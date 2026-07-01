@@ -1,0 +1,31 @@
+# MediaToolbox — Cursor 入口
+
+完整规则以 `AGENTS.md` 为准；本文件只保留 Cursor 自动加载时需要的最小摘要。
+
+## 开局
+
+1. 读 `CONTEXT.md`，确认阶段、阻断项、黄灯、下一步。
+2. 按任务关键词查 `LESSONS.md`。
+3. 代码改动前后按需读 `docs/AI_RULES.md`。
+
+## 硬规则
+
+- 代码改动后输出 `🚦 Audit Report`，再跑客观验证。
+- 前端验证默认：`npm --prefix frontend run verify`。
+- 后端改动至少执行：`npm --prefix backend run typecheck`。
+- 组件只做展示和交互，不实现媒体处理、文件系统或外部工具逻辑。
+- API 调用走 `@/api`；不直接依赖 `mockApi`。
+- 历史 mock 仅作迁移参考或测试夹具；正式开发默认走真实 API。
+- NAS 风格 Web 桌面空间关系不可破坏。
+- 旧 API 耦合、vendor、缓存、构建产物不得回流。
+- 文件超过 350/450/500 行时按 `AGENTS.md` 的规模规则处理。
+
+## 提交署名
+
+commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
+
+Cursor 产出实质改动并提交时，在 commit message 末尾追加：
+
+```text
+Co-authored-by: Cursor <cursor@cursor.sh>
+```

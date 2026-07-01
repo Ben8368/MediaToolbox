@@ -1,0 +1,298 @@
+/* ===== Log Viewer ===== */
+.lv-app {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: rgba(10,12,18,.65);
+  color: #fff;
+}
+
+.lv-app svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lv-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  min-height: 0;
+  overflow: hidden;
+  background: rgba(16,17,21,.92);
+}
+
+.lv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.lv-toolbar h2 {
+  margin: 0 0 4px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.lv-toolbar p {
+  margin: 0;
+  color: rgba(255,255,255,.52);
+  font-size: 12px;
+}
+
+.lv-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.lv-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255,255,255,.84);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lv-filter select,
+.lv-page-size select,
+.lv-jump input {
+  min-height: 34px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  color: #fff;
+  outline: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lv-filter select {
+  width: min(220px, 22vw);
+  padding: 0 12px;
+}
+
+.lv-filter select option,
+.lv-page-size select option {
+  background: #0f1419;
+  color: #e0e7ff;
+  padding: 4px 8px;
+  line-height: 1.5;
+}
+
+.lv-filter select option:checked,
+.lv-page-size select option:checked {
+  background: #2563eb;
+  color: #fff;
+}
+
+.lv-spacer {
+  flex: 1;
+}
+
+.lv-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  gap: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.84);
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lv-action:hover,
+.lv-page:hover:not(:disabled),
+.lv-refresh:hover {
+  background: rgba(255,255,255,.09);
+  color: #fff;
+}
+
+.lv-table {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lv-head,
+.lv-row {
+  display: grid;
+  grid-template-columns: 92px 130px 180px 112px minmax(220px, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: 0 20px;
+}
+
+.lv-head {
+  min-height: 40px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  color: rgba(255,255,255,.52);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lv-body {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-color: rgba(255,255,255,.22) transparent;
+}
+
+.lv-row {
+  min-height: 46px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.lv-row:hover {
+  background: rgba(255,255,255,.035);
+}
+
+.lv-row span,
+.lv-row strong,
+.lv-row p {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lv-row strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+.lv-row p {
+  margin: 0;
+  color: #fff;
+}
+
+.lv-level--debug {
+  color: #9ca3af;
+}
+
+.lv-level--info {
+  color: #f8fafc;
+}
+
+.lv-level--notice {
+  color: #54d2e6;
+}
+
+.lv-level--warning {
+  color: #f8c15c;
+}
+
+.lv-level--error,
+.lv-level--critical {
+  color: #ff8a82;
+}
+
+.lv-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: rgba(255,255,255,.42);
+  font-size: 14px;
+}
+
+.lv-empty--error {
+  color: #ff9f9a;
+}
+
+.lv-footer {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  gap: 10px;
+  padding: 0 20px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: rgba(255,255,255,.82);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lv-refresh,
+.lv-page {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.76);
+  cursor: pointer;
+}
+
+.lv-refresh {
+  width: 34px;
+  height: 34px;
+}
+
+.lv-pages {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.lv-page {
+  width: 32px;
+  height: 32px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lv-page--active {
+  border-color: #1684ff;
+  background: #097cff;
+  color: #fff;
+}
+
+.lv-page:disabled {
+  cursor: not-allowed;
+  color: rgba(255,255,255,.2);
+}
+
+.lv-ellipsis {
+  color: rgba(255,255,255,.68);
+  padding: 0 4px;
+}
+
+.lv-page-size,
+.lv-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.lv-page-size select {
+  min-width: 96px;
+  padding: 0 10px;
+}
+
+.lv-jump input {
+  width: 72px;
+  padding: 0 10px;
+}

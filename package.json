@@ -1,0 +1,17 @@
+{
+  "name": "mediatoolbox",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/start-dev.mjs",
+    "dev": "node scripts/start-dev.mjs",
+    "dev:full": "node scripts/start-dev.mjs --real",
+    "dev:frontend": "node scripts/start-frontend-dev.mjs",
+    "dev:real": "node scripts/start-frontend-dev.mjs --real",
+    "dev:backend": "npm --prefix backend run dev",
+    "setup": "npm --prefix frontend install && npm --prefix backend install",
+    "verify": "npm --prefix frontend run verify",
+    "verify:backend": "npm --prefix backend run typecheck"
+  }
+}

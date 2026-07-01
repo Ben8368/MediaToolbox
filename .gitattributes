@@ -1,0 +1,21 @@
+# Normalize line endings: keep LF in the repo, let Git convert on checkout.
+* text=auto eol=lf
+
+# Scripts that must stay LF (shebang + shell parsing break with CRLF).
+*.mjs text eol=lf
+*.js  text eol=lf
+*.ts  text eol=lf
+*.tsx text eol=lf
+*.sh  text eol=lf
+*.conf text eol=lf
+Dockerfile text eol=lf
+
+# Binary assets — never normalize or diff as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.svg  text eol=lf
+*.ico  binary
+*.woff  binary
+*.woff2 binary
