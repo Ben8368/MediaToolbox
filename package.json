@@ -11,7 +11,8 @@
     "dev:real": "node scripts/start-frontend-dev.ts --real",
     "dev:backend": "npm --prefix backend run dev",
     "setup": "npm --prefix frontend install && npm --prefix backend install",
-    "verify": "npm --prefix frontend run verify",
+    "verify": "npm run verify:scripts && npm --prefix frontend run verify",
+    "verify:scripts": "npm --prefix backend exec -- tsc --project tsconfig.scripts.json",
     "verify:backend": "npm --prefix backend run typecheck"
   }
 }

@@ -74,7 +74,7 @@ if (!options.apiBase) {
   options.apiBase = 'http://127.0.0.1:8080'
 }
 
-const env = {
+const env: NodeJS.ProcessEnv = {
   ...process.env,
   VITE_API_MODE: 'real',
 }
