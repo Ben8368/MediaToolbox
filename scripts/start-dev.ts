@@ -2,16 +2,30 @@
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { spawn } from 'node:child_process'
+import { type ChildProcess, spawn } from 'node:child_process'
+
+type DevOptions = {
+  host: string
+  port: string
+  backendHost: string
+  backendPort: string
+  apiBase: string
+}
+
+type NpmInvocation = {
+  command: string
+  args: string[]
+  shell: boolean
+}
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(scriptDir, '..')
 const frontendDir = join(repoRoot, 'frontend')
 const backendDir = join(repoRoot, 'backend')
-const frontendScript = join(scriptDir, 'start-frontend-dev.mjs')
+const frontendScript = join(scriptDir, 'start-frontend-dev.ts')
 
 const args = process.argv.slice(2)
-const options = {
+const options: DevOptions = {
   host: process.env.MEDIATOOLBOX_DEV_HOST || '127.0.0.1',
   port: process.env.MEDIATOOLBOX_DEV_PORT || '5173',
   backendHost: process.env.MEDIATOOLBOX_BACKEND_HOST || '127.0.0.1',
@@ -19,7 +33,7 @@ const options = {
   apiBase: process.env.VITE_API_BASE_URL || '',
 }
 
-function takeValue(flag, index) {
+function takeValue(flag: string, index: number): string {
   const inlinePrefix = `${flag}=`
   const current = args[index]
   if (current.startsWith(inlinePrefix)) return current.slice(inlinePrefix.length)
@@ -66,21 +80,22 @@ const clientBackendHost = options.backendHost === '0.0.0.0' ? '127.0.0.1' : opti
 const apiBase = options.apiBase || `http://${clientBackendHost}:${options.backendPort}`
 const frontendOriginHost = options.host === '0.0.0.0' ? 'localhost' : options.host
 const frontendOrigin = `http://${frontendOriginHost}:${options.port}`
-const children = []
+const children: ChildProcess[] = []
 let shuttingDown = false
+const shutdownSignals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 
 ensureNodeModules(backendDir, 'backend')
 startBackend(frontendOrigin)
 ensureNodeModules(frontendDir, 'frontend')
 startFrontend(apiBase)
 
-for (const signal of ['SIGINT', 'SIGTERM']) {
+for (const signal of shutdownSignals) {
   process.on(signal, () => {
     shutdown(signal)
   })
 }
 
-function startBackend(frontendOrigin) {
+function startBackend(frontendOrigin: string): void {
   const npmArgs = ['--prefix', backendDir, 'run', 'dev']
   const npmInvocation = getNpmInvocation(npmArgs)
   const env = {
@@ -100,7 +115,7 @@ function startBackend(frontendOrigin) {
   })
 }
 
-function startFrontend(apiBase) {
+function startFrontend(apiBase: string): void {
   const frontendArgs = [
     frontendScript,
     '--real',
@@ -122,7 +137,12 @@ function startFrontend(apiBase) {
   })
 }
 
-function spawnManaged(name, command, childArgs, options) {
+function spawnManaged(
+  name: string,
+  command: string,
+  childArgs: string[],
+  options: Parameters<typeof spawn>[2],
+): void {
   const child = spawn(command, childArgs, {
     ...options,
     stdio: 'inherit',
@@ -151,7 +171,7 @@ function spawnManaged(name, command, childArgs, options) {
   })
 }
 
-function shutdown(signal, exitCode = 0) {
+function shutdown(signal: NodeJS.Signals | null, exitCode = 0): void {
   if (shuttingDown) return
   shuttingDown = true
 
@@ -167,14 +187,14 @@ function shutdown(signal, exitCode = 0) {
   process.exit(exitCode)
 }
 
-function ensurePackage(dir, label) {
+function ensurePackage(dir: string, label: string): void {
   if (!existsSync(join(dir, 'package.json'))) {
     console.error(`[MediaToolbox] ${label} package not found: ${dir}`)
     process.exit(1)
   }
 }
 
-function ensureNodeModules(dir, label) {
+function ensureNodeModules(dir: string, label: string): void {
   if (!existsSync(join(dir, 'node_modules'))) {
     console.error(`[MediaToolbox] ${label} dependencies are not installed.`)
     console.error(`[MediaToolbox] Run: npm --prefix ${label} install`)
@@ -182,11 +202,11 @@ function ensureNodeModules(dir, label) {
   }
 }
 
-function printHelp() {
+function printHelp(): void {
   console.log(`MediaToolbox one-command dev launcher
 
 Usage:
-  node scripts/start-dev.mjs [options]
+  node scripts/start-dev.ts [options]
 
 Default:
   Starts backend and frontend together, with the frontend using the real API.
@@ -209,7 +229,7 @@ Environment overrides:
   CORS_ORIGIN`)
 }
 
-function getNpmInvocation(npmArgs) {
+function getNpmInvocation(npmArgs: string[]): NpmInvocation {
   const npmExecPath = process.env.npm_execpath
   if (npmExecPath && existsSync(npmExecPath)) {
     return {

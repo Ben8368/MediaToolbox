@@ -29,7 +29,7 @@ npm run setup
 npm start
 ```
 
-根目录 `npm start` 会调用 `scripts/start-dev.mjs`，一键启动后端和前端，并自动把前端切换到真实 API 模式。打开后访问：
+根目录 `npm start` 会调用 `scripts/start-dev.ts`，一键启动后端和前端，并自动把前端切换到真实 API 模式。打开后访问：
 
 ```text
 http://127.0.0.1:5173

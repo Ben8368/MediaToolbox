@@ -33,7 +33,7 @@ MediaToolbox 是 [Ben8368/MediaTools-v2](https://github.com/Ben8368/MediaTools-v
 
 1. 日常启动：`npm run setup` 后执行 `npm start`，访问 `http://127.0.0.1:5173`。
 2. 用真实 URL 提交下载任务，确认创建、轮询、取消、历史记录和产出文件路径。
-3. 补充前端测试，优先覆盖 `api/http.ts`、`scripts/start-dev.mjs` 参数分支和关键 API 适配。
+3. 补充前端测试，优先覆盖 `api/http.ts`、`scripts/start-dev.ts` 参数分支和关键 API 适配。
 
 ## 常用文档
 

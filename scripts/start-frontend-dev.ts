@@ -4,6 +4,18 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 
+type FrontendDevOptions = {
+  host: string
+  port: string
+  apiBase: string
+}
+
+type NpmInvocation = {
+  command: string
+  args: string[]
+  shell: boolean
+}
+
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const repoRoot = resolve(scriptDir, '..')
 const frontendDir = join(repoRoot, 'frontend')
@@ -11,13 +23,13 @@ const packageJson = join(frontendDir, 'package.json')
 const nodeModules = join(frontendDir, 'node_modules')
 
 const args = process.argv.slice(2)
-const options = {
+const options: FrontendDevOptions = {
   host: process.env.MEDIATOOLBOX_DEV_HOST || '127.0.0.1',
   port: process.env.MEDIATOOLBOX_DEV_PORT || '5173',
   apiBase: process.env.VITE_API_BASE_URL || '',
 }
 
-function takeValue(flag, index) {
+function takeValue(flag: string, index: number): string {
   const inlinePrefix = `${flag}=`
   const current = args[index]
   if (current.startsWith(inlinePrefix)) return current.slice(inlinePrefix.length)
@@ -82,6 +94,7 @@ const child = spawn(npmInvocation.command, npmInvocation.args, {
   stdio: 'inherit',
   shell: npmInvocation.shell,
 })
+const shutdownSignals: NodeJS.Signals[] = ['SIGINT', 'SIGTERM']
 
 child.on('error', (error) => {
   console.error(`[MediaToolbox] Failed to start frontend: ${error.message}`)
@@ -89,7 +102,7 @@ child.on('error', (error) => {
   process.exit(1)
 })
 
-for (const signal of ['SIGINT', 'SIGTERM']) {
+for (const signal of shutdownSignals) {
   process.on(signal, () => {
     if (!child.killed) child.kill(signal)
   })
@@ -100,11 +113,11 @@ child.on('exit', (code, signal) => {
   process.exit(code ?? 0)
 })
 
-function printHelp() {
+function printHelp(): void {
   console.log(`MediaToolbox frontend dev launcher
 
 Usage:
-  node scripts/start-frontend-dev.mjs [options]
+  node scripts/start-frontend-dev.ts [options]
 
 Options:
   --host <host>       Dev server host. Default: 127.0.0.1
@@ -119,7 +132,7 @@ Environment overrides:
   VITE_API_BASE_URL`)
 }
 
-function getNpmInvocation(npmArgs) {
+function getNpmInvocation(npmArgs: string[]): NpmInvocation {
   const npmExecPath = process.env.npm_execpath
   if (npmExecPath && existsSync(npmExecPath)) {
     return {
