@@ -7,13 +7,14 @@
 
 ## 项目定位
 
-MediaToolbox 是 [Ben8368/MediaTools-v2](https://github.com/Ben8368/MediaTools-v2) 的前端提取移植仓库。当前目标是在不搬运旧后端复杂度的前提下，维持可运行、可验证、可继续接入真实服务的 NAS 风格 Web 桌面。
+MediaToolbox 是 [Ben8368/MediaTools-v2](https://github.com/Ben8368/MediaTools-v2) 的前端提取移植仓库。当前目标是在不搬运旧后端复杂度的前提下，维持可运行、可验证、可继续接入真实服务的 NAS 风格 Web 桌面，并扩展 Photoshop 自动化能力。
 
 ## 当前快照
 
 - 前端：React 18 + TypeScript + Vite + Zustand；桌面壳、窗口系统、应用入口、下载器、文件管理器、设置、日志入口已具备。
 - API：`frontend/src/api.ts` 默认接 `realApi`；历史 `mockApi/` 仅保留为迁移参考和测试夹具。
 - 后端：Fastify v5 + TypeScript；已实现下载任务、队列、JSON 持久化、yt-dlp/ffmpeg 调用、安全边界和 CORS 收紧。
+- **Photoshop 自动化**：基于 ExtendScript 的 PSD 自动化服务，支持文案替换、字体修改、图片替换、图层翻译（占位），复用任务队列系统。
 - 启动：`npm start` 同时拉起后端与前端，并注入 `VITE_API_BASE_URL`。
 - 部署：Docker 多阶段镜像与 nginx `/api` 反代模板已存在。
 - 治理：入口文件已压缩；commit message 标题与正文统一使用中文；阶段计划和 Feature 索引见 `docs/ROADMAP.md`。
@@ -43,3 +44,4 @@ MediaToolbox 是 [Ben8368/MediaTools-v2](https://github.com/Ben8368/MediaTools-v
 - API 契约：`docs/FRONTEND_API_CONTRACT.md`
 - UI 兼容：`docs/UI_COMPAT.md`
 - 路线图：`docs/ROADMAP.md`
+- **Photoshop 自动化**：`docs/PHOTOSHOP_AUTOMATION.md`

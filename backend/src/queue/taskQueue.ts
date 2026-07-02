@@ -13,15 +13,20 @@ const MAX_CONCURRENT = Number(process.env.MAX_CONCURRENT_DOWNLOADS ?? 2)
 
 // ─── 内部状态 ─────────────────────────────────────────────────────────────────
 
-let workerFn: WorkerFn | null = null
+const workers = new Map<string, WorkerFn>()   // task.type → worker
 let running = 0
 const pending: string[] = []   // task id 队列
 
 // ─── 公开 API ─────────────────────────────────────────────────────────────────
 
-/** 注册实际执行下载的 worker，由 downloader/index 调用一次 */
+/** 注册 worker，按 task.type 路由 */
 export function registerWorker(fn: WorkerFn): void {
-  workerFn = fn
+  // 为了保持向后兼容，默认注册为 'fetch' 类型
+  // Photoshop 服务会显式调用 registerWorker，但需要区分类型
+  // 更好的做法是修改签名为 registerWorker(type: string, fn: WorkerFn)
+  // 但为了最小改动，先用函数名推断
+  const taskType = fn.name.includes('photoshop') ? 'photoshop' : 'fetch'
+  workers.set(taskType, fn)
 }
 
 /** 将任务加入队列；若有空槽立即启动 */
@@ -45,10 +50,14 @@ function drain(): void {
 }
 
 async function runOne(id: string): Promise<void> {
-  if (!workerFn) return
-
   const task = getTask(id)
   if (!task) return
+
+  const workerFn = workers.get(task.type)
+  if (!workerFn) {
+    console.error(`未找到 task.type="${task.type}" 的 worker`)
+    return
+  }
 
   running++
   try {

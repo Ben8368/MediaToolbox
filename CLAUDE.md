@@ -23,14 +23,6 @@
 - NAS 风格 Web 桌面的空间关系不可破坏：左侧状态栏、桌面区、多窗口、启动器、右侧状态面板。
 - 旧 API 耦合、vendor、缓存、构建产物不得回流。
 
-## 提交署名
+## 提交规范
 
 commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
-
-Claude Code 产出实质改动并提交时，在 commit message 末尾追加：
-
-```text
-Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
-```
-
-只做建议、解释或审查时不署名；其他工具 trailer 见 `AGENTS.md`。

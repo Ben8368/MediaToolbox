@@ -5,8 +5,10 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { initDownloader } from './services/downloader/index.js'
+import { initPhotoshop } from './services/photoshop/index.js'
 import { tasksRoutes } from './routes/tasks.js'
 import { systemRoutes } from './routes/system.js'
+import { photoshopRoutes } from './routes/photoshop.js'
 
 const PORT = Number(process.env.PORT ?? 8080)
 // 默认绑定到 loopback，避免后端 API 在未经 nginx 的情况下暴露给局域网；
@@ -36,12 +38,14 @@ async function main(): Promise<void> {
     }
   })
 
-  // 注册下载 worker
+  // 注册 worker
   initDownloader()
+  initPhotoshop()
 
   // 注册路由
   await app.register(tasksRoutes)
   await app.register(systemRoutes)
+  await app.register(photoshopRoutes)
 
   // 健康检查
   app.get('/api/health', async () => ({ ok: true, ts: Date.now() }))
