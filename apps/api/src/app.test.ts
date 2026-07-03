@@ -28,10 +28,13 @@ describe('api skeleton contract', () => {
     expect(created.statusCode).toBe(200)
     expect(createdBody.task_id).toBeTruthy()
     expect(canceled.json()).toEqual({ ok: true })
-    // 任务最终必须进入终态（failed/cancelled），无论 yt-dlp 是否可用
+    // CI 无 yt-dlp 时任务可能以 failed/cancelled 结束，均视为合法终态
     expect(history.json()).toMatchObject({
       ok: true,
-      tasks: [expect.objectContaining({ task_id: createdBody.task_id })],
+      tasks: [expect.objectContaining({
+        task_id: createdBody.task_id,
+        status: expect.stringMatching(/^(completed|failed|cancelled)$/),
+      })],
     })
     await app.close()
   })
@@ -101,9 +104,9 @@ describe('api skeleton contract', () => {
     const jobsAfter = await app.inject({ method: 'GET', url: '/api/jobs' })
     const jobAfter = jobsAfter.json<{ jobs: Array<{ id: string; status: string }> }>().jobs.find((j) => j.id === taskId)
 
-    // 任务执行可能在取消前已完成（CI 无 yt-dlp），job 应处于某个终态
-    const terminalStatuses = ['canceled', 'succeeded', 'failed']
-    expect(terminalStatuses).toContain(jobAfter?.status)
+    // CI 无 yt-dlp 时执行可能在取消前已完成，job 应处于某个终态且不为 undefined
+    expect(jobAfter).toBeDefined()
+    expect(['canceled', 'succeeded', 'failed']).toContain(jobAfter!.status)
     await app.close()
   })
 
