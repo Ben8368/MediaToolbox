@@ -2,8 +2,8 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 3 已完成，Phase 4 待开始
-> **最近更新：** 2026-07-03，完成 ffmpeg 包（tool/probe/progress/errors/run）及 transcode-worker，API 接入转码任务提交和取消路由；`npm run verify` 全通过（35 tests，build ✓）。
+> **当前阶段：** Phase 4 已完成，Phase 5 待开始
+> **最近更新：** 2026-07-03，完成 SQLite 持久化层（packages/db）：jobs、assets、logs 三张表 + 迁移机制；apps/api 全面切换至数据库存储，测试用内存DB；`npm run verify` 全通过（db: 13 tests，api: 7 tests，build ✓，typecheck ✓）。
 
 ## 项目定位
 

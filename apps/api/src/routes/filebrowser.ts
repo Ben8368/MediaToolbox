@@ -48,7 +48,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
   app.post<{ Body: { path?: string }; Reply: CreateDirectoryResponse }>('/api/filebrowser/mkdir', { schema: filebrowserMkdirSchema }, async (request) => {
     const path = normalizeWorkspacePath(request.body.path, state.workspaceRoot)
     state.folders.add(path)
-    addLog(state, 'INFO', 'file-manager', `创建虚拟目录：${path}`)
+    addLog(state.db, 'INFO', 'file-manager', `创建虚拟目录：${path}`)
     return { ok: true, path }
   })
 

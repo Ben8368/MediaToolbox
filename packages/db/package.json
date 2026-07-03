@@ -7,13 +7,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "verify": "npm run test && npm run typecheck && npm run build"
   },
   "dependencies": {
-    "@mediatoolbox/contracts": "0.1.0"
+    "@mediatoolbox/contracts": "0.1.0",
+    "better-sqlite3": "^12.11.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "@types/better-sqlite3": "^7.6.13",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
   }
 }

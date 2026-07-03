@@ -21,7 +21,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         kind: 'media.transcode',
         title: title || `转码任务：${inputPath.split(/[\\/]/).pop() ?? 'unknown'}`,
       })
-      state.jobs.unshift(job)
+      await state.db.jobs.create(job)
 
       // 异步执行转码，不阻塞 HTTP 响应
       void executeTranscode(
@@ -37,7 +37,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Params: { id: string }; Reply: OkResult }>(
     '/api/transcode/jobs/:id/cancel',
     async (request) => {
-      const job = state.jobs.find((j) => j.id === request.params.id)
+      const job = await state.db.jobs.findById(request.params.id)
       if (job && job.kind === 'media.transcode' && job.status === 'running') {
         abortTranscode(job.id)
       }
