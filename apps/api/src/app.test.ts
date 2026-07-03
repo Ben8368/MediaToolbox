@@ -82,4 +82,47 @@ describe('api skeleton contract', () => {
     expect(drivePath.json()).toMatchObject({ ok: false, message: '路径必须位于工作区内，不能使用磁盘盘符。' })
     await app.close()
   })
+
+  it('fetch task creation and cancellation are reflected in the job list', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { urls: ['https://example.com/video'] },
+    })
+    const taskId = created.json<{ task_id: string }>().task_id
+
+    const jobsBefore = await app.inject({ method: 'GET', url: '/api/jobs' })
+    const jobBefore = jobsBefore.json<{ jobs: Array<{ id: string; status: string }> }>().jobs.find((j) => j.id === taskId)
+
+    await app.inject({ method: 'POST', url: `/api/fetch/tasks/${taskId}/cancel` })
+
+    const jobsAfter = await app.inject({ method: 'GET', url: '/api/jobs' })
+    const jobAfter = jobsAfter.json<{ jobs: Array<{ id: string; status: string }> }>().jobs.find((j) => j.id === taskId)
+
+    expect(jobBefore?.status).toBe('queued')
+    expect(jobAfter?.status).toBe('canceled')
+    await app.close()
+  })
+
+  it('deleting a fetch task also removes the corresponding job', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { urls: ['https://example.com/video'] },
+    })
+    const taskId = created.json<{ task_id: string }>().task_id
+
+    await app.inject({ method: 'POST', url: `/api/fetch/tasks/${taskId}/cancel` })
+    await app.inject({ method: 'DELETE', url: `/api/fetch/tasks/${taskId}` })
+
+    const jobsAfter = await app.inject({ method: 'GET', url: '/api/jobs' })
+    const stillExists = jobsAfter.json<{ jobs: Array<{ id: string }> }>().jobs.some((j) => j.id === taskId)
+
+    expect(stillExists).toBe(false)
+    await app.close()
+  })
 })

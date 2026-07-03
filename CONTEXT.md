@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 1 前端迁回完成 → Phase 2 大项目骨架与 API 契约对齐完成
-> **最近更新：** 2026-07-03，统一 `TrashEntry.deleted_at`、`JobRecord.createdAt/updatedAt` 为 Unix 秒 number；清除 `ai_analyze` 死代码存根
+> **最近更新：** 2026-07-03，`fetch/tasks` 内部收敛到 `job-core`：创建/取消/删除下载任务时同步维护对应 `JobRecord`
 
 ## 项目定位
 
@@ -32,10 +32,9 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 
 ## 下一步
 
-1. 将兼容 `fetch/tasks` 下载流内部收敛到 `packages/job-core` 的统一任务状态机。
-2. 实现下载 worker 的 `yt-dlp` 进程执行、进度解析、错误归一和取消。
-3. 接入 SQLite 持久化任务、资产和日志。
-4. 评估 Electron 依赖审计项并制定非破坏性修复路径。
+1. 实现下载 worker 的 `yt-dlp` 进程执行、进度解析、错误归一和取消。
+2. 接入 SQLite 持久化任务、资产和日志。
+3. 评估 Electron 依赖审计项并制定非破坏性修复路径。
 
 ## 常用命令
 

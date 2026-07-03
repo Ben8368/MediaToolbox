@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { createJobRecord, transitionJob } from '@mediatoolbox/job-core'
 import type { FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 import { clearFetchTasksSchema, fetchTaskSubmitSchema } from '../schemas.js'
@@ -42,6 +43,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
       state: { mode: 'api-skeleton', note: '后端已接收任务，真实下载执行器尚未接入。' },
     }
     state.fetchTasks.unshift(task)
+    state.jobs.unshift(createJobRecord({ id, kind: 'download.video', title: task.title }))
     addLog(state, 'NOTICE', 'downloader', `创建下载任务骨架：${task.title}`)
     return { ok: true, task_id: id, status: task.status }
   })
@@ -63,6 +65,11 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
       task.stage = '任务已取消'
       task.updated_at = nowSeconds()
       task.completed_at = task.updated_at
+      const jobIndex = state.jobs.findIndex((job) => job.id === task.id)
+      if (jobIndex >= 0) {
+        const job = state.jobs[jobIndex]!
+        if (job.status !== 'canceled') state.jobs[jobIndex] = transitionJob(job, 'canceled')
+      }
       addLog(state, 'WARNING', 'downloader', `取消下载任务骨架：${task.title}`)
     }
     return { ok: true }
@@ -70,16 +77,30 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
   app.delete<{ Params: { id: string }; Reply: OkResult }>('/api/fetch/tasks/:id', async (request) => {
     const index = state.fetchTasks.findIndex((item) => item.id === request.params.id || item.task_id === request.params.id)
-    if (index >= 0) state.fetchTasks.splice(index, 1)
+    if (index >= 0) {
+      const [removed] = state.fetchTasks.splice(index, 1)
+      if (removed) {
+        const jobIdx = state.jobs.findIndex((job) => job.id === removed.id)
+        if (jobIdx >= 0) state.jobs.splice(jobIdx, 1)
+      }
+    }
     return { ok: true }
   })
 
   app.post<{ Body: { task_ids?: string[] }; Reply: OkResult }>('/api/fetch/tasks/clear', { schema: clearFetchTasksSchema }, async (request) => {
     const ids = new Set(request.body.task_ids ?? [])
+    const removedIds: string[] = []
     for (let index = state.fetchTasks.length - 1; index >= 0; index -= 1) {
       const task = state.fetchTasks[index]
       if (!task) continue
-      if ((ids.size === 0 && isTerminalTask(task)) || ids.has(task.id) || ids.has(task.task_id)) state.fetchTasks.splice(index, 1)
+      if ((ids.size === 0 && isTerminalTask(task)) || ids.has(task.id) || ids.has(task.task_id)) {
+        state.fetchTasks.splice(index, 1)
+        removedIds.push(task.id)
+      }
+    }
+    for (let index = state.jobs.length - 1; index >= 0; index -= 1) {
+      const job = state.jobs[index]
+      if (job && removedIds.includes(job.id)) state.jobs.splice(index, 1)
     }
     return { ok: true }
   })
