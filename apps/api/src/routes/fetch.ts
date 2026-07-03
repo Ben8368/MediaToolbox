@@ -5,6 +5,7 @@ import type { FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse }
 import { clearFetchTasksSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
+import { executeDownload, abortDownload } from '../download-executor.js'
 
 function titleFromDraft(draft: Record<string, unknown>) {
   const urls = Array.isArray(draft.urls) ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
@@ -34,17 +35,28 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
       source_url: taskSourceFromDraft(request.body),
       status: 'pending',
       progress: 0,
-      stage: '等待下载执行器接入',
+      stage: '等待执行',
       created_at: createdAt,
       updated_at: createdAt,
       started_at: null,
       completed_at: null,
       params: request.body,
-      state: { mode: 'api-skeleton', note: '后端已接收任务，真实下载执行器尚未接入。' },
+      state: {},
     }
     state.fetchTasks.unshift(task)
     state.jobs.unshift(createJobRecord({ id, kind: 'download.video', title: task.title }))
-    addLog(state, 'NOTICE', 'downloader', `创建下载任务骨架：${task.title}`)
+    addLog(state, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
+
+    // 异步执行，不阻塞 HTTP 响应
+    void executeDownload(task, state).then(() => {
+      const job = state.jobs.find((j) => j.id === task.id)
+      if (!job) return
+      const idx = state.jobs.indexOf(job)
+      if (task.status === 'completed') state.jobs[idx] = transitionJob(job, 'succeeded')
+      else if (task.status === 'failed') state.jobs[idx] = transitionJob(job, 'failed')
+      else if (task.status === 'cancelled' && job.status !== 'canceled') state.jobs[idx] = transitionJob(job, 'canceled')
+    }).catch(() => {/* errors already handled inside executeDownload */})
+
     return { ok: true, task_id: id, status: task.status }
   })
 
@@ -61,16 +73,20 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Params: { id: string }; Reply: OkResult }>('/api/fetch/tasks/:id/cancel', async (request) => {
     const task = state.fetchTasks.find((item) => item.id === request.params.id || item.task_id === request.params.id)
     if (task && !isTerminalTask(task)) {
-      task.status = 'cancelled'
-      task.stage = '任务已取消'
-      task.updated_at = nowSeconds()
-      task.completed_at = task.updated_at
+      abortDownload(task.id)
+      // 状态由 executeDownload 的 AbortError 分支更新；这里做保底同步
+      if (!isTerminalTask(task)) {
+        task.status = 'cancelled'
+        task.stage = '已取消'
+        task.updated_at = nowSeconds()
+        task.completed_at = task.updated_at
+      }
       const jobIndex = state.jobs.findIndex((job) => job.id === task.id)
       if (jobIndex >= 0) {
         const job = state.jobs[jobIndex]!
         if (job.status !== 'canceled') state.jobs[jobIndex] = transitionJob(job, 'canceled')
       }
-      addLog(state, 'WARNING', 'downloader', `取消下载任务骨架：${task.title}`)
+      addLog(state, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
     }
     return { ok: true }
   })
