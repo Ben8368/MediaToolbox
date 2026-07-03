@@ -224,6 +224,9 @@ export type RuntimeMetrics = {
   system?: {
     cpu_percent?: number
     memory_percent?: number
+    memory_used_bytes?: number
+    memory_total_bytes?: number
+    memory_free_bytes?: number
     gpu_percent?: number
     gpu_available?: boolean
     gpu_detail?: string

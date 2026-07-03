@@ -51,7 +51,13 @@ describe('api skeleton contract', () => {
     expect(directory.json()).toMatchObject({ ok: true, path: '/Workspace' })
     expect(metrics.json()).toMatchObject({
       runtime: expect.any(Object),
-      system: expect.objectContaining({ gpu_available: false }),
+      system: expect.objectContaining({
+        gpu_available: false,
+        memory_percent: expect.any(Number),
+        memory_used_bytes: expect.any(Number),
+        memory_total_bytes: expect.any(Number),
+        memory_free_bytes: expect.any(Number),
+      }),
       network: expect.objectContaining({ upload_bytes_per_sec: 0 }),
     })
     await app.close()
