@@ -15,7 +15,7 @@ export type AppsResponse = {
   apps: WorkbenchApp[]
 }
 
-export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'media.transcode' | 'psd.batch'
+export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'media.transcode' | 'psd.batch'
 
 export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'retrying' | 'canceled'
 
@@ -80,6 +80,61 @@ export type SubmitFetchResponse = OkResult & {
   task_id?: string
   task_ids?: string[]
   status?: FetchTaskStatus
+}
+
+export type BrowserNetworkDownloadStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'canceled'
+
+export type BrowserNetworkPermissionDecision = 'granted' | 'denied'
+
+export type BrowserNetworkPermissionKind =
+  | 'clipboard-read'
+  | 'clipboard-sanitized-write'
+  | 'display-capture'
+  | 'fullscreen'
+  | 'geolocation'
+  | 'media'
+  | 'notifications'
+  | 'openExternal'
+  | 'storage-access'
+  | 'top-level-storage-access'
+  | 'fileSystem'
+  | 'unknown'
+
+export type BrowserNetworkDownloadRecord = {
+  id: string
+  job_id: string
+  view_id: string
+  session_id: string
+  source_url: string
+  url_chain: string[]
+  filename: string
+  target_path: string
+  status: BrowserNetworkDownloadStatus
+  received_bytes: number
+  total_bytes: number
+  mime_type?: string
+  user_gesture: boolean
+  created_at: number
+  updated_at: number
+  completed_at: number | null
+  error?: string | null
+}
+
+export type BrowserNetworkDownloadListResponse = OkResult & {
+  downloads: BrowserNetworkDownloadRecord[]
+}
+
+export type BrowserNetworkDownloadResponse = OkResult & {
+  download?: BrowserNetworkDownloadRecord
+}
+
+export type BrowserNetworkPermissionEvent = {
+  view_id: string
+  session_id: string
+  origin: string
+  permission: BrowserNetworkPermissionKind
+  decision: BrowserNetworkPermissionDecision
+  reason?: string
 }
 
 export type TaskListResponse = OkResult & {

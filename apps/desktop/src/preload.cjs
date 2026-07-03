@@ -25,6 +25,12 @@ const browserApi = {
   focus(id) {
     return ipcRenderer.invoke('mediatoolbox:browser:focus', { id })
   },
+  downloadUrl(id, url) {
+    return ipcRenderer.invoke('mediatoolbox:browser:download-url', { id, url })
+  },
+  cancelDownload(downloadId) {
+    return ipcRenderer.invoke('mediatoolbox:browser:cancel-download', { downloadId })
+  },
   onEvent(listener) {
     const wrapped = (_event, payload) => listener(payload)
     ipcRenderer.on('mediatoolbox:browser:event', wrapped)

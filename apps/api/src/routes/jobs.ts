@@ -9,9 +9,12 @@ import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 
 export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: { kind?: string; title?: string }; Reply: JobRecord }>('/api/jobs', async (request) => {
+    const allowedKind = request.body.kind === 'media.transcode'
+      || request.body.kind === 'psd.batch'
+      || request.body.kind === 'browser.download'
     const job = createJobRecord({
       id: `job-${Date.now()}`,
-      kind: request.body.kind === 'media.transcode' || request.body.kind === 'psd.batch' ? request.body.kind : 'download.video',
+      kind: allowedKind ? request.body.kind as JobRecord['kind'] : 'download.video',
       title: request.body.title || '本地任务',
     })
     await state.db.jobs.create(job)
@@ -47,6 +50,14 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
         task.stage = '已取消'
         task.updated_at = nowSeconds()
         task.completed_at = task.updated_at
+      }
+    } else if (job.kind === 'browser.download') {
+      const download = state.browserDownloads.find((item) => item.job_id === job.id)
+      if (download && download.status !== 'succeeded' && download.status !== 'failed' && download.status !== 'canceled') {
+        download.status = 'canceled'
+        download.updated_at = nowSeconds()
+        download.completed_at = download.updated_at
+        download.error = '统一任务中心请求取消浏览器下载。'
       }
     } else if (job.kind === 'media.transcode') {
       abortTranscode(job.id)

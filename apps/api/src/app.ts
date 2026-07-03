@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 
+import { registerBrowserNetworkRoutes } from './routes/browser-network.js'
 import { registerCoreRoutes } from './routes/core.js'
 import { registerFetchRoutes } from './routes/fetch.js'
 import { registerFilebrowserRoutes } from './routes/filebrowser.js'
@@ -46,6 +47,7 @@ export function buildApiServer() {
   })
 
   registerCoreRoutes(app)
+  registerBrowserNetworkRoutes(app, state)
   registerFetchRoutes(app, state)
   registerFilebrowserRoutes(app, state)
   registerSystemRoutes(app, state)

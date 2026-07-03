@@ -111,6 +111,67 @@
   line-height: 1.55;
 }
 
+.browser-network-card {
+  min-width: 0;
+  max-height: 230px;
+  overflow: hidden;
+}
+
+.browser-network-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+  min-width: 0;
+  max-height: 184px;
+  overflow: auto;
+}
+
+.browser-network-list::-webkit-scrollbar { display: none; }
+
+.browser-network-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  background: rgba(0,0,0,.16);
+  padding: 7px;
+}
+
+.browser-network-item strong,
+.browser-network-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-network-item strong {
+  color: rgba(255,255,255,.84);
+  font-size: 11px;
+}
+
+.browser-network-item small {
+  color: rgba(255,255,255,.46);
+  font-size: 10px;
+}
+
+.browser-network-item button {
+  justify-self: start;
+  min-height: 24px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 7px;
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.78);
+  cursor: pointer;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.browser-network-item--permission {
+  border-color: rgba(255,212,59,.16);
+}
+
 .browser-panel {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;

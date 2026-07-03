@@ -86,3 +86,51 @@ export const transcodeJobCreateSchema = {
     },
   },
 } as const
+
+export const browserNetworkDownloadCreateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['source_url', 'filename', 'target_path', 'view_id', 'session_id'],
+    properties: {
+      source_url: { type: 'string', minLength: 1 },
+      url_chain: { type: 'array', items: { type: 'string' } },
+      filename: { type: 'string', minLength: 1 },
+      target_path: { type: 'string', minLength: 1 },
+      view_id: { type: 'string', minLength: 1 },
+      session_id: { type: 'string', minLength: 1 },
+      total_bytes: { type: 'number', minimum: 0 },
+      mime_type: { type: 'string' },
+      user_gesture: { type: 'boolean' },
+    },
+  },
+} as const
+
+export const browserNetworkDownloadUpdateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      status: { type: 'string', enum: ['pending', 'running', 'succeeded', 'failed', 'canceled'] },
+      received_bytes: { type: 'number', minimum: 0 },
+      total_bytes: { type: 'number', minimum: 0 },
+      error: { type: 'string' },
+    },
+  },
+} as const
+
+export const browserNetworkPermissionEventSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['view_id', 'session_id', 'origin', 'permission', 'decision'],
+    properties: {
+      view_id: { type: 'string', minLength: 1 },
+      session_id: { type: 'string', minLength: 1 },
+      origin: { type: 'string', minLength: 1 },
+      permission: { type: 'string', minLength: 1 },
+      decision: { type: 'string', enum: ['granted', 'denied'] },
+      reason: { type: 'string' },
+    },
+  },
+} as const

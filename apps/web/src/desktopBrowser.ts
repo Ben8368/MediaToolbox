@@ -7,6 +7,7 @@ export type DesktopBrowserBounds = {
 
 export type DesktopBrowserState = {
   id: string
+  sessionId: string
   url: string
   title: string
   loading: boolean
@@ -15,10 +16,41 @@ export type DesktopBrowserState = {
   error?: string
 }
 
-export type DesktopBrowserEvent = {
-  type: 'state'
-  state: DesktopBrowserState
+export type DesktopBrowserDownloadEvent = {
+  id: string
+  viewId: string
+  sessionId: string
+  sourceUrl: string
+  filename: string
+  targetPath: string
+  status: 'running' | 'succeeded' | 'failed' | 'canceled'
+  receivedBytes: number
+  totalBytes: number
+  error?: string
 }
+
+export type DesktopBrowserPermissionEvent = {
+  view_id: string
+  session_id: string
+  origin: string
+  permission: string
+  decision: 'granted' | 'denied'
+  reason?: string
+}
+
+export type DesktopBrowserEvent =
+  | {
+      type: 'state'
+      state: DesktopBrowserState
+    }
+  | {
+      type: 'download'
+      download: DesktopBrowserDownloadEvent
+    }
+  | {
+      type: 'permission'
+      permission: DesktopBrowserPermissionEvent
+    }
 
 export type DesktopBrowserResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
@@ -31,6 +63,8 @@ export type DesktopBrowserBridge = {
   goForward: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   reload: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   focus: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
+  downloadUrl: (id: string, url?: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
+  cancelDownload: (downloadId: string) => Promise<DesktopBrowserResult<{ id: string; canceled: boolean }>>
   onEvent: (listener: (event: DesktopBrowserEvent) => void) => () => void
 }
 
