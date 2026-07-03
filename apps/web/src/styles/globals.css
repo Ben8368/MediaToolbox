@@ -5,6 +5,7 @@
 @import './log-viewer.css';
 @import './downloader.css';
 @import './browser.css';
+@import './transcode.css';
 
 .settings-app {
   display: grid;

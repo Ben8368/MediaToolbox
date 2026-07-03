@@ -93,6 +93,7 @@ export const browserNetworkDownloadCreateSchema = {
     additionalProperties: false,
     required: ['source_url', 'filename', 'target_path', 'view_id', 'session_id'],
     properties: {
+      id: { type: 'string', minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9._:-]+$' },
       source_url: { type: 'string', minLength: 1 },
       url_chain: { type: 'array', items: { type: 'string' } },
       filename: { type: 'string', minLength: 1 },

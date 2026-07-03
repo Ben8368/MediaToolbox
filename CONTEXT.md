@@ -1,9 +1,9 @@
 # 当前状态
 
 > **初始基线：** 2026-07-02
-> **当前分支：** `codex/browser-app`
+> **当前分支：** `main`
 > **当前阶段：** Phase 4 已完成，Phase 4.5 浏览器网络能力层第一版已接入，Phase 5 待开始
-> **最近更新：** 2026-07-03，Browser Network adapter 第一版落地：Electron 浏览器使用隔离 session，接管 `will-download` 写入工作区 Downloads，回写本地 API/jobs/日志；Web 浏览器窗口显示下载与权限事件；上传确认流、下载 app 双通道和生产打包验收仍待后续。
+> **最近更新：** 2026-07-04，Browser Network adapter 的下载 ID 链路已收敛：Electron 桌面端生成的下载 ID 会作为本地 API 记录和统一 job 的稳定 ID，避免进度、取消和完成回写依赖时间戳碰巧一致；上传确认流、下载 app 双通道和生产打包验收仍待后续。
 
 ## 项目定位
 
@@ -12,7 +12,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 ## 当前快照
 
 - **仓库形态：** npm workspaces monorepo。
-- **前端：** `apps/web`，React 18 + TypeScript + Vite + Zustand；保留 NAS 风格 UI、窗口系统、下载器、文件管理器、设置、日志和浏览器入口。
+- **前端：** `apps/web`，React 18 + TypeScript + Vite + Zustand；保留 NAS 风格 UI、窗口系统、下载器、文件管理器、转码工作台、设置、日志和浏览器入口。
 - **桌面壳：** `apps/desktop`，具备 Electron BrowserWindow、托盘、基础 IPC、可选本地 API 子进程启动能力；浏览器 app 通过 `WebContentsView` 由主进程承载真实网页，并已接入 Browser Network session、权限审计和下载事件。
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
@@ -26,7 +26,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 ## 剩余黄灯
 
 - 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示。
-- Browser Network 第一版已覆盖隔离 session、下载事件、权限审计和 API/jobs 契约；受控上传确认流、下载 app 双通道策略、弹窗细化、标签页和生产打包资源加载仍需后续验收。
+- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、权限审计和 API/jobs 契约；受控上传确认流、下载 app 双通道策略、弹窗细化、标签页和生产打包资源加载仍需后续验收。
 - desktop 已有主进程能力，但 Electron 打包、安装包和生产资源加载仍待后续阶段验收。
 - PSD Photoshop adapter 已建立脚本命令边界，但真实 Photoshop 本机命令路径、复杂 batchPlay 和 PSD 工作台 UI 尚未联调。
 - 网络速率、GPU 指标仍未接入系统级采集器；当前系统指标主要覆盖 uptime、CPU 负载近似值和内存占用。
@@ -36,7 +36,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 1. 验收 Phase 4.5 第一版：桌面浏览器下载真实文件、进度回写、取消、失败提示和权限日志。
 2. 设计受控上传确认流：只允许从工作区选择文件，并在桌面端弹出用户确认。
 3. 下载 app 增加双通道策略：普通网页资源走 Browser Network，媒体解析与后处理继续走 `yt-dlp` worker。
-4. 前端转码工作台实际对接真实转码流。
+4. 验收前端转码工作台对接真实转码流：提交、进度、取消、失败提示和产物路径。
 5. 进入 Phase 5：设计 PSD 工作台 UI、PSD 模板 manifest 编辑流和 Photoshop 本机联调清单。
 
 ## 常用命令

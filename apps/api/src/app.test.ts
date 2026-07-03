@@ -298,6 +298,7 @@ describe('api skeleton contract', () => {
       url: '/api/browser-network/downloads',
       headers,
       payload: {
+        id: 'desktop-generated-download-1',
         source_url: 'https://example.com/file.zip',
         url_chain: ['https://example.com/file.zip'],
         filename: 'file.zip',
@@ -320,6 +321,8 @@ describe('api skeleton contract', () => {
     const job = await app.inject({ method: 'GET', url: `/api/jobs/${download.job_id}` })
 
     expect(created.statusCode).toBe(200)
+    expect(download.id).toBe('desktop-generated-download-1')
+    expect(download.job_id).toBe('desktop-generated-download-1')
     expect(updated.json()).toMatchObject({ ok: true, download: expect.objectContaining({ status: 'succeeded' }) })
     expect(job.json()).toMatchObject({
       ok: true,
@@ -357,6 +360,27 @@ describe('api skeleton contract', () => {
     expect(missingMarker.statusCode).toBe(403)
     expect(wrongTarget.statusCode).toBe(400)
     expect(wrongTarget.json()).toMatchObject({ ok: false, message: '浏览器下载只能写入工作区 Downloads 目录。' })
+    await app.close()
+  })
+
+  it('rejects duplicate browser network ids before job creation', async () => {
+    const app = buildApiServer()
+    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+    const payload = {
+      id: 'desktop-generated-download-duplicate',
+      source_url: 'https://example.com/file.zip',
+      filename: 'file.zip',
+      target_path: '/Workspace/Downloads/file.zip',
+      view_id: 'browser',
+      session_id: 'mediatoolbox-browser-browser',
+    }
+
+    const created = await app.inject({ method: 'POST', url: '/api/browser-network/downloads', headers, payload })
+    const duplicate = await app.inject({ method: 'POST', url: '/api/browser-network/downloads', headers, payload })
+
+    expect(created.statusCode).toBe(200)
+    expect(duplicate.statusCode).toBe(409)
+    expect(duplicate.json()).toMatchObject({ ok: false, message: '浏览器下载记录已存在。' })
     await app.close()
   })
 })
