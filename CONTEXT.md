@@ -2,8 +2,8 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 1 前端迁回完成 → Phase 2 大项目骨架与 API 契约对齐完成
-> **最近更新：** 2026-07-03，接入开发期 supervisor 与 `process-manager`：`npm run dev` 统一启动 Web/API，前端关闭请求可触发总控关闭子进程。
+> **当前阶段：** Phase 3 真实下载与转码进行中
+> **最近更新：** 2026-07-03，下载 adapter 拆出 `yt-dlp` 参数构建、工具探测、进度解析、错误归一与进程执行入口，`download-worker` 已可调用真实执行器。
 
 ## 项目定位
 
@@ -16,7 +16,7 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 - **API：** `apps/api`，Fastify 本地服务骨架，已对齐前端下载、文件浏览、系统指标、日志、通知和 jobs 的最小契约；路由已按领域拆分，并对关键写入端点加入基础 schema 与虚拟工作区路径边界。
 - **桌面壳：** `apps/desktop`，Electron 配置入口骨架。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
-- **Workers：** `download-worker`、`transcode-worker`、`psd-worker` 已建立入口。
+- **Workers：** `download-worker` 已接入 `yt-dlp` 工具解析与真实执行入口；`transcode-worker`、`psd-worker` 仍为骨架。
 - **治理：** 保留红绿灯审查机制，规则见 `docs/AI_RULES.md`。
 - **验证：** `npm run verify` 已通过，覆盖测试、typecheck 和 build。
 
@@ -27,13 +27,14 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 ## 剩余黄灯
 
 - `apps/web` 仍保留历史 `fnos-*` CSS 类名前缀；仅作为实现细节，不进入用户文案。
-- API、desktop、workers 目前仍是架构骨架，尚未接真实执行器、数据库和任务队列；前端已明确标注为本地 API 契约模式。
+- API、desktop、部分 workers 目前仍是架构骨架，尚未接数据库和任务队列；前端已明确标注为本地 API 契约模式。
+- `yt-dlp` 执行器已在 adapter/worker 层具备最小运行入口，但尚未接入 `apps/api` 的任务调度和前端实时状态。
 - 开发期 supervisor 已接管 Web/API 共同启停；workers 与 Electron main 复用 `packages/process-manager` 的接入仍待后续阶段完成。
 - `npm install` 报告 1 个 high severity 依赖审计项，尚未执行可能带来破坏性升级的 `npm audit fix --force`。
 
 ## 下一步
 
-1. 实现下载 worker 的 `yt-dlp` 进程执行、进度解析、错误归一和取消。
+1. 将 `apps/api` 下载任务从骨架记录接入 `download-worker`，打通进度、日志、取消和失败状态。
 2. 接入 SQLite 持久化任务、资产和日志。
 3. 评估 Electron 依赖审计项并制定非破坏性修复路径。
 
