@@ -1,6 +1,7 @@
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
 import { runDownloadWorkerJob, type DownloadWorkerJob } from '@mediatoolbox/download-worker'
 import { YtdlpRunError, YtdlpToolNotFoundError, type YtdlpProgressEvent } from '@mediatoolbox/downloader'
+import { transitionJob, canTransitionJob } from '@mediatoolbox/job-core'
 
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
@@ -12,6 +13,13 @@ export function abortDownload(taskId: string): void {
   activeAbortControllers.delete(taskId)
 }
 
+function updateJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof transitionJob>[1]) {
+  const idx = state.jobs.findIndex((j) => j.id === taskId)
+  if (idx < 0) return
+  const job = state.jobs[idx]!
+  if (canTransitionJob(job.status, nextStatus)) state.jobs[idx] = transitionJob(job, nextStatus)
+}
+
 export async function executeDownload(task: FetchTaskRecord, state: ApiState): Promise<void> {
   const controller = new AbortController()
   activeAbortControllers.set(task.id, controller)
@@ -20,6 +28,7 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
   task.started_at = nowSeconds()
   task.updated_at = task.started_at
   task.stage = '准备下载'
+  updateJob(state, task.id, 'running')
   addLog(state, 'INFO', 'downloader', `开始下载：${task.title}`)
 
   try {
@@ -57,6 +66,7 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       task.stage = '已取消'
       task.completed_at = nowSeconds()
       task.updated_at = task.completed_at
+      updateJob(state, task.id, 'canceled')
       addLog(state, 'WARNING', 'downloader', `下载已取消：${task.title}`)
     } else {
       task.status = 'completed'
@@ -64,6 +74,7 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       task.stage = '下载完成'
       task.completed_at = nowSeconds()
       task.updated_at = task.completed_at
+      updateJob(state, task.id, 'succeeded')
       addLog(state, 'INFO', 'downloader', `下载完成：${task.title}`)
     }
   } catch (error) {
@@ -75,17 +86,20 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       task.status = 'failed'
       task.stage = '未找到 yt-dlp'
       task.error = '未找到可用的 yt-dlp，请确认已安装并在 PATH 中。'
+      updateJob(state, task.id, 'failed')
       addLog(state, 'ERROR', 'downloader', `下载失败（yt-dlp 缺失）：${task.title}`)
     } else if (error instanceof YtdlpRunError) {
       task.status = 'failed'
       task.stage = `失败：${error.normalized.message}`
       task.error = error.normalized.message
+      updateJob(state, task.id, 'failed')
       addLog(state, 'ERROR', 'downloader', `下载失败：${task.title} — ${error.normalized.message}`)
     } else {
       const message = error instanceof Error ? error.message : String(error)
       task.status = 'failed'
       task.stage = '执行出错'
       task.error = message
+      updateJob(state, task.id, 'failed')
       addLog(state, 'ERROR', 'downloader', `下载出错：${task.title} — ${message}`)
     }
   }
