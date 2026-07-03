@@ -44,8 +44,8 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
       state: {},
     }
     state.fetchTasks.unshift(task)
-    state.jobs.unshift(createJobRecord({ id, kind: 'download.video', title: task.title }))
-    addLog(state, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
+    await state.db.jobs.create(createJobRecord({ id, kind: 'download.video', title: task.title }))
+    addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
 
     // 异步执行，不阻塞 HTTP 响应
     void executeDownload(task, state)
@@ -74,8 +74,8 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
         task.updated_at = nowSeconds()
         task.completed_at = task.updated_at
       }
-      updateJob(state, task.id, 'canceled')
-      addLog(state, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
+      await updateJob(state, task.id, 'canceled')
+      addLog(state.db, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
     }
     return { ok: true }
   })
@@ -85,8 +85,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     if (index >= 0) {
       const [removed] = state.fetchTasks.splice(index, 1)
       if (removed) {
-        const jobIdx = state.jobs.findIndex((job) => job.id === removed.id)
-        if (jobIdx >= 0) state.jobs.splice(jobIdx, 1)
+        await state.db.jobs.delete(removed.id)
       }
     }
     return { ok: true }
@@ -94,18 +93,12 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
   app.post<{ Body: { task_ids?: string[] }; Reply: OkResult }>('/api/fetch/tasks/clear', { schema: clearFetchTasksSchema }, async (request) => {
     const ids = new Set(request.body.task_ids ?? [])
-    const removedIds: string[] = []
     for (let index = state.fetchTasks.length - 1; index >= 0; index -= 1) {
       const task = state.fetchTasks[index]
       if (!task) continue
       if ((ids.size === 0 && isTerminalTask(task)) || ids.has(task.id) || ids.has(task.task_id)) {
         state.fetchTasks.splice(index, 1)
-        removedIds.push(task.id)
       }
-    }
-    for (let index = state.jobs.length - 1; index >= 0; index -= 1) {
-      const job = state.jobs[index]
-      if (job && removedIds.includes(job.id)) state.jobs.splice(index, 1)
     }
     return { ok: true }
   })
