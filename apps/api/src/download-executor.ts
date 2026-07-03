@@ -107,9 +107,10 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
   }
 }
 
-function buildDownloadJob(task: FetchTaskRecord): DownloadWorkerJob {
+export function buildDownloadJob(task: FetchTaskRecord): DownloadWorkerJob {
   const params = task.params as Record<string, unknown>
-  const url = typeof params.url === 'string' ? params.url : ''
+  const urls = Array.isArray(params.urls) ? params.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+  const url = typeof params.url === 'string' && params.url.trim().length > 0 ? params.url.trim() : (urls[0]?.trim() ?? '')
   const mode = params.mode === 'audio' ? 'audio' : params.mode === 'subtitles' ? 'subtitles' : 'video'
   return { url, mode, outputTemplate: '%(title)s.%(ext)s' }
 }

@@ -11,5 +11,8 @@ export async function fetchSystemRuntimeMetrics() {
 }
 
 export async function shutdownSystem() {
-  return apiRequest<{ ok: boolean }>('/api/system/shutdown', { method: 'POST' })
+  return apiRequest<{ ok: boolean }>('/api/system/shutdown', {
+    method: 'POST',
+    headers: { 'x-mediatoolbox-shutdown': 'desktop' },
+  })
 }

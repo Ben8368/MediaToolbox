@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import type { FetchTaskRecord } from '@mediatoolbox/contracts'
+
 import { buildApiServer } from './app.js'
+import { buildDownloadJob } from './download-executor.js'
 
 describe('api skeleton contract', () => {
   it('serves health and app metadata', async () => {
@@ -127,6 +130,112 @@ describe('api skeleton contract', () => {
     const stillExists = jobsAfter.json<{ jobs: Array<{ id: string }> }>().jobs.some((j) => j.id === taskId)
 
     expect(stillExists).toBe(false)
+    await app.close()
+  })
+
+  it('maps urls payloads to the worker download URL', () => {
+    const job = buildDownloadJob({
+      id: 'task-1',
+      task_id: 'task-1',
+      title: 'task',
+      source_url: 'https://example.com/a',
+      status: 'pending',
+      progress: 0,
+      stage: 'pending',
+      created_at: 1,
+      updated_at: 1,
+      started_at: null,
+      completed_at: null,
+      params: { urls: [' https://example.com/a ', 'https://example.com/b'] },
+    } satisfies FetchTaskRecord)
+
+    expect(job.url).toBe('https://example.com/a')
+  })
+
+  it('clearing fetch task records also removes corresponding jobs', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { urls: ['https://example.com/video'] },
+    })
+    const taskId = created.json<{ task_id: string }>().task_id
+
+    await app.inject({ method: 'POST', url: `/api/fetch/tasks/${taskId}/cancel` })
+    await app.inject({ method: 'POST', url: '/api/fetch/tasks/clear', payload: { task_ids: [taskId] } })
+
+    const jobsAfter = await app.inject({ method: 'GET', url: '/api/jobs' })
+    const stillExists = jobsAfter.json<{ jobs: Array<{ id: string }> }>().jobs.some((j) => j.id === taskId)
+
+    expect(stillExists).toBe(false)
+    await app.close()
+  })
+
+  it('rejects unsafe transcode paths before invoking ffmpeg', async () => {
+    const app = buildApiServer()
+
+    const drivePath = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: { inputPath: 'C:/Users/demo/input.mov', outputPath: '/Workspace/Exports/out.mp4' },
+    })
+    const outsideExports = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: { inputPath: '/Workspace/README.txt', outputPath: '/Workspace/out.mp4' },
+    })
+
+    expect(drivePath.statusCode).toBe(400)
+    expect(outsideExports.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('updates workspace state instead of returning a fake success', async () => {
+    const app = buildApiServer()
+
+    const updated = await app.inject({
+      method: 'PUT',
+      url: '/api/filebrowser/workspace',
+      payload: { workspace: '/Workspace/ProjectA' },
+    })
+    const workspace = await app.inject({ method: 'GET', url: '/api/filebrowser/workspace' })
+    const directory = await app.inject({
+      method: 'POST',
+      url: '/api/filebrowser/list',
+      payload: { directory: '/Workspace/ProjectA' },
+    })
+
+    expect(updated.json()).toMatchObject({ ok: true, workspace: '/Workspace/ProjectA' })
+    expect(workspace.json()).toMatchObject({ ok: true, project_root: '/Workspace/ProjectA' })
+    expect(directory.json()).toMatchObject({ ok: true, path: '/Workspace/ProjectA' })
+    await app.close()
+  })
+
+  it('restores file browser trash entries and rejects non-empty directory deletes', async () => {
+    const app = buildApiServer()
+
+    await app.inject({ method: 'DELETE', url: '/api/filebrowser/path', payload: { path: '/Workspace/README.txt', to_trash: true } })
+    const trash = await app.inject({ method: 'GET', url: '/api/filebrowser/trash' })
+    const trashId = trash.json<{ items: Array<{ id: string }> }>().items[0]!.id
+    await app.inject({ method: 'POST', url: `/api/filebrowser/trash/${trashId}/restore` })
+    const root = await app.inject({ method: 'POST', url: '/api/filebrowser/list', payload: { directory: '/Workspace' } })
+
+    await app.inject({ method: 'POST', url: '/api/filebrowser/mkdir', payload: { path: '/Workspace/Downloads/Nested' } })
+    const nonEmptyDelete = await app.inject({ method: 'DELETE', url: '/api/filebrowser/path', payload: { path: '/Workspace/Downloads', to_trash: true } })
+
+    expect(root.json<{ files: Array<{ name: string }> }>().files.some((file) => file.name === 'README.txt')).toBe(true)
+    expect(nonEmptyDelete.json()).toMatchObject({ ok: false })
+    await app.close()
+  })
+
+  it('requires an explicit local shutdown marker', async () => {
+    const app = buildApiServer()
+
+    const response = await app.inject({ method: 'POST', url: '/api/system/shutdown' })
+
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toMatchObject({ ok: false })
     await app.close()
   })
 })

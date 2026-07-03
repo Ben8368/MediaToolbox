@@ -69,6 +69,10 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
     return slice
   })
   app.post<{ Reply: OkResult }>('/api/system/shutdown', async (_request, reply) => {
+    if (_request.headers['x-mediatoolbox-shutdown'] !== 'desktop') {
+      reply.status(403)
+      return { ok: false, message: '缺少本地关机确认标记。' }
+    }
     reply.send({ ok: true, message: '正在关闭本地服务...' })
     setTimeout(() => {
       if (SUPERVISOR_SHUTDOWN_URL) {

@@ -25,9 +25,11 @@ export function normalizeWorkspacePath(input: string | undefined, workspaceRoot 
   }
 
   if (normalized.startsWith('/')) {
-    const rootName = workspaceRoot.replace(/^\//, '')
-    if (segments[0] !== rootName) throw new WorkspacePathError('路径必须位于工作区内。')
-    return `/${segments.join('/')}`
+    const candidate = `/${segments.join('/')}`
+    if (candidate !== workspaceRoot && !candidate.startsWith(`${workspaceRoot}/`)) {
+      throw new WorkspacePathError('路径必须位于工作区内。')
+    }
+    return candidate
   }
 
   return `${workspaceRoot}/${segments.join('/')}`

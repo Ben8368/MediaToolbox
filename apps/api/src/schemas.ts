@@ -72,3 +72,17 @@ export const clearFetchTasksSchema = {
     },
   },
 } as const
+
+export const transcodeJobCreateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['inputPath', 'outputPath'],
+    properties: {
+      inputPath: { type: 'string', minLength: 1 },
+      outputPath: { type: 'string', minLength: 1 },
+      preset: { type: 'string', enum: ['mp4-h264-aac', 'audio-mp3', 'copy'] },
+      title: { type: 'string' },
+    },
+  },
+} as const
