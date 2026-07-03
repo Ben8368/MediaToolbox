@@ -13,7 +13,7 @@ export function abortDownload(taskId: string): void {
   activeAbortControllers.delete(taskId)
 }
 
-function updateJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof transitionJob>[1]) {
+export function updateJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof transitionJob>[1]) {
   const idx = state.jobs.findIndex((j) => j.id === taskId)
   if (idx < 0) return
   const job = state.jobs[idx]!

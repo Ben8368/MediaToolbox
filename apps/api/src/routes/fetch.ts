@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify'
-import { createJobRecord, transitionJob } from '@mediatoolbox/job-core'
+import { createJobRecord } from '@mediatoolbox/job-core'
 import type { FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 import { clearFetchTasksSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
-import { executeDownload, abortDownload } from '../download-executor.js'
+import { executeDownload, abortDownload, updateJob } from '../download-executor.js'
 
 function titleFromDraft(draft: Record<string, unknown>) {
   const urls = Array.isArray(draft.urls) ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
@@ -74,11 +74,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
         task.updated_at = nowSeconds()
         task.completed_at = task.updated_at
       }
-      const jobIndex = state.jobs.findIndex((job) => job.id === task.id)
-      if (jobIndex >= 0) {
-        const job = state.jobs[jobIndex]!
-        if (job.status !== 'canceled') state.jobs[jobIndex] = transitionJob(job, 'canceled')
-      }
+      updateJob(state, task.id, 'canceled')
       addLog(state, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
     }
     return { ok: true }
