@@ -46,6 +46,20 @@
 - [ ] 文件库统一管理下载、转码和 PSD 产出（UI 联调待后续）。
 - [ ] 全局任务中心显示 worker 状态、进度、日志和失败原因（UI 联调待后续）。
 
+## Phase 4.5：浏览器网络能力层
+
+状态：**待开始**。
+
+目标：把现有真浏览器 app 沉淀为可复用的 Browser Network adapter，让下载、文件管理和后续新增 app 可以按浏览器网络行为执行受控上传下载，同时保留 worker adapter 处理媒体解析和后处理。
+
+- [ ] 在 `apps/desktop` 建立 browser session 管理边界，区分默认会话和应用隔离会话。
+- [ ] 接管 Electron 下载事件，支持下载目标目录、文件名冲突、进度、取消、失败原因和完成通知。
+- [ ] 建立受控文件选择 / 上传桥接，上传来源仅允许工作区内文件，并要求用户确认。
+- [ ] 在 `apps/api` 冻结 Browser Network 任务契约，纳入统一 jobs、日志、权限校验和工作区路径约束。
+- [ ] 下载 app 增加双通道策略：普通网页资源走浏览器下载；视频、音频、字幕和后处理继续走 `yt-dlp` / worker。
+- [ ] 定义权限策略：下载、上传、弹窗、剪贴板、通知、跨域读取和 cookie 访问分别授权，默认不向 Web UI 暴露原始 cookie。
+- [ ] 补齐浏览器 app 的弹窗策略、错误页、标签页和生产打包资源加载验收。
+
 ## Phase 5：PS / PSD 工作台
 
 状态：**待开始**。
@@ -71,3 +85,5 @@
 | 010 | yt-dlp adapter | 执行入口已接入 |
 | 011 | ffmpeg adapter | 执行入口已接入 |
 | 012 | PSD 模版引擎 | engine 接口与 Photoshop JSX adapter 已建立 |
+| 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽和缩放已主观验收 |
+| 014 | Browser Network adapter | 已纳入 Phase 4.5，待开始 |
