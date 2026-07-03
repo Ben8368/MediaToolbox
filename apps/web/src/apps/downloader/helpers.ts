@@ -122,11 +122,6 @@ export function getTaskDownloadFilePath(task: DownloadTask): string {
   return getTaskVideoFilePath(task) || getTaskSubtitleFilePath(task)
 }
 
-/** 是否可向工作台跳转并做「AI 分析字幕」 */
-export function canWorkbenchAiAnalyze(task: DownloadTask): boolean {
-  return task.status === 'completed' && Boolean(getTaskSubtitleFilePath(task))
-}
-
 /** 是否可向工作台跳转并做「AI 切片 / 导出片段」（需本地视频） */
 export function canWorkbenchAiSlice(task: DownloadTask): boolean {
   return task.status === 'completed' && Boolean(getTaskVideoFilePath(task))

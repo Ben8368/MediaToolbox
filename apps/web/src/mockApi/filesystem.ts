@@ -18,7 +18,7 @@ type MockTrashItem = {
   id: string
   name: string
   original_path: string
-  deleted_at: string
+  deleted_at: number
   type: 'directory' | 'file'
   size: number
   stored_path: string
@@ -165,7 +165,7 @@ export async function deleteFilebrowserPath(path: string, toTrash = true) {
     id: `trash-${randomId()}`,
     name: normalized.split('/').filter(Boolean).pop() || normalized,
     original_path: normalized,
-    deleted_at: new Date().toISOString(),
+    deleted_at: Math.floor(Date.now() / 1000),
     type: isDirectory ? 'directory' : 'file',
     size: trashEntrySize(snapshot),
     stored_path: normalized,

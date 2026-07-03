@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 1 前端迁回完成 → Phase 2 大项目骨架与 API 契约对齐完成
-> **最近更新：** 2026-07-03，`apps/api` 路由按领域拆分，补充基础 schema、统一错误响应和虚拟工作区路径边界；前端文案改为本地 API 契约模式
+> **最近更新：** 2026-07-03，统一 `TrashEntry.deleted_at`、`JobRecord.createdAt/updatedAt` 为 Unix 秒 number；清除 `ai_analyze` 死代码存根
 
 ## 项目定位
 
@@ -35,8 +35,7 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 1. 将兼容 `fetch/tasks` 下载流内部收敛到 `packages/job-core` 的统一任务状态机。
 2. 实现下载 worker 的 `yt-dlp` 进程执行、进度解析、错误归一和取消。
 3. 接入 SQLite 持久化任务、资产和日志。
-4. 统一任务、日志、资产的时间戳策略，并补充持久化迁移测试。
-5. 评估 Electron 依赖审计项并制定非破坏性修复路径。
+4. 评估 Electron 依赖审计项并制定非破坏性修复路径。
 
 ## 常用命令
 

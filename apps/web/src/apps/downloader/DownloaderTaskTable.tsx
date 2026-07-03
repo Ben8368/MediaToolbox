@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 
 import { StatusIcon } from '@/apps/downloader/icons'
 import {
-  canWorkbenchAiAnalyze,
   formatRelativeTime,
   getTaskDisplayTitle,
   getTaskDownloadFilePath,
@@ -87,16 +86,6 @@ export function DownloaderTaskTable({
             role="menu"
             aria-label="任务扩展操作"
           >
-            <button
-              type="button"
-              role="menuitem"
-              className="dl-row-menu-item"
-              disabled={!canWorkbenchAiAnalyze(menu.task)}
-              title={canWorkbenchAiAnalyze(menu.task) ? '分析字幕并可选导出片段' : '需要任务已完成且存在字幕文件路径'}
-              onClick={() => runAction('ai_analyze', menu.task)}
-            >
-              字幕分析
-            </button>
             <button
               type="button"
               role="menuitem"

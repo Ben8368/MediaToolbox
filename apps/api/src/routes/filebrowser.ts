@@ -11,7 +11,7 @@ import type {
 
 import { filebrowserDeleteSchema, filebrowserListSchema, filebrowserMkdirSchema, setWorkspaceSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
-import { addLog, entryName, formatLogTime } from '../utils.js'
+import { addLog, entryName, formatLogTime, nowSeconds } from '../utils.js'
 import { normalizeWorkspacePath, parentWorkspacePath } from '../workspace-path.js'
 
 export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState) {
@@ -59,13 +59,13 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     if (fileIndex >= 0) {
       const [file] = state.files.splice(fileIndex, 1)
       if (file && request.body.to_trash !== false) {
-        state.trash.unshift({ id: `trash-${Date.now()}`, name: file.name, original_path: file.path, deleted_at: new Date().toISOString(), type: 'file', size: file.size, stored_path: file.path })
+        state.trash.unshift({ id: `trash-${Date.now()}`, name: file.name, original_path: file.path, deleted_at: nowSeconds(), type: 'file', size: file.size, stored_path: file.path })
       }
       return { ok: true }
     }
     if (!state.folders.delete(path)) return { ok: false, message: '路径不存在。' }
     if (request.body.to_trash !== false) {
-      state.trash.unshift({ id: `trash-${Date.now()}`, name: entryName(path), original_path: path, deleted_at: new Date().toISOString(), type: 'directory', size: 0, stored_path: path })
+      state.trash.unshift({ id: `trash-${Date.now()}`, name: entryName(path), original_path: path, deleted_at: nowSeconds(), type: 'directory', size: 0, stored_path: path })
     }
     return { ok: true }
   })

@@ -40,7 +40,7 @@ export type TrashEntry = {
   id: string
   name: string
   original_path: string
-  deleted_at: string
+  deleted_at: number
   type: 'directory' | 'file'
   size: number
   stored_path: string

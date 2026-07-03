@@ -31,8 +31,8 @@ export type JobRecord = {
   status: JobStatus
   title: string
   progress?: JobProgress
-  createdAt: string
-  updatedAt: string
+  createdAt: number
+  updatedAt: number
   errorMessage?: string
 }
 
@@ -132,7 +132,7 @@ export type TrashEntry = {
   id: string
   name: string
   original_path: string
-  deleted_at: string
+  deleted_at: number
   type: 'directory' | 'file'
   size: number
   stored_path: string

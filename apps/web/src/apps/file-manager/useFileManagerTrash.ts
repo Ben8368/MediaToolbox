@@ -26,7 +26,7 @@ export function useFileManagerTrash({ currentPath, setError, enterTrashView }: U
     name: item.name,
     path: item.id,
     size: item.size,
-    modified: item.deleted_at,
+    modified: new Date(item.deleted_at * 1000).toISOString().slice(0, 19).replace('T', ' '),
     type: item.type,
     original_path: item.original_path,
   })), [trashItems])

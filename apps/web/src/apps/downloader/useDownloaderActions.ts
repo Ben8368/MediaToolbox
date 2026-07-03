@@ -119,9 +119,6 @@ export function useDownloaderActions({
           setActionError(err instanceof Error ? err.message : '重试任务失败')
         }
       }
-      if (action === 'ai_analyze') {
-        setActionError('字幕分析功能暂未接入。')
-      }
     },
     [onOptimisticTaskCreated, refreshLists, setOptimisticTasks],
   )

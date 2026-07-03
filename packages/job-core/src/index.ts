@@ -22,19 +22,19 @@ export function transitionJob(job: JobRecord, nextStatus: JobStatus, now = new D
   return {
     ...job,
     status: nextStatus,
-    updatedAt: now.toISOString(),
+    updatedAt: Math.floor(now.getTime() / 1000),
   }
 }
 
 export function createJobRecord(input: { id: string; kind: JobKind; title: string; now?: Date }): JobRecord {
-  const now = (input.now ?? new Date()).toISOString()
+  const nowSec = Math.floor((input.now ?? new Date()).getTime() / 1000)
 
   return {
     id: input.id,
     kind: input.kind,
     status: 'queued',
     title: input.title,
-    createdAt: now,
-    updatedAt: now,
+    createdAt: nowSec,
+    updatedAt: nowSec,
   }
 }
