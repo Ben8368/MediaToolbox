@@ -6,6 +6,7 @@
 @import './downloader.css';
 @import './browser.css';
 @import './transcode.css';
+@import './psd.css';
 
 .settings-app {
   display: grid;

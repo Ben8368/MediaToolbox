@@ -5,12 +5,14 @@ import {
   SidebarButton,
   TrashIcon,
 } from '@/apps/file-manager/controls'
+import type { AssetRecord } from '@/api/types'
 import type { DiskInfo } from '@/apps/file-manager/types'
 import { displayDiskName, formatSize, isPathOnDisk } from '@/apps/file-manager/utils'
 
 type FileManagerSidebarProps = {
   activeSection: 'local' | 'trash'
   disks: DiskInfo[]
+  assets: AssetRecord[]
   activeDiskPath: string
   currentPath: string
   onOpenLocal: () => void
@@ -21,6 +23,7 @@ type FileManagerSidebarProps = {
 export function FileManagerSidebar({
   activeSection,
   disks,
+  assets,
   activeDiskPath,
   currentPath,
   onOpenLocal,
@@ -31,6 +34,12 @@ export function FileManagerSidebar({
     <aside className="fm-sidebar">
       <nav className="fm-nav">
         <SidebarButton active={activeSection === 'local'} icon={<ChevronIcon />} label="我的文件" onClick={onOpenLocal} />
+        {assets.length > 0 && (
+          <div className="fm-asset-summary">
+            <strong>资产索引</strong>
+            <span>{assets.length} 项产出</span>
+          </div>
+        )}
         {activeSection === 'local' && disks.length > 0 && (
           <div className="fm-disk-list">
             {disks.map((disk) => (

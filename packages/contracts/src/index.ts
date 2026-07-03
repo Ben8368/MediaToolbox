@@ -49,6 +49,10 @@ export type AssetRecord = {
   updatedAt: string
 }
 
+export type AssetListResponse = OkResult & {
+  assets: AssetRecord[]
+}
+
 export type HealthResponse = {
   ok: boolean
   service: string
@@ -135,6 +139,19 @@ export type BrowserNetworkPermissionEvent = {
   permission: BrowserNetworkPermissionKind
   decision: BrowserNetworkPermissionDecision
   reason?: string
+}
+
+export type BrowserNetworkUploadSelection = {
+  view_id: string
+  session_id: string
+  filename: string
+  path: string
+  size: number
+  confirmed: boolean
+}
+
+export type BrowserNetworkUploadSelectionResponse = OkResult & {
+  selection?: BrowserNetworkUploadSelection
 }
 
 export type TaskListResponse = OkResult & {

@@ -1,8 +1,9 @@
 import { PLATFORM_OPTIONS } from '@/apps/downloader/constants'
-import type { CookieBrowser, DownloadPlatform, PlatformOption, SubtitleFormat } from '@/apps/downloader/types'
+import type { CookieBrowser, DownloadChannel, DownloadPlatform, PlatformOption, SubtitleFormat } from '@/apps/downloader/types'
 
 type DownloaderAddFormProps = {
   taskUrl: string
+  taskChannel: DownloadChannel
   taskPlatform: DownloadPlatform
   taskSubtitles: boolean
   taskOutputDir: string
@@ -14,6 +15,7 @@ type DownloaderAddFormProps = {
   addingTask: boolean
   submitError: string
   onTaskUrlChange: (value: string) => void
+  onTaskChannelChange: (value: DownloadChannel) => void
   onTaskPlatformChange: (value: DownloadPlatform) => void
   onTaskSubtitlesChange: (value: boolean) => void
   onTaskOutputDirChange: (value: string) => void
@@ -28,6 +30,7 @@ type DownloaderAddFormProps = {
 
 export function DownloaderAddForm({
   taskUrl,
+  taskChannel,
   taskPlatform,
   taskSubtitles,
   taskOutputDir,
@@ -39,6 +42,7 @@ export function DownloaderAddForm({
   addingTask,
   submitError,
   onTaskUrlChange,
+  onTaskChannelChange,
   onTaskPlatformChange,
   onTaskSubtitlesChange,
   onTaskOutputDirChange,
@@ -65,24 +69,40 @@ export function DownloaderAddForm({
 
       <div className="dl-form-row">
         <div className="dl-field">
+          <label>任务通道</label>
+          <select value={taskChannel} onChange={(event) => onTaskChannelChange(event.target.value as DownloadChannel)}>
+            <option value="media">媒体解析（yt-dlp）</option>
+            <option value="browser">浏览器资源（Browser Network）</option>
+          </select>
+          <small className="dl-field-hint">
+            普通网页文件、需要登录态跳转链的资源走浏览器通道；视频、音频、字幕和后处理继续走媒体解析。
+          </small>
+        </div>
+        <div className="dl-field" />
+      </div>
+
+      <div className="dl-form-row">
+        <div className="dl-field">
           <label>平台</label>
-          <select value={taskPlatform} onChange={(event) => onTaskPlatformChange(event.target.value as DownloadPlatform)}>
+          <select value={taskPlatform} disabled={taskChannel === 'browser'} onChange={(event) => onTaskPlatformChange(event.target.value as DownloadPlatform)}>
             {PLATFORM_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
-          <small className="dl-field-hint">{selectedPlatform.hint}</small>
+          <small className="dl-field-hint">{taskChannel === 'browser' ? '浏览器资源通道不解析媒体平台参数。' : selectedPlatform.hint}</small>
         </div>
         <div className="dl-field">
           <label>字幕</label>
           <select
             value={String(selectedPlatform.supportsSubtitles ? taskSubtitles : false)}
-            disabled={!selectedPlatform.supportsSubtitles}
+            disabled={taskChannel === 'browser' || !selectedPlatform.supportsSubtitles}
             onChange={(event) => onTaskSubtitlesChange(event.target.value === 'true')}
           >
-            {selectedPlatform.supportsSubtitles ? (
+            {taskChannel === 'browser' ? (
+              <option value="false">浏览器资源不处理字幕</option>
+            ) : selectedPlatform.supportsSubtitles ? (
               <>
                 <option value="true">下载字幕</option>
                 <option value="false">仅视频</option>
@@ -91,7 +111,7 @@ export function DownloaderAddForm({
               <option value="false">当前平台不提供字幕</option>
             )}
           </select>
-          {!selectedPlatform.supportsSubtitles && (
+          {taskChannel !== 'browser' && !selectedPlatform.supportsSubtitles && (
             <small className="dl-field-hint">已自动切换为仅视频，适合大多数短视频平台。</small>
           )}
         </div>
@@ -120,6 +140,7 @@ export function DownloaderAddForm({
           <label>登录态</label>
           <select
             value={taskCookieBrowser}
+            disabled={taskChannel === 'browser'}
             onChange={(event) => onTaskCookieBrowserChange(event.target.value as CookieBrowser)}
           >
             <option value="none">不使用浏览器登录态</option>
@@ -128,7 +149,9 @@ export function DownloaderAddForm({
             <option value="firefox">Firefox</option>
           </select>
           <small className="dl-field-hint">
-            遇到 YouTube 登录或机器人验证时，选择已登录的浏览器。使用浏览器登录态前需完全退出该浏览器，否则无法读取 Cookie；公开视频通常无需登录态。
+            {taskChannel === 'browser'
+              ? '浏览器资源通道使用 MediaToolbox 桌面内核会话，不向 Web UI 暴露 cookie。'
+              : '遇到 YouTube 登录或机器人验证时，选择已登录的浏览器。使用浏览器登录态前需完全退出该浏览器，否则无法读取 Cookie；公开视频通常无需登录态。'}
           </small>
         </div>
       </div>
@@ -138,25 +161,27 @@ export function DownloaderAddForm({
           <label>视频编码</label>
           <select
             value={String(taskPreferH264)}
-            disabled={taskNoTranscode}
+            disabled={taskChannel === 'browser' || taskNoTranscode}
             onChange={(event) => onTaskPreferH264Change(event.target.value === 'true')}
           >
             <option value="true">优先 H264（兼容性好）</option>
             <option value="false">最高规格原始编码</option>
           </select>
           <small className="dl-field-hint">
-            {taskNoTranscode
+            {taskChannel === 'browser'
+              ? '浏览器资源通道只负责受控下载，不做媒体转码。'
+              : taskNoTranscode
               ? '已选"不转码"，将保留最高规格原始编码。'
               : '优先选已是 H264 的最高规格；若最高规格非 H264，则下载后转码为 H264/MP4。'}
           </small>
         </div>
         <div className="dl-field">
           <label>转码</label>
-          <select value={String(taskNoTranscode)} onChange={(event) => onTaskNoTranscodeChange(event.target.value === 'true')}>
+          <select value={String(taskNoTranscode)} disabled={taskChannel === 'browser'} onChange={(event) => onTaskNoTranscodeChange(event.target.value === 'true')}>
             <option value="false">按需转码为 H264/MP4</option>
             <option value="true">不转码（保留原始格式）</option>
           </select>
-          <small className="dl-field-hint">选择"不转码"可加快完成，但可能得到 VP9/AV1 等编码。</small>
+          <small className="dl-field-hint">{taskChannel === 'browser' ? '浏览器通道下载完成后会进入文件库。' : '选择"不转码"可加快完成，但可能得到 VP9/AV1 等编码。'}</small>
         </div>
       </div>
 
@@ -165,7 +190,7 @@ export function DownloaderAddForm({
           <label>字幕格式</label>
           <select
             value={taskSubtitleFormat}
-            disabled={!selectedPlatform.supportsSubtitles || !taskSubtitles}
+            disabled={taskChannel === 'browser' || !selectedPlatform.supportsSubtitles || !taskSubtitles}
             onChange={(event) => onTaskSubtitleFormatChange(event.target.value as SubtitleFormat)}
           >
             <option value="srt">SRT（默认，通用）</option>
