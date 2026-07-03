@@ -1,0 +1,29 @@
+# Keep the build context small and reproducible.
+.git
+.github
+.agents
+.codex
+.tmp
+
+# Dependencies and build output are produced inside the image.
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/coverage
+
+# Local env and logs must never leak into the image.
+.env
+.env.*
+!.env.example
+*.log
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docs and governance aren't needed at build time.
+docs
+*.md

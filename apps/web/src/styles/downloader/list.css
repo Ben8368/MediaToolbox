@@ -1,0 +1,292 @@
+.dl-table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dl-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 18px;
+  padding-bottom: 8px;
+  scrollbar-gutter: stable;
+}
+
+.dl-table-scroll::-webkit-scrollbar { width: 4px; }
+.dl-table-scroll::-webkit-scrollbar-track { background: transparent; }
+.dl-table-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+
+/* 下载队列：无勾选框，状态图标贴近标题；末尾为行内菜单 */
+.dl-table--queue .dl-head,
+.dl-table--queue .dl-row {
+  grid-template-columns: 22px minmax(200px, 1fr) minmax(150px, 0.38fr) 104px 30px;
+  column-gap: 8px;
+}
+
+.dl-table--queue .dl-col-status {
+  justify-content: flex-end;
+}
+
+.dl-table--queue .dl-col-name:not(:has(small)) {
+  justify-content: center;
+}
+
+.dl-head,
+.dl-row {
+  display: grid;
+  /* 状态图标列；解密器等场景仍可能含勾选框 */
+  grid-template-columns: 32px minmax(220px, 1fr) minmax(170px, .42fr) 126px;
+  align-items: center;
+  column-gap: 14px;
+}
+
+.dl-head {
+  min-height: 40px;
+  padding-right: calc(18px + 10px);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  color: rgba(255,255,255,.42);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 下载器：表头与数据共用滚动容器，只需与 .dl-row 一致的右侧内边距 */
+.dl-table-scroll > .dl-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-right: 10px;
+  background: rgba(16, 17, 21, 0.96);
+}
+
+.dl-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.dl-body--detail-open {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.dl-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dl-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 18px;
+  padding-bottom: 8px;
+  scrollbar-gutter: stable;
+}
+
+.dl-list::-webkit-scrollbar { width: 4px; }
+.dl-list::-webkit-scrollbar-track { background: transparent; }
+.dl-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+
+.dl-row {
+  min-height: 46px;
+  padding-right: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  cursor: default;
+  font-size: 13px;
+}
+
+.dl-row:hover {
+  background: rgba(255,255,255,.035);
+}
+
+.dl-row--selected {
+  background: rgba(28,126,255,.12);
+}
+
+.dl-row--focused {
+  box-shadow: inset 0 0 0 1px rgba(77,171,255,.4);
+}
+
+.dl-row input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #2f8cff;
+  cursor: pointer;
+}
+
+.dl-col-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.dl-status-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.dl-status-icon--running { color: #54ffb7; }
+.dl-status-icon--pending { color: #ffcc66; }
+.dl-status-icon--completed { color: #4dabff; }
+.dl-status-icon--failed { color: #ff8a82; }
+.dl-status-icon--cancelled { color: rgba(255,255,255,.35); }
+
+.dl-col-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dl-col-name strong {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-col-name small {
+  color: rgba(255,255,255,.38);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-col-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dl-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,.06);
+  border-radius: 2px;
+  overflow: hidden;
+  min-width: 40px;
+}
+
+.dl-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a8fff, #5b9bff);
+  border-radius: 2px;
+  transition: width .3s ease;
+}
+
+.dl-progress-text {
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+  width: 42px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dl-col-time {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,.45);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  padding-inline-end: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dl-col-menu {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.dl-row-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,.38);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+
+.dl-row-menu-trigger:hover,
+.dl-row-menu-trigger--open {
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.92);
+}
+
+.dl-row-menu-trigger__icon {
+  display: block;
+}
+
+.dl-row-menu-portal {
+  position: fixed;
+  z-index: 4000;
+  width: 180px;
+  padding: 4px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(22,24,30,.98);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+
+.dl-row-menu-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.88);
+  text-align: left;
+  font-size: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.dl-row-menu-item:hover:not(:disabled) {
+  background: rgba(255,255,255,.06);
+}
+
+.dl-row-menu-item:disabled {
+  cursor: not-allowed;
+  color: rgba(255,255,255,.32);
+}
+
+.dl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  color: rgba(255,255,255,.35);
+  text-align: center;
+}
+
+.dl-empty-icon {
+  width: 100px;
+  height: 80px;
+  margin-bottom: 16px;
+  opacity: .6;
+}
+
+.dl-empty p {
+  font-size: 16px;
+  font-weight: 600;
+}
