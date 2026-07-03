@@ -19,6 +19,14 @@ export const DEFAULT_WINDOW_PRESET: WindowPreset = {
   y: 80,
 }
 
-export function getWindowPreset(_appType: string) {
+export function getWindowPreset(appType: string) {
+  if (appType === 'browser') {
+    return {
+      width: 1080,
+      height: 700,
+      x: 120,
+      y: 56,
+    }
+  }
   return DEFAULT_WINDOW_PRESET
 }

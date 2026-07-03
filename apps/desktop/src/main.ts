@@ -2,6 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
+import { registerBrowserViewIpcHandlers } from './browserViews.js'
+
 type ElectronModule = typeof import('electron')
 type DesktopRuntimeMode = 'development' | 'production'
 
@@ -97,8 +99,8 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
   })
 
   await electron.app.whenReady()
-  registerIpcHandlers(electron, config, () => apiProcess)
-  createMainWindow(electron, config)
+  const mainWindow = createMainWindow(electron, config)
+  registerIpcHandlers(electron, config, () => apiProcess, mainWindow)
   createTray(electron)
 
   electron.app.on('activate', () => {
@@ -122,6 +124,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(rootDir, 'apps', 'desktop', 'src', 'preload.cjs'),
     },
   })
 
@@ -134,7 +137,12 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
   return win
 }
 
-function registerIpcHandlers(electron: ElectronModule, config: DesktopShellConfig, getApiProcess: () => DesktopApiProcess | null) {
+function registerIpcHandlers(
+  electron: ElectronModule,
+  config: DesktopShellConfig,
+  getApiProcess: () => DesktopApiProcess | null,
+  mainWindow: import('electron').BrowserWindow,
+) {
   electron.ipcMain.handle('mediatoolbox:get-config', () => config)
   electron.ipcMain.handle('mediatoolbox:get-api-status', () => {
     const apiProcess = getApiProcess()
@@ -149,6 +157,7 @@ function registerIpcHandlers(electron: ElectronModule, config: DesktopShellConfi
     electron.app.quit()
     return { ok: true }
   })
+  registerBrowserViewIpcHandlers(electron, mainWindow)
 }
 
 function createTray(electron: ElectronModule) {
