@@ -29,8 +29,10 @@ Workers / adapters 负责：
 ## 2. 通用约定
 
 - 所有 API 错误返回用户可读 `message`。
+- 本地 API 统一错误响应为 `{ ok: false, message }`；schema 校验失败返回 400。
 - 前端请求必须有超时和失败提示。
 - 文件路径和系统操作由服务层校验，前端不自行绕过安全边界。
+- 文件浏览骨架使用虚拟 `/Workspace` 路径；真实文件系统接入前，服务层已拒绝 `..`、磁盘盘符、UNC 和工作区外路径。
 - 测试夹具响应结构应尽量贴近真实契约，避免组件感知数据来源。
 - 跨模块共享类型逐步收敛到 `packages/contracts`。
 
@@ -82,13 +84,17 @@ Workers / adapters 负责：
 
 说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实下载、真实文件系统操作、系统指标采集或任务队列执行器已接入。
 
-## 4. 启用真实 API
+当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace` 和 `POST /api/fetch/tasks/clear` 已加入基础 Fastify schema。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+
+## 4. 启用本地 API 契约模式
 
 默认请求同源 `/api`。如果本地 API 不与前端同源，在 `apps/web/.env.local` 或构建环境中设置：
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
+
+说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和骨架服务已启用，不表示真实下载、真实文件写入、真实系统指标或真实关机能力已经接入。
 
 ## 5. 迁移规则
 

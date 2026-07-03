@@ -47,4 +47,39 @@ describe('api skeleton contract', () => {
     })
     await app.close()
   })
+
+  it('rejects invalid fetch submissions with a readable error payload', async () => {
+    const app = buildApiServer()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { output_dir: 'downloads' },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ ok: false, message: '请求参数不符合 API 契约。' })
+    await app.close()
+  })
+
+  it('rejects workspace path escapes before real filesystem access is added', async () => {
+    const app = buildApiServer()
+
+    const traversal = await app.inject({
+      method: 'POST',
+      url: '/api/filebrowser/list',
+      payload: { directory: '../outside' },
+    })
+    const drivePath = await app.inject({
+      method: 'POST',
+      url: '/api/filebrowser/mkdir',
+      payload: { path: 'C:/Users/demo' },
+    })
+
+    expect(traversal.statusCode).toBe(400)
+    expect(traversal.json()).toMatchObject({ ok: false, message: '路径不能包含 . 或 .. 段。' })
+    expect(drivePath.statusCode).toBe(400)
+    expect(drivePath.json()).toMatchObject({ ok: false, message: '路径必须位于工作区内，不能使用磁盘盘符。' })
+    await app.close()
+  })
 })
