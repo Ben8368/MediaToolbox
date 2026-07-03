@@ -35,6 +35,7 @@ function memoryPercent() {
 
 function buildMetrics(state: ApiState): RuntimeMetrics {
   const activeTasks = state.fetchTasks.filter((task) => !isTerminalTask(task))
+  const activeBrowserDownloads = state.browserDownloads.filter((download) => download.status === 'pending' || download.status === 'running')
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
@@ -53,24 +54,39 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
     services: [
       service('api', '本地 API', 'Fastify API 正在运行。'),
       service('downloader', '下载服务', '下载任务已接入 yt-dlp worker 执行入口。'),
+      service('browser-network', '浏览器网络', '浏览器下载事件、权限审计和工作区写入边界已接入。'),
       service('file-manager', '文件管理', `虚拟工作区映射到受控本地目录：${state.physicalWorkspaceRoot}`),
       service('logs', '日志服务', '日志、通知已接入 SQLite 状态。'),
     ],
-    tasks: activeTasks.map((task) => ({
-      id: task.id,
-      name: task.title,
-      source: task.source_url,
-      type: 'download',
-      status: task.status,
-      status_label: task.status === 'pending' ? '等待中' : task.status,
-      stage: task.stage,
-      progress: task.progress,
-      can_cancel: task.status === 'pending' || task.status === 'running',
-    })),
+    tasks: [
+      ...activeTasks.map((task) => ({
+        id: task.id,
+        name: task.title,
+        source: task.source_url,
+        type: 'download',
+        status: task.status,
+        status_label: task.status === 'pending' ? '等待中' : task.status,
+        stage: task.stage,
+        progress: task.progress,
+        can_cancel: task.status === 'pending' || task.status === 'running',
+      })),
+      ...activeBrowserDownloads.map((download) => ({
+        id: download.id,
+        name: download.filename,
+        source: download.source_url,
+        type: 'browser-download',
+        status: download.status,
+        status_label: download.status === 'running' ? '浏览器下载中' : '等待中',
+        stage: download.target_path,
+        progress: download.total_bytes > 0 ? Math.round((download.received_bytes / download.total_bytes) * 100) : 0,
+        can_cancel: true,
+      })),
+    ],
     task_summary: {
-      active_downloads: activeTasks.length,
-      total_download_records: state.fetchTasks.length,
-      terminal_download_records: state.fetchTasks.filter(isTerminalTask).length,
+      active_downloads: activeTasks.length + activeBrowserDownloads.length,
+      total_download_records: state.fetchTasks.length + state.browserDownloads.length,
+      terminal_download_records: state.fetchTasks.filter(isTerminalTask).length
+        + state.browserDownloads.filter((download) => download.status === 'succeeded' || download.status === 'failed' || download.status === 'canceled').length,
     },
     log_mode: 'sqlite-local',
   }

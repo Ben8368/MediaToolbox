@@ -288,4 +288,75 @@ describe('api skeleton contract', () => {
     expect(response.json()).toMatchObject({ ok: false })
     await app.close()
   })
+
+  it('records browser network downloads as jobs and workspace assets', async () => {
+    const app = buildApiServer()
+    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/browser-network/downloads',
+      headers,
+      payload: {
+        source_url: 'https://example.com/file.zip',
+        url_chain: ['https://example.com/file.zip'],
+        filename: 'file.zip',
+        target_path: '/Workspace/Downloads/file.zip',
+        view_id: 'browser',
+        session_id: 'mediatoolbox-browser-browser',
+        total_bytes: 100,
+        mime_type: 'application/zip',
+        user_gesture: true,
+      },
+    })
+    const download = created.json<{ download: { id: string; job_id: string } }>().download
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/api/browser-network/downloads/${download.id}`,
+      headers,
+      payload: { status: 'succeeded', received_bytes: 100, total_bytes: 100 },
+    })
+    const job = await app.inject({ method: 'GET', url: `/api/jobs/${download.job_id}` })
+
+    expect(created.statusCode).toBe(200)
+    expect(updated.json()).toMatchObject({ ok: true, download: expect.objectContaining({ status: 'succeeded' }) })
+    expect(job.json()).toMatchObject({
+      ok: true,
+      job: expect.objectContaining({
+        kind: 'browser.download',
+        status: 'succeeded',
+        progress: { current: 100, total: 100, unit: 'bytes' },
+      }),
+    })
+    await app.close()
+  })
+
+  it('protects browser network write endpoints and target paths', async () => {
+    const app = buildApiServer()
+    const payload = {
+      source_url: 'https://example.com/file.zip',
+      filename: 'file.zip',
+      target_path: '/Workspace/Exports/file.zip',
+      view_id: 'browser',
+      session_id: 'mediatoolbox-browser-browser',
+    }
+
+    const missingMarker = await app.inject({
+      method: 'POST',
+      url: '/api/browser-network/downloads',
+      payload: { ...payload, target_path: '/Workspace/Downloads/file.zip' },
+    })
+    const wrongTarget = await app.inject({
+      method: 'POST',
+      url: '/api/browser-network/downloads',
+      headers: { 'x-mediatoolbox-browser-network': 'desktop' },
+      payload,
+    })
+
+    expect(missingMarker.statusCode).toBe(403)
+    expect(wrongTarget.statusCode).toBe(400)
+    expect(wrongTarget.json()).toMatchObject({ ok: false, message: '浏览器下载只能写入工作区 Downloads 目录。' })
+    await app.close()
+  })
 })

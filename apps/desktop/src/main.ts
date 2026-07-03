@@ -157,7 +157,11 @@ function registerIpcHandlers(
     electron.app.quit()
     return { ok: true }
   })
-  registerBrowserViewIpcHandlers(electron, mainWindow)
+  registerBrowserViewIpcHandlers(electron, mainWindow, {
+    apiUrl: config.apiUrl,
+    rootDir,
+    env: process.env,
+  })
 }
 
 function createTray(electron: ElectronModule) {

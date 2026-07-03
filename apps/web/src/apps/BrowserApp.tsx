@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import {
   getDesktopBrowserBridge,
   type DesktopBrowserBounds,
+  type DesktopBrowserDownloadEvent,
+  type DesktopBrowserPermissionEvent,
   type DesktopBrowserResult,
   type DesktopBrowserState,
 } from '@/desktopBrowser'
@@ -12,6 +14,7 @@ const HOME_URL = 'about:blank'
 
 const initialState: DesktopBrowserState = {
   id: '',
+  sessionId: '',
   url: HOME_URL,
   title: 'Browser',
   loading: false,
@@ -31,6 +34,8 @@ export function BrowserApp() {
   const [address, setAddress] = useState('')
   const [browserState, setBrowserState] = useState<DesktopBrowserState>({ ...initialState, id: viewId })
   const [status, setStatus] = useState({ tone: 'pending', text: '正在连接桌面浏览器内核' })
+  const [downloads, setDownloads] = useState<DesktopBrowserDownloadEvent[]>([])
+  const [permissions, setPermissions] = useState<DesktopBrowserPermissionEvent[]>([])
 
   const handleResult = useCallback(<T,>(result: DesktopBrowserResult<T>): T | undefined => {
     if (result.ok) return result.data
@@ -66,12 +71,27 @@ export function BrowserApp() {
     })
 
     const unsubscribe = bridge.onEvent((event) => {
-      if (event.type !== 'state' || event.state.id !== viewId) return
-      setBrowserState(event.state)
-      setAddress(event.state.url === HOME_URL ? '' : event.state.url)
-      setStatus(event.state.error
-        ? { tone: 'error', text: event.state.error }
-        : { tone: event.state.loading ? 'pending' : 'online', text: event.state.loading ? '正在载入' : '页面已载入' })
+      if (event.type === 'state') {
+        if (event.state.id !== viewId) return
+        setBrowserState(event.state)
+        setAddress(event.state.url === HOME_URL ? '' : event.state.url)
+        setStatus(event.state.error
+          ? { tone: 'error', text: event.state.error }
+          : { tone: event.state.loading ? 'pending' : 'online', text: event.state.loading ? '正在载入' : '页面已载入' })
+        return
+      }
+
+      if (event.type === 'download') {
+        if (event.download.viewId !== viewId) return
+        setDownloads((items) => [event.download, ...items.filter((item) => item.id !== event.download.id)].slice(0, 6))
+        setStatus({ tone: event.download.status === 'failed' ? 'error' : 'online', text: downloadStatusText(event.download) })
+        return
+      }
+
+      if (event.type === 'permission') {
+        if (event.permission.view_id !== viewId) return
+        setPermissions((items) => [event.permission, ...items].slice(0, 4))
+      }
     })
 
     return () => {
@@ -131,6 +151,20 @@ export function BrowserApp() {
     })
   }, [bridge, handleResult, viewId])
 
+  const downloadCurrentPage = useCallback(() => {
+    if (!bridge || browserState.url === HOME_URL || browserState.error) return
+    setStatus({ tone: 'pending', text: '正在创建浏览器下载' })
+    void bridge.downloadUrl(viewId, browserState.url).then((result) => {
+      const state = handleResult(result)
+      if (state) setBrowserState(state)
+    })
+  }, [bridge, browserState.error, browserState.url, handleResult, viewId])
+
+  const cancelDownload = useCallback((downloadId: string) => {
+    if (!bridge) return
+    void bridge.cancelDownload(downloadId).then(handleResult)
+  }, [bridge, handleResult])
+
   const showOverlay = !bridge || !isActive || browserState.url === HOME_URL || Boolean(browserState.error)
 
   return (
@@ -142,11 +176,32 @@ export function BrowserApp() {
             <span className="browser-type__text"><strong>浏览器</strong></span>
           </button>
         </div>
-        <div className="browser-sidebar-card">
-          <span>桌面内核</span>
-          <p>页面由 Electron WebContentsView 承载，窗口位置跟随 NAS 桌面同步。</p>
-        </div>
-      </aside>
+          <div className="browser-sidebar-card">
+            <span>桌面内核</span>
+            <p>页面由 Electron WebContentsView 承载，窗口位置跟随 NAS 桌面同步。</p>
+          </div>
+          <div className="browser-sidebar-card browser-network-card">
+            <span>网络事件</span>
+            <div className="browser-network-list">
+              {downloads.length === 0 && permissions.length === 0 && <p>暂无下载或权限事件。</p>}
+              {downloads.map((download) => (
+                <div className="browser-network-item" key={download.id}>
+                  <strong>{download.filename}</strong>
+                  <small>{downloadStatusText(download)} · {download.targetPath}</small>
+                  {download.status === 'running' && (
+                    <button type="button" onClick={() => cancelDownload(download.id)}>取消</button>
+                  )}
+                </div>
+              ))}
+              {permissions.map((permission, index) => (
+                <div className="browser-network-item browser-network-item--permission" key={`${permission.session_id}-${permission.permission}-${index}`}>
+                  <strong>{permission.permission}</strong>
+                  <small>{permission.decision === 'granted' ? '已允许' : '已拒绝'} · {permission.origin}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+        </aside>
 
       <section className="browser-panel">
         <div className="browser-commandbar">
@@ -159,6 +214,15 @@ export function BrowserApp() {
             </button>
             <button className="browser-icon-button" type="button" title="刷新" disabled={!bridge} onClick={() => runNavigationAction('reload')}>
               <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" /></svg>
+            </button>
+            <button
+              className="browser-icon-button"
+              type="button"
+              title="下载当前页"
+              disabled={!bridge || browserState.url === HOME_URL || Boolean(browserState.error)}
+              onClick={downloadCurrentPage}
+            >
+              <svg viewBox="0 0 24 24"><path d="M12 4v10M7 9l5 5 5-5M5 20h14" /></svg>
             </button>
           </div>
 
@@ -203,4 +267,19 @@ export function BrowserApp() {
       </section>
     </div>
   )
+}
+
+function downloadStatusText(download: DesktopBrowserDownloadEvent): string {
+  if (download.status === 'succeeded') return '已完成'
+  if (download.status === 'failed') return download.error || '下载失败'
+  if (download.status === 'canceled') return '已取消'
+  if (download.totalBytes <= 0) return `下载中 ${formatBytes(download.receivedBytes)}`
+  const percent = Math.round((download.receivedBytes / download.totalBytes) * 100)
+  return `下载中 ${percent}%`
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB`
+  return `${Math.round(value / 1024 / 102.4) / 10} MB`
 }

@@ -1,4 +1,5 @@
 import type { IpcMainInvokeEvent, Rectangle } from 'electron'
+import { cancelBrowserNetworkDownload, createBrowserNetworkSession } from './browserNetwork.js'
 
 type ElectronModule = typeof import('electron')
 type BrowserHostWindow = import('electron').BrowserWindow
@@ -6,6 +7,7 @@ type BrowserWebContentsView = import('electron').WebContentsView
 
 type BrowserViewState = {
   id: string
+  sessionId: string
   url: string
   title: string
   loading: boolean
@@ -16,6 +18,7 @@ type BrowserViewState = {
 
 type BrowserViewRecord = {
   id: string
+  sessionId: string
   view: BrowserWebContentsView
   state: BrowserViewState
 }
@@ -24,7 +27,11 @@ type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
 const browserViews = new Map<string, BrowserViewRecord>()
 
-export function registerBrowserViewIpcHandlers(electron: ElectronModule, hostWindow: BrowserHostWindow) {
+export function registerBrowserViewIpcHandlers(
+  electron: ElectronModule,
+  hostWindow: BrowserHostWindow,
+  options: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv },
+) {
   const assertSender = (event: IpcMainInvokeEvent) => {
     if (event.sender.id !== hostWindow.webContents.id) {
       throw new Error('Browser IPC rejected from unknown sender')
@@ -41,19 +48,30 @@ export function registerBrowserViewIpcHandlers(electron: ElectronModule, hostWin
 
     const initialUrl = normalizeBrowserUrl(getStringField(payload, 'url') || 'about:blank')
     if (!initialUrl) return fail('Unsupported browser URL')
+    const browserNetwork = createBrowserNetworkSession({
+      electron,
+      hostWindow,
+      viewId: id,
+      apiUrl: options.apiUrl,
+      rootDir: options.rootDir,
+      env: options.env,
+    })
 
     const view = new electron.WebContentsView({
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        session: browserNetwork.session,
       },
     })
     const record: BrowserViewRecord = {
       id,
+      sessionId: browserNetwork.sessionId,
       view,
       state: {
         id,
+        sessionId: browserNetwork.sessionId,
         url: initialUrl,
         title: 'Browser',
         loading: false,
@@ -142,6 +160,24 @@ export function registerBrowserViewIpcHandlers(electron: ElectronModule, hostWin
     return ok(updateBrowserState(record))
   })
 
+  electron.ipcMain.handle('mediatoolbox:browser:download-url', (event, payload: unknown): IpcResult<BrowserViewState> => {
+    assertSender(event)
+    const record = getRecord(payload)
+    if (!record) return fail('Browser view not found')
+    const explicitUrl = getStringField(payload, 'url')
+    const url = normalizeBrowserUrl(explicitUrl || record.view.webContents.getURL())
+    if (!url || url === 'about:blank') return fail('Only http and https URLs can be downloaded')
+    record.view.webContents.downloadURL(url)
+    return ok(updateBrowserState(record))
+  })
+
+  electron.ipcMain.handle('mediatoolbox:browser:cancel-download', (event, payload: unknown): IpcResult<{ id: string; canceled: boolean }> => {
+    assertSender(event)
+    const id = getStringField(payload, 'downloadId')
+    if (!id) return fail('Missing browser download id')
+    return ok({ id, canceled: cancelBrowserNetworkDownload(id) })
+  })
+
   hostWindow.on('closed', () => {
     for (const id of [...browserViews.keys()]) destroyBrowserView(hostWindow, id)
   })
@@ -154,7 +190,6 @@ function configureBrowserView(electron: ElectronModule, hostWindow: BrowserHostW
     if (normalized) void loadBrowserUrl(record, normalized)
     return { action: 'deny' }
   })
-  view.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   view.webContents.on('will-navigate', (event, url) => {
     if (!normalizeBrowserUrl(url)) event.preventDefault()
   })
@@ -208,6 +243,7 @@ async function loadBrowserUrl(record: BrowserViewRecord, url: string) {
 function updateBrowserState(record: BrowserViewRecord): BrowserViewState {
   record.state = {
     ...record.state,
+    sessionId: record.sessionId,
     url: record.view.webContents.getURL() || record.state.url,
     title: record.view.webContents.getTitle() || record.state.title,
     loading: record.view.webContents.isLoading(),
