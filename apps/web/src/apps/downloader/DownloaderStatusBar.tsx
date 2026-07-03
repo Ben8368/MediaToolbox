@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { fetchSystemRuntimeMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
+import { useSystemStore } from '@/store'
 
 const ZERO_SPEED = { text: '0 B/s' }
 
@@ -15,6 +16,7 @@ export function DownloaderStatusBar({ detailOpen, onToggleDetail }: DownloaderSt
     upload: ZERO_SPEED,
     download: ZERO_SPEED,
   })
+  const systemLifecycle = useSystemStore((state) => state.systemLifecycle)
 
   const refreshNetwork = useCallback(async () => {
     try {
@@ -30,7 +32,7 @@ export function DownloaderStatusBar({ detailOpen, onToggleDetail }: DownloaderSt
     }
   }, [])
 
-  useVisibilityPolling(refreshNetwork, 1000)
+  useVisibilityPolling(refreshNetwork, 1000, systemLifecycle === 'running')
 
   return (
     <footer className="dl-status">
