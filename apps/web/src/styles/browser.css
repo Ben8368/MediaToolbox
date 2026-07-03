@@ -125,11 +125,51 @@
 
 .browser-commandbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.browser-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.browser-icon-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.78);
+  cursor: pointer;
+  padding: 0;
+}
+
+.browser-icon-button:hover:not(:disabled) {
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.09);
+  color: #fff;
+}
+
+.browser-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: .38;
+}
+
+.browser-icon-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .browser-nav-form {
@@ -198,6 +238,11 @@
 .browser-addressbar__monitor--offline {
   background: rgba(255,255,255,.06);
   color: rgba(255,255,255,.46);
+}
+
+.browser-addressbar__monitor--error {
+  background: rgba(255,92,104,.12);
+  color: #ffb7b7;
 }
 
 .browser-addressbar input {
@@ -271,11 +316,15 @@
   min-height: 0;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
+  border-radius: 8px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.035), transparent 38px),
     #0c0f14;
   box-shadow: 0 24px 70px rgba(0,0,0,.28);
+}
+
+.browser-native-host {
+  isolation: isolate;
 }
 
 .browser-canvas {
@@ -305,10 +354,11 @@
   width: 74px;
   height: 74px;
   border: 1px solid rgba(77,171,255,.22);
-  border-radius: 26px;
+  border-radius: 8px;
   background: rgba(77,171,255,.08);
   color: #7cc4ff;
-  font-size: 32px;
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .browser-empty strong {

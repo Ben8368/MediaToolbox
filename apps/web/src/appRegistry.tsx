@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 
+import { BrowserApp } from '@/apps/BrowserApp'
 import { DownloaderApp } from '@/apps/DownloaderApp'
 import { FileManagerApp } from '@/apps/FileManagerApp'
 import { SettingsApp } from '@/apps/SettingsApp'
@@ -17,6 +18,7 @@ export type RegisteredApp = {
 }
 
 export const appRegistry: RegisteredApp[] = [
+  { id: 'browser', label: '浏览器', title: '浏览器', icon: APP_ICON_PATHS.browser, component: BrowserApp, status: 'beta' },
   { id: 'file-manager', label: '文件管理', title: '文件管理', icon: APP_ICON_PATHS.fileManager, component: FileManagerApp, status: 'stable' },
   { id: 'fetcher', label: '下载', title: '下载', icon: APP_ICON_PATHS.fetcher, component: DownloaderApp, status: 'stable' },
   { id: 'settings', label: '设置', title: '设置', icon: APP_ICON_PATHS.settings, component: SettingsApp, status: 'beta', launcherVisible: false },

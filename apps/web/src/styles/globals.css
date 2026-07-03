@@ -4,6 +4,7 @@
 @import './file-manager.css';
 @import './log-viewer.css';
 @import './downloader.css';
+@import './browser.css';
 
 .settings-app {
   display: grid;
