@@ -2,8 +2,8 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `codex/browser-app`
-> **当前阶段：** Phase 4 已完成，Phase 5 待开始
-> **最近更新：** 2026-07-03，新增真浏览器版桌面 app；Web 侧注册“浏览器”入口，Electron 侧通过 preload 限定桥接与 `WebContentsView` 承载网页内容；用户已验收拖拽、缩放体验。
+> **当前阶段：** Phase 4 已完成，Phase 4.5 浏览器网络能力层待开始，Phase 5 待开始
+> **最近更新：** 2026-07-03，新增真浏览器版桌面 app；Web 侧注册“浏览器”入口，Electron 侧通过 preload 限定桥接与 `WebContentsView` 承载网页内容；用户已验收拖拽、缩放体验；Browser Network adapter 已纳入后续开发计划。
 
 ## 项目定位
 
@@ -26,16 +26,17 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 ## 剩余黄灯
 
 - 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示。
-- 浏览器下载处理、权限策略、弹窗策略、标签页和生产打包资源加载仍需后续验收。
+- 浏览器下载处理、权限策略、弹窗策略、标签页和生产打包资源加载仍需后续验收；后续需沉淀为 Browser Network adapter，供下载和新增 app 复用。
 - desktop 已有主进程能力，但 Electron 打包、安装包和生产资源加载仍待后续阶段验收。
 - PSD Photoshop adapter 已建立脚本命令边界，但真实 Photoshop 本机命令路径、复杂 batchPlay 和 PSD 工作台 UI 尚未联调。
 - 网络速率、GPU 指标仍未接入系统级采集器；当前系统指标主要覆盖 uptime、CPU 负载近似值和内存占用。
 
 ## 下一步
 
-1. 继续验收浏览器 app 的导航、层级、错误页和生产打包资源加载。
-2. 前端转码工作台实际对接真实转码流。
-3. 进入 Phase 5：设计 PSD 工作台 UI、PSD 模板 manifest 编辑流和 Photoshop 本机联调清单。
+1. 进入 Phase 4.5：设计 Browser Network adapter 的 session、权限、下载事件、上传桥接和 jobs/API 契约。
+2. 继续验收浏览器 app 的导航、层级、错误页和生产打包资源加载。
+3. 前端转码工作台实际对接真实转码流。
+4. 进入 Phase 5：设计 PSD 工作台 UI、PSD 模板 manifest 编辑流和 Photoshop 本机联调清单。
 
 ## 常用命令
 
