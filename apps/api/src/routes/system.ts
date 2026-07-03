@@ -66,5 +66,10 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
     if (metrics.network) slice.network = metrics.network
     return slice
   })
-  app.post<{ Reply: OkResult }>('/api/system/shutdown', async () => ({ ok: true, message: '骨架模式不会关闭本地服务。' }))
+  app.post<{ Reply: OkResult }>('/api/system/shutdown', async (_request, reply) => {
+    reply.send({ ok: true, message: '正在关闭本地服务...' })
+    setTimeout(() => {
+      app.close().then(() => process.exit(0)).catch(() => process.exit(1))
+    }, 100)
+  })
 }
