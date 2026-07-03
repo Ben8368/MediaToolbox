@@ -21,6 +21,7 @@ import { addLog, entryName, nowSeconds } from '../utils.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
 type BrowserDownloadCreateBody = {
+  id?: string
   source_url: string
   url_chain?: string[]
   filename: string
@@ -60,7 +61,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
 
       const targetPath = normalizeBrowserDownloadPath(request.body.target_path, state.workspaceRoot)
       const now = nowSeconds()
-      const id = createBrowserDownloadId(state, now)
+      const id = createBrowserDownloadId(state, now, request.body.id)
       const download: BrowserNetworkDownloadRecord = {
         id,
         job_id: id,
@@ -162,8 +163,19 @@ function safeFilename(filename: string): string {
   return basename || 'download.bin'
 }
 
-function createBrowserDownloadId(state: ApiState, now: number): string {
-  return `browser-download-${now}-${state.browserDownloads.length + 1}`
+function createBrowserDownloadId(state: ApiState, now: number, requestedId?: string): string {
+  const id = requestedId?.trim() || `browser-download-${now}-${state.browserDownloads.length + 1}`
+  if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) {
+    const error = new Error('浏览器下载 ID 不符合 API 契约。')
+    ;(error as Error & { statusCode?: number }).statusCode = 400
+    throw error
+  }
+  if (state.browserDownloads.some((download) => download.id === id)) {
+    const error = new Error('浏览器下载记录已存在。')
+    ;(error as Error & { statusCode?: number }).statusCode = 409
+    throw error
+  }
+  return id
 }
 
 function applyDownloadUpdate(download: BrowserNetworkDownloadRecord, update: BrowserDownloadUpdateBody): void {

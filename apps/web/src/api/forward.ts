@@ -17,6 +17,10 @@ export const deleteTaskRecord = forwardMethod('deleteTaskRecord')
 export const clearTaskRecords = forwardMethod('clearTaskRecords')
 export const getFetchTaskFileUrl = forwardMethod('getFetchTaskFileUrl')
 
+export const listJobs = forwardMethod('listJobs')
+export const submitTranscodeJob = forwardMethod('submitTranscodeJob')
+export const cancelJob = forwardMethod('cancelJob')
+
 export const getWorkspace = forwardMethod('getWorkspace')
 export const fetchFilebrowserDisks = forwardMethod('fetchFilebrowserDisks')
 export const listFilebrowserDirectory = forwardMethod('listFilebrowserDirectory')

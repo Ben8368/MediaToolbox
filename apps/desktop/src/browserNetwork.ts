@@ -114,6 +114,7 @@ function configureDownloads(session: BrowserSession, options: BrowserNetworkOpti
     downloadItems.set(id, item)
 
     const started = {
+      id,
       source_url: sourceUrl,
       url_chain: urlChain.length ? urlChain : [sourceUrl],
       filename: target.filename,

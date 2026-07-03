@@ -45,6 +45,7 @@
 - [x] 系统指标接入 uptime、CPU 负载近似值和内存占用采样。
 - [ ] 文件库统一管理下载、转码和 PSD 产出（UI 联调待后续）。
 - [ ] 全局任务中心显示 worker 状态、进度、日志和失败原因（UI 联调待后续）。
+- [x] 前端转码工作台接入真实 `/api/transcode/jobs` 和统一 jobs 取消/轮询链路。
 
 ## Phase 4.5：浏览器网络能力层
 
@@ -83,7 +84,7 @@
 | 008 | Electron 桌面壳 | BrowserWindow / IPC / 托盘已接入 |
 | 009 | 任务状态机 | jobs cancel 已联动 |
 | 010 | yt-dlp adapter | 执行入口已接入 |
-| 011 | ffmpeg adapter | 执行入口已接入 |
+| 011 | ffmpeg adapter | 执行入口已接入，转码工作台 beta 已对接真实 API |
 | 012 | PSD 模版引擎 | engine 接口与 Photoshop JSX adapter 已建立 |
 | 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽和缩放已主观验收 |
 | 014 | Browser Network adapter | 第一版已接入：隔离 session、下载事件、权限审计、API/jobs 契约 |

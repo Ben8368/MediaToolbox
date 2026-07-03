@@ -5,6 +5,7 @@ export const APP_ICON_PATHS = {
   fetcher:     `${BASE}/download-center.png`,
   fileManager: `${BASE}/file-manager.png`,
   'file-manager': `${BASE}/file-manager.png`,
+  transcode:   `${BASE}/setting.png`,
   settings:    `${BASE}/setting.png`,
   logs:        `${BASE}/log-center.png`,
 } as const

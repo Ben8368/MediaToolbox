@@ -2,6 +2,7 @@ import type {
   CreateDirectoryResponse,
   DiskListResponse,
   DirectoryListResponse,
+  JobRecord,
   LogListResponse,
   LogMetadataResponse,
   OkResult,
@@ -16,11 +17,23 @@ import type {
 } from '@mediatoolbox/contracts'
 
 export type {
+  JobRecord,
   LogListResponse,
   LogMetadataResponse,
   RuntimeMetricsSlice,
   TaskListResponse,
   UnreadNotificationResponse,
+}
+
+export type JobListResponse = OkResult & {
+  jobs: JobRecord[]
+}
+
+export type TranscodeJobDraft = {
+  inputPath: string
+  outputPath: string
+  preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
+  title?: string
 }
 
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
@@ -32,6 +45,10 @@ export interface MediaToolboxApi {
   deleteTaskRecord(taskId: string): Promise<OkResult>
   clearTaskRecords(taskIds?: string[]): Promise<OkResult>
   getFetchTaskFileUrl(taskId: string, path: string): string
+
+  listJobs(): Promise<JobListResponse>
+  submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
+  cancelJob(jobId: string): Promise<OkResult>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>
