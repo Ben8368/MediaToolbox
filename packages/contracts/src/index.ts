@@ -224,6 +224,8 @@ export type RuntimeMetrics = {
   system?: {
     cpu_percent?: number
     memory_percent?: number
+    memory_pressure_percent?: number
+    memory_pressure_label?: string
     memory_used_bytes?: number
     memory_total_bytes?: number
     memory_free_bytes?: number

@@ -81,6 +81,7 @@ export function RightPanel() {
     })
   }, [tasks])
   const expandedGroup = groupedTasks.find((group) => group.type === expandedTaskType) || null
+  const memoryLabel = system.memory_pressure_label || '物理占用'
   const memoryDetail = system.memory_total_bytes
     ? `${formatBytes(system.memory_used_bytes)} / ${formatBytes(system.memory_total_bytes)}`
     : '等待采样'
@@ -97,7 +98,7 @@ export function RightPanel() {
         </div>
         <div className="rp-gauges">
           <GaugeSvg value={system.cpu_percent || 0} color="#7CB3FF" label="CPU" />
-          <GaugeSvg value={system.memory_percent || 0} color="#7CB3FF" label="内存" title={memoryDetail} />
+          <GaugeSvg value={system.memory_percent || 0} color="#7CB3FF" label="内存" title={`${memoryLabel} · ${memoryDetail}`} />
           <GaugeSvg
             value={system.gpu_percent || 0}
             color={system.gpu_available ? '#7CB3FF' : '#64748b'}
@@ -111,7 +112,7 @@ export function RightPanel() {
           {frontendModeLabel(metrics.log_mode) && <span className="rp-runtime-mode">{frontendModeLabel(metrics.log_mode)}</span>}
         </div>
         <div className="rp-sample-detail">
-          <span>内存</span>
+          <span>内存{memoryLabel === '物理占用' ? '' : ` · ${memoryLabel}`}</span>
           <strong>{memoryDetail}</strong>
         </div>
         {error && <div className="rp-error">{error}</div>}
