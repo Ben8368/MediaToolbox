@@ -10,32 +10,32 @@ html, body, #root {
 }
 
 :root {
-  --fnos-wp: url('/static/bg/live/wallpaper-3-dark.webp');
-  --fnos-brand: #0066ff;
-  --fnos-brand-light: rgba(0,102,255,.12);
-  --fnos-surface: rgba(255,255,255,.86);
-  --fnos-fill: rgba(15,23,42,.055);
-  --fnos-fill-2: rgba(15,23,42,.12);
-  --fnos-border: rgba(15,23,42,.14);
-  --fnos-divider: rgba(15,23,42,.08);
-  --fnos-text-0: #111827;
-  --fnos-text-1: #334155;
-  --fnos-text-2: #64748b;
-  --fnos-danger: #ff453a;
+  --mt-wp: url('/static/bg/live/wallpaper-3-dark.webp');
+  --mt-brand: #0066ff;
+  --mt-brand-light: rgba(0,102,255,.12);
+  --mt-surface: rgba(255,255,255,.86);
+  --mt-fill: rgba(15,23,42,.055);
+  --mt-fill-2: rgba(15,23,42,.12);
+  --mt-border: rgba(15,23,42,.14);
+  --mt-divider: rgba(15,23,42,.08);
+  --mt-text-0: #111827;
+  --mt-text-1: #334155;
+  --mt-text-2: #64748b;
+  --mt-danger: #ff453a;
 }
 
-.fnos-desktop {
+.mt-desktop {
   width: 100%; height: 100%;
   position: relative;
   isolation: isolate;
-  background-image: var(--fnos-wp);
+  background-image: var(--mt-wp);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
 /* ===== Left Sidebar ===== */
-.fnos-sidebar {
+.mt-sidebar {
   position: fixed;
   left: 0; top: 0; bottom: 0;
   width: 48px;
@@ -101,7 +101,7 @@ html, body, #root {
 }
 
 /* ===== Floating Left Nav (LeftNavbar.tsx) ===== */
-.fnos-left-nav {
+.mt-left-nav {
   position: fixed;
   left: 8px;
   top: 8px;
@@ -119,40 +119,40 @@ html, body, #root {
   border: 1px solid rgba(255, 255, 255, .04);
 }
 
-.fnos-left-nav__section {
+.mt-left-nav__section {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
 
-.fnos-left-nav__section--top {
+.mt-left-nav__section--top {
   gap: 8px;
   margin-bottom: 12px;
 }
 
-.fnos-left-nav__section--apps {
+.mt-left-nav__section--apps {
   flex: 1;
   gap: 6px;
 }
 
-.fnos-left-nav__section--bottom {
+.mt-left-nav__section--bottom {
   margin-top: 12px;
 }
 
-.fnos-left-nav__sep {
+.mt-left-nav__sep {
   width: 22px;
   height: 1px;
   background: rgba(255, 255, 255, .06);
   margin-bottom: 12px;
 }
 
-.fnos-left-nav__sep--bottom {
+.mt-left-nav__sep--bottom {
   margin-top: 12px;
   margin-bottom: 8px;
 }
 
-.fnos-left-nav__app-btn {
+.mt-left-nav__app-btn {
   width: 36px;
   height: 36px;
   display: flex;
@@ -166,25 +166,25 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-.fnos-left-nav__app-btn:hover {
+.mt-left-nav__app-btn:hover {
   background: rgba(255, 255, 255, .08);
 }
 
-.fnos-left-nav__app-btn--active {
+.mt-left-nav__app-btn--active {
   background: rgba(255, 255, 255, .12);
 }
 
-.fnos-left-nav__app-btn img {
+.mt-left-nav__app-btn img {
   width: 22px;
   height: 22px;
   object-fit: contain;
 }
 
-.fnos-left-nav__notify-wrap {
+.mt-left-nav__notify-wrap {
   position: relative;
 }
 
-.fnos-left-nav__badge {
+.mt-left-nav__badge {
   position: absolute;
   top: -4px;
   right: -4px;
@@ -201,7 +201,7 @@ html, body, #root {
   border: 2px solid rgba(10, 12, 16, .6);
 }
 
-.fnos-left-nav__power-menu {
+.mt-left-nav__power-menu {
   position: absolute;
   left: 52px;
   bottom: 14px;
@@ -215,7 +215,7 @@ html, body, #root {
   box-shadow: 0 18px 44px rgba(0, 0, 0, .34);
 }
 
-.fnos-left-nav__power-btn {
+.mt-left-nav__power-btn {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -231,11 +231,11 @@ html, body, #root {
   text-align: left;
 }
 
-.fnos-left-nav__power-btn:hover {
+.mt-left-nav__power-btn:hover {
   background: rgba(255, 255, 255, .06);
 }
 
-.fnos-shutdown-overlay {
+.mt-shutdown-overlay {
   position: fixed;
   inset: 0;
   display: flex;
@@ -247,7 +247,7 @@ html, body, #root {
   padding: 24px;
 }
 
-.fnos-shutdown-card {
+.mt-shutdown-card {
   width: min(480px, 100%);
   padding: 28px 24px;
   border-radius: 18px;
@@ -256,19 +256,19 @@ html, body, #root {
   box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
 }
 
-.fnos-shutdown-card__title {
+.mt-shutdown-card__title {
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 10px;
 }
 
-.fnos-shutdown-card__body {
+.mt-shutdown-card__body {
   color: rgba(255, 255, 255, .72);
   line-height: 1.6;
   margin-bottom: 18px;
 }
 
-.fnos-shutdown-card__reload {
+.mt-shutdown-card__reload {
   min-width: 132px;
   height: 40px;
   border-radius: 10px;
@@ -278,7 +278,7 @@ html, body, #root {
   cursor: pointer;
 }
 
-.fnos-shutdown-card__reload:hover {
+.mt-shutdown-card__reload:hover {
   background: rgba(255, 255, 255, .12);
 }
 
@@ -291,7 +291,7 @@ html, body, #root {
 }
 
 /* ===== Desktop Grid ===== */
-.fnos-main {
+.mt-main {
   position: absolute;
   top: 20px;
   left: 60px;
@@ -303,7 +303,7 @@ html, body, #root {
   scrollbar-width: none;
 }
 
-.fnos-main::-webkit-scrollbar { display: none; }
+.mt-main::-webkit-scrollbar { display: none; }
 
 .icon-grid {
   display: grid;

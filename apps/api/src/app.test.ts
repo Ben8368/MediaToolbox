@@ -172,6 +172,24 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('creates one fetch task and job per submitted URL', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { urls: ['https://example.com/a', 'https://example.com/b'] },
+    })
+    const body = created.json<{ task_id: string; task_ids: string[] }>()
+    const jobs = await app.inject({ method: 'GET', url: '/api/jobs' })
+    const jobIds = new Set(jobs.json<{ jobs: Array<{ id: string }> }>().jobs.map((job) => job.id))
+
+    expect(body.task_ids).toHaveLength(2)
+    expect(body.task_id).toBe(body.task_ids[0])
+    expect(body.task_ids.every((id) => jobIds.has(id))).toBe(true)
+    await app.close()
+  })
+
   it('rejects unsafe transcode paths before invoking ffmpeg', async () => {
     const app = buildApiServer()
 
@@ -226,6 +244,38 @@ describe('api skeleton contract', () => {
 
     expect(root.json<{ files: Array<{ name: string }> }>().files.some((file) => file.name === 'README.txt')).toBe(true)
     expect(nonEmptyDelete.json()).toMatchObject({ ok: false })
+    await app.close()
+  })
+
+  it('cancels queued jobs through the unified jobs endpoint', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({ method: 'POST', url: '/api/jobs', payload: { title: 'Manual job' } })
+    const jobId = created.json<{ id: string }>().id
+    const canceled = await app.inject({ method: 'POST', url: `/api/jobs/${jobId}/cancel` })
+    const detail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+
+    expect(canceled.json()).toMatchObject({ ok: true })
+    expect(detail.json<{ job: { status: string } }>().job.status).toBe('canceled')
+    await app.close()
+  })
+
+  it('clears logs and marks derived notifications as read', async () => {
+    const app = buildApiServer()
+
+    const created = await app.inject({ method: 'POST', url: '/api/jobs', payload: { title: 'Notification job' } })
+    const jobId = created.json<{ id: string }>().id
+    await app.inject({ method: 'POST', url: `/api/jobs/${jobId}/cancel` })
+
+    const unreadBefore = await app.inject({ method: 'GET', url: '/api/notifications/unread-count' })
+    await app.inject({ method: 'POST', url: '/api/notifications/read-all' })
+    const unreadAfter = await app.inject({ method: 'GET', url: '/api/notifications/unread-count' })
+    await app.inject({ method: 'DELETE', url: '/api/logs' })
+    const logs = await app.inject({ method: 'GET', url: '/api/logs' })
+
+    expect(unreadBefore.json<{ unread_count: number }>().unread_count).toBeGreaterThan(0)
+    expect(unreadAfter.json()).toMatchObject({ ok: true, unread_count: 0 })
+    expect(logs.json()).toMatchObject({ ok: true, total: 0, items: [] })
     await app.close()
   })
 

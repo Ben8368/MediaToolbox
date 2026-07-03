@@ -32,7 +32,7 @@ Workers / adapters 负责：
 - 本地 API 统一错误响应为 `{ ok: false, message }`；schema 校验失败返回 400。
 - 前端请求必须有超时和失败提示。
 - 文件路径和系统操作由服务层校验，前端不自行绕过安全边界。
-- 文件浏览骨架使用虚拟 `/Workspace` 路径；真实文件系统接入前，服务层已拒绝 `..`、磁盘盘符、UNC 和工作区外路径。
+- 文件浏览对外仍使用虚拟 `/Workspace` 路径；服务层会映射到受控本地工作区目录，并拒绝 `..`、磁盘盘符、UNC 和工作区外路径。
 - 测试夹具响应结构应尽量贴近真实契约，避免组件感知数据来源。
 - 跨模块共享类型逐步收敛到 `packages/contracts`。
 
@@ -42,39 +42,39 @@ Workers / adapters 负责：
 | --- | --- | --- |
 | `GET /api/health` | 本地 API 健康检查 | 骨架 |
 | `GET /api/apps` | 工作台应用列表 | 骨架 |
-| `GET /api/system/metrics` | 右侧状态面板系统快照 | 骨架 |
-| `GET /api/system/runtime` | 下载器状态栏网络速率 | 骨架 |
+| `GET /api/system/metrics` | 右侧状态面板系统快照 | 本地采样 |
+| `GET /api/system/runtime` | 下载器状态栏网络速率 | 本地采样 |
 | `POST /api/system/shutdown` | 关闭本地服务，需 `x-mediatoolbox-shutdown: desktop` 请求头 | 骨架 |
-| `GET /api/logs` | 日志列表 | 骨架 |
-| `GET /api/logs/metadata` | 日志筛选元数据 | 骨架 |
-| `DELETE /api/logs` | 清理日志 | 骨架 |
-| `GET /api/notifications/unread-count` | 未读通知数量 | 骨架 |
-| `DELETE /api/notifications` | 清理通知 | 骨架 |
-| `POST /api/notifications/read-all` | 全部通知标为已读 | 骨架 |
-| `POST /api/jobs` | 创建统一任务 | 骨架 |
-| `GET /api/jobs` | 任务列表 | 骨架 |
-| `GET /api/jobs/{id}` | 任务详情 | 骨架 |
-| `POST /api/jobs/{id}/cancel` | 取消任务 | 骨架 |
+| `GET /api/logs` | 日志列表 | SQLite |
+| `GET /api/logs/metadata` | 日志筛选元数据 | SQLite |
+| `DELETE /api/logs` | 清理日志 | SQLite |
+| `GET /api/notifications/unread-count` | 未读通知数量 | 本地状态 |
+| `DELETE /api/notifications` | 清理通知 | 本地状态 |
+| `POST /api/notifications/read-all` | 全部通知标为已读 | 本地状态 |
+| `POST /api/jobs` | 创建统一任务 | SQLite |
+| `GET /api/jobs` | 任务列表 | SQLite |
+| `GET /api/jobs/{id}` | 任务详情 | SQLite |
+| `POST /api/jobs/{id}/cancel` | 取消任务 | 状态联动 |
 | `POST /api/downloads/analyze` | 解析下载 URL | 待设计 |
-| `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交 | 骨架 |
-| `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 骨架 |
-| `GET /api/fetch/tasks/history` | 兼容迁回前端的历史任务 | 骨架 |
-| `POST /api/fetch/tasks/{id}/cancel` | 取消兼容下载任务 | 骨架 |
-| `DELETE /api/fetch/tasks/{id}` | 删除兼容下载记录 | 骨架 |
-| `POST /api/fetch/tasks/clear` | 清理兼容下载记录 | 骨架 |
+| `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交；多 URL 会拆分为多任务并返回 `task_ids` | 执行入口 |
+| `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 本地状态 |
+| `GET /api/fetch/tasks/history` | 兼容迁回前端的历史任务 | 本地状态 |
+| `POST /api/fetch/tasks/{id}/cancel` | 取消兼容下载任务 | 状态联动 |
+| `DELETE /api/fetch/tasks/{id}` | 删除兼容下载记录 | 本地状态 |
+| `POST /api/fetch/tasks/clear` | 清理兼容下载记录 | 本地状态 |
 | `GET /api/fetch/tasks/{id}/file` | 兼容下载文件访问 | 骨架 |
-| `GET /api/filebrowser/workspace` | 工作区信息 | 骨架 |
-| `PUT /api/filebrowser/workspace` | 设置工作区 | 骨架 |
-| `GET /api/filebrowser/disks` | 磁盘列表 | 骨架 |
-| `POST /api/filebrowser/list` | 列出目录 | 骨架 |
-| `POST /api/filebrowser/mkdir` | 新建文件夹 | 骨架 |
-| `DELETE /api/filebrowser/path` | 删除/移入回收站 | 骨架 |
-| `GET /api/filebrowser/trash` | 回收站列表 | 骨架 |
-| `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 骨架 |
-| `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 骨架 |
-| `DELETE /api/filebrowser/trash` | 清空回收站 | 骨架 |
-| `POST /api/transcode/jobs` | 创建转码任务，输入必须在工作区内，输出必须在 `/Workspace/Exports` 内 | 骨架 |
-| `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 骨架 |
+| `GET /api/filebrowser/workspace` | 工作区信息 | 本地映射 |
+| `PUT /api/filebrowser/workspace` | 设置工作区 | 本地映射 |
+| `GET /api/filebrowser/disks` | 磁盘列表 | 本地映射 |
+| `POST /api/filebrowser/list` | 列出目录 | 本地映射 |
+| `POST /api/filebrowser/mkdir` | 新建文件夹 | 本地映射 |
+| `DELETE /api/filebrowser/path` | 删除/移入回收站 | 本地映射 |
+| `GET /api/filebrowser/trash` | 回收站列表 | 本地映射 |
+| `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 本地映射 |
+| `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 本地映射 |
+| `DELETE /api/filebrowser/trash` | 清空回收站 | 本地映射 |
+| `POST /api/transcode/jobs` | 创建转码任务，输入必须在工作区内，输出必须在 `/Workspace/Exports` 内 | 执行入口 |
+| `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot | 待设计 |
 | `POST /api/psd/batch-jobs` | 创建 PSD 批处理任务 | 待设计 |
 
@@ -85,11 +85,11 @@ Workers / adapters 负责：
 - 共享契约：`packages/contracts`
 - 历史测试夹具：`apps/web/src/mockApi/`
 
-说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实下载、真实文件系统操作、系统指标采集或任务队列执行器已接入。
+说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。系统指标当前采样 uptime、CPU 负载近似值和内存占用；网络速率和 GPU 仍保留为未接入采集器的 0 值。
 
-当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear` 和 `POST /api/transcode/jobs` 已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，当前单任务执行器使用第一条 URL。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear` 和 `POST /api/transcode/jobs` 已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller 和 job 状态；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
 
-文件浏览骨架的 `PUT /api/filebrowser/workspace` 会更新当前虚拟工作区状态，并重置骨架目录、文件和回收站；`POST /api/filebrowser/trash/{id}/restore` 会恢复对应内存条目；非空目录删除会被拒绝，避免产生不可达的子项。
+文件浏览端点会更新当前虚拟工作区到本地目录的映射，并通过 `.trash` 子目录实现回收站；非空目录删除会被拒绝，避免误删整棵目录。
 
 ## 4. 启用本地 API 契约模式
 
@@ -99,7 +99,7 @@ Workers / adapters 负责：
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
 
-说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和骨架服务已启用，不表示真实下载、真实文件写入、真实系统指标或真实关机能力已经接入。
+说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、日志清理、通知已读、统一任务取消和基础系统采样已接入，但不表示网络/GPU 指标、PSD 工作台 UI 和 Photoshop 本机联调已经完整完成。
 
 ## 5. 迁移规则
 

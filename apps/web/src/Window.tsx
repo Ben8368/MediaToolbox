@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { WINDOW_CHROME } from '@/appPresentation'
 import { getApiRuntimePresentation } from '@/api/runtime'
 import { getAppIcon } from '@/icon-library'
@@ -22,14 +22,14 @@ function WindowStatusBadge({ appType }: { appType?: string }) {
 
   if (!status) return null
   return (
-    <div className={`fnos-window-status fnos-window-status--${status.tone}`} title={status.detail}>
+    <div className={`mt-window-status mt-window-status--${status.tone}`} title={status.detail}>
       <span aria-hidden="true" />
       <strong>{status.label}</strong>
     </div>
   )
 }
 
-export function FnOSWindow({
+export function DesktopWindow({
   windowId, title, width = 900, height = 600,
   x: ix = 80, y: iy = 80,
   isMaximized, isMinimized, isActive, zIndex,
@@ -114,39 +114,39 @@ export function FnOSWindow({
 
   return (
     <div
-      className={`fnos-window ${isActive ? 'fnos-window--active' : ''} ${isMaximized ? 'fnos-window--maximized' : ''}`}
+      className={`mt-window ${isActive ? 'mt-window--active' : ''} ${isMaximized ? 'mt-window--maximized' : ''}`}
       style={{ width: w, height: h, left, top, zIndex }}
       onMouseDown={() => onFocus(windowId)}
     >
-      <div className="fnos-window-header" onMouseDown={startDrag} onDoubleClick={() => onMaximize(windowId)}>
-        <div className="fnos-window-brand">
+      <div className="mt-window-header" onMouseDown={startDrag} onDoubleClick={() => onMaximize(windowId)}>
+        <div className="mt-window-brand">
           {activeIcon && <img src={activeIcon} alt="" />}
           <strong>{title}</strong>
         </div>
-        <div className="fnos-window-controls wc">
+        <div className="mt-window-controls wc">
           <WindowStatusBadge appType={appType} />
-          <button className="fnos-window-btn fnos-window-btn--min" title="最小化" onClick={(e) => { e.stopPropagation(); onMinimize(windowId) }}>
+          <button className="mt-window-btn mt-window-btn--min" title="最小化" onClick={(e) => { e.stopPropagation(); onMinimize(windowId) }}>
             <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
           </button>
-          <button className="fnos-window-btn fnos-window-btn--max" title="最大化" onClick={(e) => { e.stopPropagation(); onMaximize(windowId) }}>
+          <button className="mt-window-btn mt-window-btn--max" title="最大化" onClick={(e) => { e.stopPropagation(); onMaximize(windowId) }}>
             <svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="14" rx="1.5" /></svg>
           </button>
-          <button className="fnos-window-btn fnos-window-btn--close" title="关闭" onClick={(e) => { e.stopPropagation(); onClose(windowId) }}>
+          <button className="mt-window-btn mt-window-btn--close" title="关闭" onClick={(e) => { e.stopPropagation(); onClose(windowId) }}>
             <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
           </button>
         </div>
       </div>
-      <div className="fnos-window-body">{children}</div>
+      <div className="mt-window-body">{children}</div>
       {!isMaximized && (
         <>
-          <div className="fnos-resize-handle fnos-resize-n" onMouseDown={(e) => startResize(e, 'n')} />
-          <div className="fnos-resize-handle fnos-resize-s" onMouseDown={(e) => startResize(e, 's')} />
-          <div className="fnos-resize-handle fnos-resize-w" onMouseDown={(e) => startResize(e, 'w')} />
-          <div className="fnos-resize-handle fnos-resize-e" onMouseDown={(e) => startResize(e, 'e')} />
-          <div className="fnos-resize-handle fnos-resize-nw" onMouseDown={(e) => startResize(e, 'nw')} />
-          <div className="fnos-resize-handle fnos-resize-ne" onMouseDown={(e) => startResize(e, 'ne')} />
-          <div className="fnos-resize-handle fnos-resize-sw" onMouseDown={(e) => startResize(e, 'sw')} />
-          <div className="fnos-resize-handle fnos-resize-se" onMouseDown={(e) => startResize(e, 'se')} />
+          <div className="mt-resize-handle mt-resize-n" onMouseDown={(e) => startResize(e, 'n')} />
+          <div className="mt-resize-handle mt-resize-s" onMouseDown={(e) => startResize(e, 's')} />
+          <div className="mt-resize-handle mt-resize-w" onMouseDown={(e) => startResize(e, 'w')} />
+          <div className="mt-resize-handle mt-resize-e" onMouseDown={(e) => startResize(e, 'e')} />
+          <div className="mt-resize-handle mt-resize-nw" onMouseDown={(e) => startResize(e, 'nw')} />
+          <div className="mt-resize-handle mt-resize-ne" onMouseDown={(e) => startResize(e, 'ne')} />
+          <div className="mt-resize-handle mt-resize-sw" onMouseDown={(e) => startResize(e, 'sw')} />
+          <div className="mt-resize-handle mt-resize-se" onMouseDown={(e) => startResize(e, 'se')} />
         </>
       )}
     </div>

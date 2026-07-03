@@ -1,5 +1,5 @@
-/* ===== Right Panel ===== */
-.fnos-right-panel {
+﻿/* ===== Right Panel ===== */
+.mt-right-panel {
   position: fixed;
   right: 12px;
   top: 12px;
@@ -19,7 +19,7 @@
   scrollbar-width: none;
 }
 
-.fnos-right-panel::-webkit-scrollbar { display: none; }
+.mt-right-panel::-webkit-scrollbar { display: none; }
 
 .rp-card {
   background: rgba(0,0,0,.35);

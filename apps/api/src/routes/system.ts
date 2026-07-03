@@ -1,3 +1,4 @@
+import os from 'node:os'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult, RuntimeMetrics, RuntimeMetricsSlice } from '@mediatoolbox/contracts'
 
@@ -6,18 +7,30 @@ import { isTerminalTask } from '../utils.js'
 
 const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
 
-function service(id: string, name: string) {
+function service(id: string, name: string, detail: string, availabilityStatus = 'ready') {
   return {
     id,
     name,
     online: true,
-    status: '骨架',
+    status: '运行中',
     runtime_status: 'ready',
-    availability_status: 'stub',
-    mode: 'skeleton',
-    mode_label: '骨架模式',
-    detail: '契约已接入，真实执行器待实现。',
+    availability_status: availabilityStatus,
+    mode: 'local',
+    mode_label: '本地服务',
+    detail,
   }
+}
+
+function cpuPercent() {
+  const cpuCount = Math.max(os.cpus().length, 1)
+  const oneMinuteLoad = os.loadavg()[0] ?? 0
+  return Math.max(0, Math.min(100, Math.round((oneMinuteLoad / cpuCount) * 100)))
+}
+
+function memoryPercent() {
+  const total = os.totalmem()
+  if (!total) return 0
+  return Math.round(((total - os.freemem()) / total) * 100)
 }
 
 function buildMetrics(state: ApiState): RuntimeMetrics {
@@ -25,11 +38,11 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
-      cpu_percent: 0,
-      memory_percent: 0,
+      cpu_percent: cpuPercent(),
+      memory_percent: memoryPercent(),
       gpu_percent: 0,
       gpu_available: false,
-      gpu_detail: '系统指标采集器待接入。',
+      gpu_detail: 'GPU 指标采集尚未接入；当前返回 CPU 与内存运行时采样。',
     },
     network: {
       upload: { text: '0 B/s' },
@@ -37,7 +50,12 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
       upload_bytes_per_sec: 0,
       download_bytes_per_sec: 0,
     },
-    services: [service('api', '本地 API'), service('downloader', '下载服务'), service('file-manager', '文件管理')],
+    services: [
+      service('api', '本地 API', 'Fastify API 正在运行。'),
+      service('downloader', '下载服务', '下载任务已接入 yt-dlp worker 执行入口。'),
+      service('file-manager', '文件管理', `虚拟工作区映射到受控本地目录：${state.physicalWorkspaceRoot}`),
+      service('logs', '日志服务', '日志、通知已接入 SQLite 状态。'),
+    ],
     tasks: activeTasks.map((task) => ({
       id: task.id,
       name: task.title,
@@ -54,7 +72,7 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
       total_download_records: state.fetchTasks.length,
       terminal_download_records: state.fetchTasks.filter(isTerminalTask).length,
     },
-    log_mode: 'api-skeleton',
+    log_mode: 'sqlite-local',
   }
 }
 
@@ -68,8 +86,8 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
     if (metrics.network) slice.network = metrics.network
     return slice
   })
-  app.post<{ Reply: OkResult }>('/api/system/shutdown', async (_request, reply) => {
-    if (_request.headers['x-mediatoolbox-shutdown'] !== 'desktop') {
+  app.post<{ Reply: OkResult }>('/api/system/shutdown', async (request, reply) => {
+    if (request.headers['x-mediatoolbox-shutdown'] !== 'desktop') {
       reply.status(403)
       return { ok: false, message: '缺少本地关机确认标记。' }
     }

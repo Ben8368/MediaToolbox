@@ -1,4 +1,4 @@
-import { getApiRuntimePresentation, shutdownSystem } from '@/api'
+﻿import { getApiRuntimePresentation, shutdownSystem } from '@/api'
 import { ApiRequestError } from '@/api/http'
 import { getAppIcon } from '@/icon-library'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
@@ -87,13 +87,13 @@ export function LeftNavbar() {
 
   if (powerComplete) {
     return (
-      <div className="fnos-shutdown-overlay">
-        <div className="fnos-shutdown-card">
-          <div className="fnos-shutdown-card__title">{runtime.shutdown.completeTitle}</div>
-          <div className="fnos-shutdown-card__body">
+      <div className="mt-shutdown-overlay">
+        <div className="mt-shutdown-card">
+          <div className="mt-shutdown-card__title">{runtime.shutdown.completeTitle}</div>
+          <div className="mt-shutdown-card__body">
             {runtime.shutdown.completeBody}
           </div>
-          <button type="button" className="fnos-shutdown-card__reload" onClick={() => window.location.reload()}>
+          <button type="button" className="mt-shutdown-card__reload" onClick={() => window.location.reload()}>
             返回桌面
           </button>
         </div>
@@ -104,32 +104,32 @@ export function LeftNavbar() {
   const topZIndex = Math.max(...windows.map((windowItem) => windowItem.zIndex), 0)
 
   return (
-    <div className="fnos-left-nav">
-      <div className="fnos-left-nav__section fnos-left-nav__section--top">
+    <div className="mt-left-nav">
+      <div className="mt-left-nav__section mt-left-nav__section--top">
         <NavButton icon={<IconMonitor />} tooltip="MediaTools" />
         <NavButton icon={<IconGrid />} tooltip="所有应用" active={showLauncher} onClick={toggleLauncher} />
       </div>
 
-      <div className="fnos-left-nav__sep" />
+      <div className="mt-left-nav__sep" />
 
-      <div className="fnos-left-nav__section fnos-left-nav__section--apps">
+      <div className="mt-left-nav__section mt-left-nav__section--apps">
         {uniqueRunningApps.map((windowItem) => (
           <button
             key={windowItem.id}
             onClick={() => doClick(windowItem.appType)}
             title={windowItem.title}
-            className={`fnos-left-nav__app-btn ${windowItem.zIndex === topZIndex ? 'fnos-left-nav__app-btn--active' : ''}`}
+            className={`mt-left-nav__app-btn ${windowItem.zIndex === topZIndex ? 'mt-left-nav__app-btn--active' : ''}`}
           >
             <img src={getAppIcon(windowItem.appType)} alt={windowItem.title} />
           </button>
         ))}
       </div>
 
-      <div className="fnos-left-nav__sep fnos-left-nav__sep--bottom" />
+      <div className="mt-left-nav__sep mt-left-nav__sep--bottom" />
 
-      <div className="fnos-left-nav__section fnos-left-nav__section--bottom">
+      <div className="mt-left-nav__section mt-left-nav__section--bottom">
         <NavButton icon={<IconGlobe />} tooltip="网络" />
-        <div className="fnos-left-nav__notify-wrap">
+        <div className="mt-left-nav__notify-wrap">
           <NavButton
             icon={<IconBell />}
             tooltip="日志"
@@ -140,7 +140,7 @@ export function LeftNavbar() {
             }}
           />
           {unreadNotificationCount > 0 && (
-            <div className="fnos-left-nav__badge">
+            <div className="mt-left-nav__badge">
               {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
             </div>
           )}
@@ -158,11 +158,11 @@ export function LeftNavbar() {
       </div>
 
       {showPowerMenu && (
-        <div className="fnos-left-nav__power-menu">
+        <div className="mt-left-nav__power-menu">
           <button
             type="button"
             aria-label="shutdown-backend"
-            className="fnos-left-nav__power-btn"
+            className="mt-left-nav__power-btn"
             onClick={() => {
               setShowPowerMenu(false)
               void doShutdown()

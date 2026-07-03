@@ -1,5 +1,5 @@
-import { getRegisteredApp } from '@/appRegistry'
-import { FnOSWindow } from '@/Window'
+﻿import { getRegisteredApp } from '@/appRegistry'
+import { DesktopWindow } from '@/Window'
 import { useWindowStore } from '@/windowStore'
 
 export function WindowContainer() {
@@ -7,13 +7,13 @@ export function WindowContainer() {
   const maxZ = Math.max(0, ...windows.map((w) => w.zIndex))
 
   return (
-    <div className="fnos-windows">
+    <div className="mt-windows">
       {windows.map((w) => {
         const registeredApp = getRegisteredApp(w.appType)
         if (!registeredApp) return null
         const C = registeredApp.component
         return (
-          <FnOSWindow
+          <DesktopWindow
             key={w.id}
             windowId={w.id}
             title={registeredApp.title || w.title}
@@ -34,7 +34,7 @@ export function WindowContainer() {
             onResize={resizeWindow}
           >
             <C />
-          </FnOSWindow>
+          </DesktopWindow>
         )
       })}
     </div>

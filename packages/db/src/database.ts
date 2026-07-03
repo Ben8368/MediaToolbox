@@ -168,6 +168,10 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       const rows = stmt.all(limit, offset) as DbLogRow[]
       return rows.map((row) => this.mapDbLogToEntry(row))
     },
+
+    clear: async (): Promise<void> => {
+      this.db.prepare('DELETE FROM logs').run()
+    },
   }
 
   private mapDbLogToEntry(row: DbLogRow): LogEntry {

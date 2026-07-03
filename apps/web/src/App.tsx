@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+﻿import { useCallback, useEffect } from 'react'
 import { LeftNavbar } from '@/LeftNavbar'
 import { AppLauncher } from '@/AppLauncher'
 import { WindowContainer } from '@/WindowContainer'
@@ -17,13 +17,13 @@ export default function App() {
   }, [openWindow, setShowLauncher])
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--fnos-wp', `url('/static/bg/live/wallpaper-${wallpaper + 1}-dark.webp')`)
+    document.documentElement.style.setProperty('--mt-wp', `url('/static/bg/live/wallpaper-${wallpaper + 1}-dark.webp')`)
   }, [wallpaper])
 
   return (
-    <div className="fnos-desktop">
+    <div className="mt-desktop">
       <LeftNavbar />
-      <div className="fnos-main">
+      <div className="mt-main">
         <DesktopIcons onOpenApp={handleOpenApp} />
       </div>
       <WindowContainer />

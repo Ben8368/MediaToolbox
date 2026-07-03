@@ -1,4 +1,4 @@
-.fm-picker .fm-file-icon svg {
+﻿.fm-picker .fm-file-icon svg {
   width: 26px;
   height: 30px;
   stroke: rgba(125,183,255,.88);
@@ -286,7 +286,7 @@
 
 .fm-action-btn--primary {
   border-color: rgba(0,102,255,.35);
-  background: var(--fnos-brand);
+  background: var(--mt-brand);
   color: #fff;
 }
 
