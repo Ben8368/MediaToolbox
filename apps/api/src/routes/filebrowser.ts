@@ -10,7 +10,7 @@ import type {
 } from '@mediatoolbox/contracts'
 
 import { filebrowserDeleteSchema, filebrowserListSchema, filebrowserMkdirSchema, setWorkspaceSchema } from '../schemas.js'
-import type { ApiState } from '../state.js'
+import { WORKSPACE_ROOT, type ApiState } from '../state.js'
 import { addLog, entryName, formatLogTime, nowSeconds } from '../utils.js'
 import { normalizeWorkspacePath, parentWorkspacePath } from '../workspace-path.js'
 
@@ -21,10 +21,15 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     workspace: { project_root: state.workspaceRoot, downloads: `${state.workspaceRoot}/Downloads`, exports: `${state.workspaceRoot}/Exports` },
   }))
 
-  app.put<{ Body: { workspace?: string }; Reply: SetWorkspaceResponse }>('/api/filebrowser/workspace', { schema: setWorkspaceSchema }, async (request) => ({
-    ok: true,
-    workspace: normalizeWorkspacePath(request.body.workspace, state.workspaceRoot),
-  }))
+  app.put<{ Body: { workspace?: string }; Reply: SetWorkspaceResponse }>('/api/filebrowser/workspace', { schema: setWorkspaceSchema }, async (request) => {
+    const workspace = normalizeWorkspacePath(request.body.workspace, WORKSPACE_ROOT)
+    state.workspaceRoot = workspace
+    state.folders = createDefaultFolders(workspace)
+    state.files = createDefaultFiles(workspace)
+    state.trash = []
+    addLog(state.db, 'INFO', 'file-manager', `切换虚拟工作区：${workspace}`)
+    return { ok: true, workspace }
+  })
 
   app.get<{ Reply: DiskListResponse }>('/api/filebrowser/disks', async () => ({
     ok: true,
@@ -59,19 +64,33 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     if (fileIndex >= 0) {
       const [file] = state.files.splice(fileIndex, 1)
       if (file && request.body.to_trash !== false) {
-        state.trash.unshift({ id: `trash-${Date.now()}`, name: file.name, original_path: file.path, deleted_at: nowSeconds(), type: 'file', size: file.size, stored_path: file.path })
+        state.trash.unshift({ id: createTrashId(state), name: file.name, original_path: file.path, deleted_at: nowSeconds(), type: 'file', size: file.size, stored_path: file.path })
       }
       return { ok: true }
     }
+    const hasChildFolder = Array.from(state.folders).some((folder) => parentWorkspacePath(folder, state.workspaceRoot) === path)
+    const hasChildFile = state.files.some((file) => parentWorkspacePath(file.path, state.workspaceRoot) === path)
+    if (hasChildFolder || hasChildFile) return { ok: false, message: '目录不为空，请先删除其中的内容。' }
     if (!state.folders.delete(path)) return { ok: false, message: '路径不存在。' }
     if (request.body.to_trash !== false) {
-      state.trash.unshift({ id: `trash-${Date.now()}`, name: entryName(path), original_path: path, deleted_at: nowSeconds(), type: 'directory', size: 0, stored_path: path })
+      state.trash.unshift({ id: createTrashId(state), name: entryName(path), original_path: path, deleted_at: nowSeconds(), type: 'directory', size: 0, stored_path: path })
     }
     return { ok: true }
   })
 
   app.get<{ Reply: TrashListResponse }>('/api/filebrowser/trash', async () => ({ ok: true, items: state.trash }))
-  app.post<{ Params: { id: string }; Reply: OkResult }>('/api/filebrowser/trash/:id/restore', async () => ({ ok: true }))
+  app.post<{ Params: { id: string }; Reply: OkResult }>('/api/filebrowser/trash/:id/restore', async (request) => {
+    const index = state.trash.findIndex((item) => item.id === request.params.id)
+    if (index < 0) return { ok: false, message: '回收站条目不存在。' }
+    const [item] = state.trash.splice(index, 1)
+    if (!item) return { ok: false, message: '回收站条目不存在。' }
+    if (item.type === 'directory') {
+      state.folders.add(item.original_path)
+    } else if (!state.files.some((file) => file.path === item.original_path)) {
+      state.files.push({ name: item.name, path: item.original_path, size: item.size, extension: extensionFromName(item.name), type: 'file' })
+    }
+    return { ok: true }
+  })
   app.delete<{ Params: { id: string }; Reply: OkResult }>('/api/filebrowser/trash/:id', async (request) => {
     const index = state.trash.findIndex((item) => item.id === request.params.id)
     if (index >= 0) state.trash.splice(index, 1)
@@ -81,4 +100,23 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     state.trash.splice(0, state.trash.length)
     return { ok: true }
   })
+}
+
+function createDefaultFolders(workspaceRoot: string) {
+  return new Set([workspaceRoot, `${workspaceRoot}/Downloads`, `${workspaceRoot}/Exports`, `${workspaceRoot}/PSD`, `${workspaceRoot}/Transcodes`])
+}
+
+function createDefaultFiles(workspaceRoot: string) {
+  return [
+    { name: 'README.txt', path: `${workspaceRoot}/README.txt`, size: 128, extension: 'txt', type: 'file' as const },
+  ]
+}
+
+function createTrashId(state: ApiState) {
+  return `trash-${Date.now()}-${state.trash.length + 1}`
+}
+
+function extensionFromName(name: string) {
+  const index = name.lastIndexOf('.')
+  return index >= 0 ? name.slice(index + 1) : ''
 }

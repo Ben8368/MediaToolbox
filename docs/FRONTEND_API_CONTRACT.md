@@ -44,6 +44,7 @@ Workers / adapters 负责：
 | `GET /api/apps` | 工作台应用列表 | 骨架 |
 | `GET /api/system/metrics` | 右侧状态面板系统快照 | 骨架 |
 | `GET /api/system/runtime` | 下载器状态栏网络速率 | 骨架 |
+| `POST /api/system/shutdown` | 关闭本地服务，需 `x-mediatoolbox-shutdown: desktop` 请求头 | 骨架 |
 | `GET /api/logs` | 日志列表 | 骨架 |
 | `GET /api/logs/metadata` | 日志筛选元数据 | 骨架 |
 | `DELETE /api/logs` | 清理日志 | 骨架 |
@@ -72,6 +73,8 @@ Workers / adapters 负责：
 | `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 骨架 |
 | `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 骨架 |
 | `DELETE /api/filebrowser/trash` | 清空回收站 | 骨架 |
+| `POST /api/transcode/jobs` | 创建转码任务，输入必须在工作区内，输出必须在 `/Workspace/Exports` 内 | 骨架 |
+| `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 骨架 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot | 待设计 |
 | `POST /api/psd/batch-jobs` | 创建 PSD 批处理任务 | 待设计 |
 
@@ -84,7 +87,9 @@ Workers / adapters 负责：
 
 说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实下载、真实文件系统操作、系统指标采集或任务队列执行器已接入。
 
-当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace` 和 `POST /api/fetch/tasks/clear` 已加入基础 Fastify schema。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear` 和 `POST /api/transcode/jobs` 已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，当前单任务执行器使用第一条 URL。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+
+文件浏览骨架的 `PUT /api/filebrowser/workspace` 会更新当前虚拟工作区状态，并重置骨架目录、文件和回收站；`POST /api/filebrowser/trash/{id}/restore` 会恢复对应内存条目；非空目录删除会被拒绝，避免产生不可达的子项。
 
 ## 4. 启用本地 API 契约模式
 

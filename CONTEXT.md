@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4 已完成，Phase 5 待开始
-> **最近更新：** 2026-07-03，完成 SQLite 持久化层（packages/db）：jobs、assets、logs 三张表 + 迁移机制；apps/api 全面切换至数据库存储，测试用内存DB；`npm run verify` 全通过（db: 13 tests，api: 7 tests，build ✓，typecheck ✓）。
+> **最近更新：** 2026-07-03，修复代码审查发现的 API 边界与一致性问题：转码路径限制在虚拟工作区并要求输出到 Exports；下载 `urls` 契约接入执行器；批量清理同步删除 jobs；文件浏览 workspace/回收站不再假成功；关机接口增加本地确认 header。
 
 ## 项目定位
 

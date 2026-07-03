@@ -93,13 +93,16 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
   app.post<{ Body: { task_ids?: string[] }; Reply: OkResult }>('/api/fetch/tasks/clear', { schema: clearFetchTasksSchema }, async (request) => {
     const ids = new Set(request.body.task_ids ?? [])
+    const removedIds: string[] = []
     for (let index = state.fetchTasks.length - 1; index >= 0; index -= 1) {
       const task = state.fetchTasks[index]
       if (!task) continue
       if ((ids.size === 0 && isTerminalTask(task)) || ids.has(task.id) || ids.has(task.task_id)) {
-        state.fetchTasks.splice(index, 1)
+        const [removed] = state.fetchTasks.splice(index, 1)
+        if (removed) removedIds.push(removed.id)
       }
     }
+    await Promise.all(removedIds.map((id) => state.db.jobs.delete(id)))
     return { ok: true }
   })
 
