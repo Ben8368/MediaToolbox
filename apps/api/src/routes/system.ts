@@ -1,4 +1,6 @@
 import os from 'node:os'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult, RuntimeMetrics, RuntimeMetricsSlice } from '@mediatoolbox/contracts'
 
@@ -6,6 +8,7 @@ import type { ApiState } from '../state.js'
 import { isTerminalTask } from '../utils.js'
 
 const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
+const execFileAsync = promisify(execFile)
 
 function service(id: string, name: string, detail: string, availabilityStatus = 'ready', online = true) {
   return {
@@ -27,15 +30,22 @@ function cpuPercent() {
   return Math.max(0, Math.min(100, Math.round((oneMinuteLoad / cpuCount) * 100)))
 }
 
-function memorySnapshot() {
+async function memorySnapshot() {
   const total = os.totalmem()
   const free = os.freemem()
   const used = Math.max(0, total - free)
+  const physicalPercent = total > 0 ? Math.round((used / total) * 100) : 0
+  const pressurePercent = process.platform === 'darwin'
+    ? await macosMemoryPressurePercent()
+    : undefined
+
   return {
     total,
     free,
     used,
-    percent: total > 0 ? Math.round((used / total) * 100) : 0,
+    percent: pressurePercent ?? physicalPercent,
+    pressurePercent,
+    pressureLabel: pressurePercent === undefined ? undefined : memoryPressureLabel(pressurePercent),
   }
 }
 
@@ -49,12 +59,14 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const elapsedSeconds = Math.max((now - state.networkSample.at) / 1000, 0.001)
   const downloadBytesPerSec = Math.max(0, Math.round((browserReceivedBytes - state.networkSample.browserReceivedBytes) / elapsedSeconds))
   state.networkSample = { at: now, browserReceivedBytes }
-  const memory = memorySnapshot()
+  const memory = await memorySnapshot()
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
       cpu_percent: cpuPercent(),
       memory_percent: memory.percent,
+      ...(memory.pressurePercent === undefined ? {} : { memory_pressure_percent: memory.pressurePercent }),
+      ...(memory.pressureLabel === undefined ? {} : { memory_pressure_label: memory.pressureLabel }),
       memory_used_bytes: memory.used,
       memory_total_bytes: memory.total,
       memory_free_bytes: memory.free,
@@ -120,6 +132,23 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
     },
     log_mode: 'sqlite-local',
   }
+}
+
+async function macosMemoryPressurePercent(): Promise<number | undefined> {
+  try {
+    const { stdout } = await execFileAsync('memory_pressure', ['-Q'], { timeout: 800 })
+    const freePercent = Number(stdout.match(/System-wide memory free percentage:\s*(\d+)%/)?.[1])
+    if (!Number.isFinite(freePercent)) return undefined
+    return Math.max(0, Math.min(100, 100 - freePercent))
+  } catch {
+    return undefined
+  }
+}
+
+function memoryPressureLabel(percent: number): string {
+  if (percent >= 80) return '压力很高'
+  if (percent >= 60) return '压力偏高'
+  return '压力正常'
 }
 
 export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {

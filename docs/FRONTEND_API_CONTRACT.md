@@ -85,6 +85,8 @@ Workers / adapters 负责：
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot，需配置 Photoshop 命令 runner；未配置返回 503 可读错误 | 执行入口 |
 | `POST /api/psd/batch-jobs` | 创建 PSD 批处理任务 | 待设计 |
 
+`GET /api/system/metrics` 的 `system.memory_percent` 表示右侧状态面板的内存仪表值：macOS 优先使用 `memory_pressure -Q` 推导系统内存压力，其他平台回退为物理内存占用比例；`memory_used_bytes`、`memory_total_bytes` 和 `memory_free_bytes` 保留原始物理内存明细。
+
 实现位置：
 
 - Web HTTP adapter：`apps/web/src/api/real/`

@@ -49,7 +49,8 @@ describe('api skeleton contract', () => {
     const metrics = await app.inject({ method: 'GET', url: '/api/system/metrics' })
 
     expect(directory.json()).toMatchObject({ ok: true, path: '/Workspace' })
-    expect(metrics.json()).toMatchObject({
+    const metricsBody = metrics.json()
+    expect(metricsBody).toMatchObject({
       runtime: expect.any(Object),
       system: expect.objectContaining({
         gpu_available: false,
@@ -60,6 +61,12 @@ describe('api skeleton contract', () => {
       }),
       network: expect.objectContaining({ upload_bytes_per_sec: 0 }),
     })
+    if (process.platform === 'darwin') {
+      expect(metricsBody.system).toMatchObject({
+        memory_pressure_percent: expect.any(Number),
+        memory_pressure_label: expect.any(String),
+      })
+    }
     await app.close()
   })
 
