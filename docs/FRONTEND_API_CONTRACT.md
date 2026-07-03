@@ -40,20 +40,36 @@ Workers / adapters 负责：
 | --- | --- | --- |
 | `GET /api/health` | 本地 API 健康检查 | 骨架 |
 | `GET /api/apps` | 工作台应用列表 | 骨架 |
-| `GET /api/system/metrics` | 右侧状态面板系统快照 | 待接入 |
-| `GET /api/system/runtime` | 下载器状态栏网络速率 | 待接入 |
-| `GET /api/logs` | 日志列表 | 待接入 |
-| `POST /api/jobs` | 创建统一任务 | 待设计 |
-| `GET /api/jobs` | 任务列表 | 待设计 |
-| `GET /api/jobs/{id}` | 任务详情 | 待设计 |
-| `POST /api/jobs/{id}/cancel` | 取消任务 | 待设计 |
+| `GET /api/system/metrics` | 右侧状态面板系统快照 | 骨架 |
+| `GET /api/system/runtime` | 下载器状态栏网络速率 | 骨架 |
+| `GET /api/logs` | 日志列表 | 骨架 |
+| `GET /api/logs/metadata` | 日志筛选元数据 | 骨架 |
+| `DELETE /api/logs` | 清理日志 | 骨架 |
+| `GET /api/notifications/unread-count` | 未读通知数量 | 骨架 |
+| `DELETE /api/notifications` | 清理通知 | 骨架 |
+| `POST /api/notifications/read-all` | 全部通知标为已读 | 骨架 |
+| `POST /api/jobs` | 创建统一任务 | 骨架 |
+| `GET /api/jobs` | 任务列表 | 骨架 |
+| `GET /api/jobs/{id}` | 任务详情 | 骨架 |
+| `POST /api/jobs/{id}/cancel` | 取消任务 | 骨架 |
 | `POST /api/downloads/analyze` | 解析下载 URL | 待设计 |
-| `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交 | 待接入 |
-| `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 待接入 |
-| `GET /api/fetch/tasks/history` | 兼容迁回前端的历史任务 | 待接入 |
-| `POST /api/filebrowser/list` | 列出目录 | 待接入 |
-| `POST /api/filebrowser/mkdir` | 新建文件夹 | 待接入 |
-| `DELETE /api/filebrowser/path` | 删除/移入回收站 | 待接入 |
+| `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交 | 骨架 |
+| `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 骨架 |
+| `GET /api/fetch/tasks/history` | 兼容迁回前端的历史任务 | 骨架 |
+| `POST /api/fetch/tasks/{id}/cancel` | 取消兼容下载任务 | 骨架 |
+| `DELETE /api/fetch/tasks/{id}` | 删除兼容下载记录 | 骨架 |
+| `POST /api/fetch/tasks/clear` | 清理兼容下载记录 | 骨架 |
+| `GET /api/fetch/tasks/{id}/file` | 兼容下载文件访问 | 骨架 |
+| `GET /api/filebrowser/workspace` | 工作区信息 | 骨架 |
+| `PUT /api/filebrowser/workspace` | 设置工作区 | 骨架 |
+| `GET /api/filebrowser/disks` | 磁盘列表 | 骨架 |
+| `POST /api/filebrowser/list` | 列出目录 | 骨架 |
+| `POST /api/filebrowser/mkdir` | 新建文件夹 | 骨架 |
+| `DELETE /api/filebrowser/path` | 删除/移入回收站 | 骨架 |
+| `GET /api/filebrowser/trash` | 回收站列表 | 骨架 |
+| `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 骨架 |
+| `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 骨架 |
+| `DELETE /api/filebrowser/trash` | 清空回收站 | 骨架 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot | 待设计 |
 | `POST /api/psd/batch-jobs` | 创建 PSD 批处理任务 | 待设计 |
 
@@ -63,6 +79,8 @@ Workers / adapters 负责：
 - 本地 API：`apps/api/src/`
 - 共享契约：`packages/contracts`
 - 历史测试夹具：`apps/web/src/mockApi/`
+
+说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实下载、真实文件系统操作、系统指标采集或任务队列执行器已接入。
 
 ## 4. 启用真实 API
 

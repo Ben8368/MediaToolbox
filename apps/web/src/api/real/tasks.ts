@@ -1,8 +1,8 @@
 import { apiRequest, apiUrl } from '@/api/http'
-import type { TaskListResponse } from '@/api/types'
+import type { SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 export async function submitFetch(draft: Record<string, unknown>) {
-  return apiRequest<{ ok: boolean; task_id?: string; status?: string }>('/api/fetch/tasks', {
+  return apiRequest<SubmitFetchResponse>('/api/fetch/tasks', {
     method: 'POST',
     body: JSON.stringify(draft),
   })

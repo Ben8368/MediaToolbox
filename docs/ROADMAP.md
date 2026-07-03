@@ -22,7 +22,7 @@
 - [x] 建立 download/transcode/psd worker 入口。
 - [x] 安装依赖并生成根 lockfile。
 - [x] 跑通 workspace `npm run verify`。
-- [ ] 将前端 API 契约迁移到 `packages/contracts`。
+- [x] 将前端 API 契约迁移到 `packages/contracts`，并补齐 `apps/api` 可联调骨架端点。
 
 ## Phase 3：真实下载与转码
 
@@ -59,7 +59,7 @@
 | 003 | 下载器 UI | 完成 |
 | 004 | 文件管理器 UI | 完成 |
 | 005 | 治理文档与红绿灯审查 | 完成 |
-| 006 | monorepo 大项目骨架 | 进行中 |
+| 006 | monorepo 大项目骨架 | 完成 |
 | 007 | 本地 API 服务 | 骨架 |
 | 008 | Electron 桌面壳 | 骨架 |
 | 009 | 任务状态机 | 骨架 |
