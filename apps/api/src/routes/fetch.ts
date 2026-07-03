@@ -24,33 +24,58 @@ function taskSourceFromDraft(draft: Record<string, unknown>) {
   return urls.length ? urls.join(', ') : String(draft.url || '')
 }
 
+function urlsFromDraft(draft: Record<string, unknown>): string[] {
+  const urls = Array.isArray(draft.urls)
+    ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
+    : []
+  if (urls.length) return urls
+  return typeof draft.url === 'string' && draft.url.trim() ? [draft.url.trim()] : []
+}
+
+function draftForSingleUrl(draft: Record<string, unknown>, url: string): Record<string, unknown> {
+  return { ...draft, url, urls: [url] }
+}
+
+function createFetchTask(id: string, draft: Record<string, unknown>, createdAt: number): FetchTaskRecord {
+  return {
+    id,
+    task_id: id,
+    title: titleFromDraft(draft),
+    source_url: taskSourceFromDraft(draft),
+    status: 'pending',
+    progress: 0,
+    stage: '等待执行',
+    created_at: createdAt,
+    updated_at: createdAt,
+    started_at: null,
+    completed_at: null,
+    params: draft,
+    state: {},
+  }
+}
+
 export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: Record<string, unknown>; Reply: SubmitFetchResponse }>('/api/fetch/tasks', { schema: fetchTaskSubmitSchema }, async (request) => {
     const createdAt = nowSeconds()
-    const id = `fetch-${createdAt}-${state.fetchTasks.length + 1}`
-    const task: FetchTaskRecord = {
-      id,
-      task_id: id,
-      title: titleFromDraft(request.body),
-      source_url: taskSourceFromDraft(request.body),
-      status: 'pending',
-      progress: 0,
-      stage: '等待执行',
-      created_at: createdAt,
-      updated_at: createdAt,
-      started_at: null,
-      completed_at: null,
-      params: request.body,
-      state: {},
+    const urls = urlsFromDraft(request.body)
+    if (urls.length === 0) throw new Error('下载任务至少需要一个 URL。')
+    const tasks: FetchTaskRecord[] = []
+
+    for (const [index, url] of urls.entries()) {
+      const id = `fetch-${createdAt}-${state.fetchTasks.length + index + 1}`
+      tasks.push(createFetchTask(id, draftForSingleUrl(request.body, url), createdAt))
     }
-    state.fetchTasks.unshift(task)
-    await state.db.jobs.create(createJobRecord({ id, kind: 'download.video', title: task.title }))
-    addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
 
-    // 异步执行，不阻塞 HTTP 响应
-    void executeDownload(task, state)
+    state.fetchTasks.unshift(...tasks)
+    for (const task of tasks) {
+      await state.db.jobs.create(createJobRecord({ id: task.id, kind: 'download.video', title: task.title }))
+      addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
+      // 异步执行，不阻塞 HTTP 响应
+      void executeDownload(task, state)
+    }
 
-    return { ok: true, task_id: id, status: task.status }
+    const firstTask = tasks[0]!
+    return { ok: true, task_id: firstTask.id, task_ids: tasks.map((task) => task.id), status: firstTask.status }
   })
 
   app.get<{ Reply: TaskListResponse }>('/api/fetch/tasks', async () => ({

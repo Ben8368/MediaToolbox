@@ -133,4 +133,10 @@ describe('logs', () => {
     const list = await db.logs.list()
     expect(Array.isArray(list)).toBe(true)
   })
+
+  it('clears persisted log entries', async () => {
+    await db.logs.create(makeLog())
+    await db.logs.clear()
+    await expect(db.logs.list()).resolves.toEqual([])
+  })
 })

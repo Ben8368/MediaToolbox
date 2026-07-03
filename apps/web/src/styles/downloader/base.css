@@ -1,4 +1,4 @@
-/* ===== Downloader App ===== */
+﻿/* ===== Downloader App ===== */
 .dl-app {
   position: relative;
   display: grid;
@@ -156,7 +156,7 @@
 
 .dl-btn--primary {
   border-color: rgba(0,102,255,.35);
-  background: var(--fnos-brand);
+  background: var(--mt-brand);
   color: #fff;
 }
 

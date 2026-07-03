@@ -32,6 +32,7 @@
 - [x] 接入下载任务进度解析、取消、失败重试和历史记录。
 - [x] 接入 `ffprobe` 媒体探测。
 - [x] 接入 `ffmpeg` 转码预设。
+- [x] 下载多 URL 提交拆分为多任务和多 jobs。
 - [ ] 前端下载工作台对接本地 API（需 Phase 4 持久化完成后再验收）。
 
 ## Phase 4：文件库与任务中心
@@ -39,6 +40,9 @@
 状态：**完成**。
 
 - [x] SQLite 持久化资产、任务和日志。
+- [x] 文件浏览接入受控本地工作区映射。
+- [x] 日志清理、通知已读和统一 jobs cancel 接入真实状态更新。
+- [x] 系统指标接入 uptime、CPU 负载近似值和内存占用采样。
 - [ ] 文件库统一管理下载、转码和 PSD 产出（UI 联调待后续）。
 - [ ] 全局任务中心显示 worker 状态、进度、日志和失败原因（UI 联调待后续）。
 
@@ -48,7 +52,8 @@
 
 - 定义 PSD template manifest。
 - 支持 slot 检查、文案替换、底图替换、尺寸变体和批量导出。
-- 复杂 PSD 接 Photoshop 自动化 adapter；优先 DOM，复杂命令再 batchPlay。
+- [x] 建立 Photoshop JSX adapter 与可配置命令 runner。
+- [ ] 复杂 PSD 接 Photoshop 本机联调；优先 DOM，复杂命令再 batchPlay。
 
 ## Feature 索引
 
@@ -60,9 +65,9 @@
 | 004 | 文件管理器 UI | 完成 |
 | 005 | 治理文档与红绿灯审查 | 完成 |
 | 006 | monorepo 大项目骨架 | 完成 |
-| 007 | 本地 API 服务 | 骨架 |
-| 008 | Electron 桌面壳 | 骨架 |
-| 009 | 任务状态机 | 骨架 |
-| 010 | yt-dlp adapter | 进行中 |
-| 011 | ffmpeg adapter | 骨架 |
-| 012 | PSD 模版引擎 | 骨架 |
+| 007 | 本地 API 服务 | 本地能力部分接入 |
+| 008 | Electron 桌面壳 | BrowserWindow / IPC / 托盘已接入 |
+| 009 | 任务状态机 | jobs cancel 已联动 |
+| 010 | yt-dlp adapter | 执行入口已接入 |
+| 011 | ffmpeg adapter | 执行入口已接入 |
+| 012 | PSD 模版引擎 | engine 接口与 Photoshop JSX adapter 已建立 |

@@ -1,6 +1,8 @@
 import type { FetchTaskRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
 import { SqliteDatabase } from '@mediatoolbox/db'
 import type { MediaToolboxDatabase } from '@mediatoolbox/db'
+import fs from 'node:fs'
+import path from 'node:path'
 
 import { formatLogTime } from './utils.js'
 
@@ -27,17 +29,24 @@ export type ApiTrashEntry = {
 export type ApiState = {
   startedAt: number
   workspaceRoot: string
+  physicalWorkspaceBase: string
+  physicalWorkspaceRoot: string
   fetchTasks: FetchTaskRecord[]
   db: MediaToolboxDatabase
+  notificationsReadAt: string | null
   folders: Set<string>
   files: ApiFile[]
   trash: ApiTrashEntry[]
 }
 
 const DB_PATH = process.env['MEDIATOOLBOX_DB_PATH'] ?? (process.env['NODE_ENV'] === 'test' ? ':memory:' : 'mediatoolbox.db')
+let testWorkspaceCounter = 0
 
 export function createApiState(): ApiState {
   const db = new SqliteDatabase(DB_PATH)
+  const physicalWorkspaceBase = resolvePhysicalWorkspaceBase()
+  const physicalWorkspaceRoot = physicalWorkspaceForVirtualRoot(physicalWorkspaceBase, WORKSPACE_ROOT)
+  ensureDefaultPhysicalWorkspace(physicalWorkspaceRoot)
 
   void db.logs.create({
     level: 'INFO',
@@ -51,12 +60,46 @@ export function createApiState(): ApiState {
   return {
     startedAt: Date.now(),
     workspaceRoot: WORKSPACE_ROOT,
+    physicalWorkspaceBase,
+    physicalWorkspaceRoot,
     fetchTasks: [],
     db,
+    notificationsReadAt: null,
     folders: new Set(['/Workspace', '/Workspace/Downloads', '/Workspace/Exports', '/Workspace/PSD', '/Workspace/Transcodes']),
     files: [
       { name: 'README.txt', path: '/Workspace/README.txt', size: 128, extension: 'txt', type: 'file' },
     ],
     trash: [],
   }
+}
+
+export function physicalWorkspaceForVirtualRoot(base: string, virtualRoot: string): string {
+  const relativeSegments = virtualRoot.replace(/^\/Workspace\/?/, '').split('/').filter(Boolean)
+  const resolved = path.resolve(base, ...relativeSegments)
+  const normalizedBase = path.resolve(base)
+  if (resolved !== normalizedBase && !resolved.startsWith(`${normalizedBase}${path.sep}`)) {
+    throw new Error('Physical workspace root escaped its base directory.')
+  }
+  return resolved
+}
+
+export function ensureDefaultPhysicalWorkspace(root: string): void {
+  fs.mkdirSync(root, { recursive: true })
+  for (const dirname of ['Downloads', 'Exports', 'PSD', 'Transcodes']) {
+    fs.mkdirSync(path.join(root, dirname), { recursive: true })
+  }
+  const readmePath = path.join(root, 'README.txt')
+  if (!fs.existsSync(readmePath)) {
+    fs.writeFileSync(readmePath, 'MediaToolbox workspace\n', 'utf8')
+  }
+}
+
+function resolvePhysicalWorkspaceBase(): string {
+  const configured = process.env['MEDIATOOLBOX_WORKSPACE_DIR']?.trim()
+  if (configured) return path.resolve(configured)
+  if (process.env['NODE_ENV'] === 'test') {
+    testWorkspaceCounter += 1
+    return path.resolve(process.cwd(), '..', '..', '.tmp', `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
+  }
+  return path.resolve(process.cwd(), '..', '..', '.tmp', 'workspace')
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { cancelTask, getSystemMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import { useSystemStore } from '@/store'
@@ -80,7 +80,7 @@ export function RightPanel() {
   const expandedGroup = groupedTasks.find((group) => group.type === expandedTaskType) || null
 
   return (
-    <div className="fnos-right-panel">
+    <div className="mt-right-panel">
       <div className="rp-card">
         <div className="rp-card-head rp-runtime-head">
           <div className="rp-card-title">运行状态</div>

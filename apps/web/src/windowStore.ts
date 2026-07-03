@@ -1,9 +1,9 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 
 import { getAppMetadata } from '@/appRegistry'
 import { getWindowPreset } from '@/appPresentation'
 
-export interface FnOSWindow {
+export interface DesktopWindowState {
   id: string
   appType: string
   title: string
@@ -17,7 +17,7 @@ export interface FnOSWindow {
 }
 
 interface WindowStore {
-  windows: FnOSWindow[]
+  windows: DesktopWindowState[]
   maxZ: number
   openWindow: (appType: string, title?: string) => void
   closeWindow: (id: string) => void
@@ -27,7 +27,7 @@ interface WindowStore {
   dragWindow: (id: string, x: number, y: number) => void
   resizeWindow: (id: string, width: number, height: number) => void
   hasWindow: (appType: string) => boolean
-  getWindowByType: (appType: string) => FnOSWindow | undefined
+  getWindowByType: (appType: string) => DesktopWindowState | undefined
 }
 
 let counter = 0

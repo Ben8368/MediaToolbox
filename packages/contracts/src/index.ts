@@ -78,6 +78,7 @@ export type FetchTaskRecord = {
 
 export type SubmitFetchResponse = OkResult & {
   task_id?: string
+  task_ids?: string[]
   status?: FetchTaskStatus
 }
 

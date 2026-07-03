@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+﻿import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { bootstrapApiClient } from '@/api/bootstrap'
@@ -7,7 +7,7 @@ import '@/styles/globals.css'
 
 bootstrapApiClient()
 
-document.documentElement.style.setProperty('--fnos-wp', 'url(/static/bg/live/wallpaper-3-dark.webp)')
+document.documentElement.style.setProperty('--mt-wp', 'url(/static/bg/live/wallpaper-3-dark.webp)')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

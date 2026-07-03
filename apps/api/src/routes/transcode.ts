@@ -5,7 +5,7 @@ import type { TranscodePreset } from '@mediatoolbox/ffmpeg'
 
 import { transcodeJobCreateSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
-import { executeTranscode, abortTranscode } from '../transcode-executor.js'
+import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
 import { normalizeWorkspacePath, WorkspacePathError } from '../workspace-path.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
@@ -44,8 +44,9 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
     '/api/transcode/jobs/:id/cancel',
     async (request) => {
       const job = await state.db.jobs.findById(request.params.id)
-      if (job && job.kind === 'media.transcode' && job.status === 'running') {
+      if (job && job.kind === 'media.transcode' && (job.status === 'queued' || job.status === 'running')) {
         abortTranscode(job.id)
+        await updateTranscodeJob(state, job.id, 'canceled')
       }
       return { ok: true }
     },

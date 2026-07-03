@@ -1,5 +1,5 @@
-/* ===== Launcher ===== */
-.fnos-launcher-overlay {
+﻿/* ===== Launcher ===== */
+.mt-launcher-overlay {
   position: fixed;
   inset: 0;
   z-index: 6000;
@@ -15,7 +15,7 @@
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.fnos-launcher {
+.mt-launcher {
   width: 520px;
   max-height: 420px;
   background: rgba(20,22,30,.9);
@@ -32,12 +32,12 @@
 
 @keyframes slideUp { from { transform: translateY(20px) scale(.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
 
-.fnos-launcher-search {
+.mt-launcher-search {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
 
-.fnos-launcher-search input {
+.mt-launcher-search input {
   width: 100%;
   height: 36px;
   padding: 0 12px;
@@ -49,22 +49,22 @@
   outline: none;
 }
 
-.fnos-launcher-search input:focus {
+.mt-launcher-search input:focus {
   border-color: rgba(255,255,255,.12);
 }
 
-.fnos-launcher-search input::placeholder { color: rgba(255,255,255,.25); }
+.mt-launcher-search input::placeholder { color: rgba(255,255,255,.25); }
 
-.fnos-launcher-grid {
+.mt-launcher-grid {
   padding: 14px;
   overflow-y: auto;
   max-height: 350px;
   scrollbar-width: none;
 }
 
-.fnos-launcher-grid::-webkit-scrollbar { display: none; }
+.mt-launcher-grid::-webkit-scrollbar { display: none; }
 
-.fnos-launcher-apps {
+.mt-launcher-apps {
   display: grid;
   grid-template-columns: repeat(5, 80px);
   gap: 4px;

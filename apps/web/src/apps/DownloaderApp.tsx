@@ -72,9 +72,13 @@ export function DownloaderApp() {
         throw new Error('服务器未返回任务 ID')
       }
 
-      const optimisticTask = createOptimisticTask(urls.join(', '), draft, result)
-      setOptimisticTasks((prev) => mergeTasks([optimisticTask], prev))
-      selection.setSelectedTaskId(optimisticTask.id)
+      const taskIds = result.task_ids?.length ? result.task_ids : [result.task_id]
+      const optimisticTasks = taskIds.map((taskId, index) => {
+        const url = urls[index] ?? urls[0] ?? ''
+        return createOptimisticTask(url, { ...draft, url, urls: [url] }, { ...result, task_id: taskId })
+      })
+      setOptimisticTasks((prev) => mergeTasks(optimisticTasks, prev))
+      selection.setSelectedTaskId(optimisticTasks[0]?.id ?? result.task_id)
       selection.clearSelection()
       selection.setSelectedCategory('all')
       void refreshLists()

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { getLauncherApps } from '@/appRegistry'
 import { AppIconImage } from '@/components/AppIconImage'
 import { useSystemStore } from '@/store'
@@ -20,13 +20,13 @@ export function AppLauncher({ onOpenApp }: { onOpenApp: (id: string) => void }) 
   const filtered = getLauncherApps().filter((app) => app.label.includes(search) || app.title.includes(search))
 
   return (
-    <div className="fnos-launcher-overlay" onClick={() => setShowLauncher(false)}>
-      <div className="fnos-launcher" onClick={(e) => e.stopPropagation()}>
-        <div className="fnos-launcher-search">
+    <div className="mt-launcher-overlay" onClick={() => setShowLauncher(false)}>
+      <div className="mt-launcher" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-launcher-search">
           <input ref={inputRef} type="text" placeholder="搜索..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <div className="fnos-launcher-grid">
-          <div className="fnos-launcher-apps">
+        <div className="mt-launcher-grid">
+          <div className="mt-launcher-apps">
             {filtered.map((app) => (
               <div
                 key={app.id}

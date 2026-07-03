@@ -16,6 +16,7 @@ export type MediaToolboxDatabase = {
   logs: {
     create(log: LogEntry): Promise<void>
     list(options?: { limit?: number; offset?: number }): Promise<LogEntry[]>
+    clear(): Promise<void>
   }
   close(): void
 }
