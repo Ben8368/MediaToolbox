@@ -3,11 +3,13 @@ import { useEffect, useRef } from 'react'
 type PollingCallback = () => void | Promise<void>
 
 /** 页面可见时按间隔轮询，隐藏时暂停并在恢复可见时立即执行一次 */
-export function useVisibilityPolling(callback: PollingCallback, intervalMs: number) {
+export function useVisibilityPolling(callback: PollingCallback, intervalMs: number, enabled = true) {
   const callbackRef = useRef(callback)
   callbackRef.current = callback
 
   useEffect(() => {
+    if (!enabled) return
+
     let interval: ReturnType<typeof setInterval> | null = null
 
     function run() {
@@ -41,5 +43,5 @@ export function useVisibilityPolling(callback: PollingCallback, intervalMs: numb
       stopPolling()
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [intervalMs])
+  }, [enabled, intervalMs])
 }

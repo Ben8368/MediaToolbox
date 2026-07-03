@@ -4,6 +4,8 @@ import type { OkResult, RuntimeMetrics, RuntimeMetricsSlice } from '@mediatoolbo
 import type { ApiState } from '../state.js'
 import { isTerminalTask } from '../utils.js'
 
+const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
+
 function service(id: string, name: string) {
   return {
     id,
@@ -69,7 +71,22 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Reply: OkResult }>('/api/system/shutdown', async (_request, reply) => {
     reply.send({ ok: true, message: '正在关闭本地服务...' })
     setTimeout(() => {
+      if (SUPERVISOR_SHUTDOWN_URL) {
+        notifySupervisorShutdown(SUPERVISOR_SHUTDOWN_URL).catch((error: unknown) => {
+          app.log.error(error, 'Supervisor shutdown request failed; falling back to API-only shutdown.')
+          app.close().then(() => process.exit(0)).catch(() => process.exit(1))
+        })
+        return
+      }
+
       app.close().then(() => process.exit(0)).catch(() => process.exit(1))
     }, 100)
   })
+}
+
+async function notifySupervisorShutdown(url: string) {
+  const response = await fetch(url, { method: 'POST' })
+  if (!response.ok) {
+    throw new Error(`Supervisor shutdown request failed with status ${response.status}.`)
+  }
 }

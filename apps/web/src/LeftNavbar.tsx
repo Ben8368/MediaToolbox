@@ -18,7 +18,14 @@ import { useWindowStore } from '@/windowStore'
 import { useState } from 'react'
 
 export function LeftNavbar() {
-  const { showLauncher, toggleLauncher } = useSystemStore()
+  const {
+    beginSystemShutdown,
+    completeSystemShutdown,
+    resetSystemLifecycle,
+    showLauncher,
+    systemLifecycle,
+    toggleLauncher,
+  } = useSystemStore()
   const windows = useWindowStore((state) => state.windows)
   const openWindow = useWindowStore((state) => state.openWindow)
   const minimizeWindow = useWindowStore((state) => state.minimizeWindow)
@@ -35,7 +42,7 @@ export function LeftNavbar() {
       allWindows.findIndex((candidate) => candidate.appType === windowItem.appType) === index,
   )
 
-  useVisibilityPolling(() => void pullUnreadNotificationCount(), 3000)
+  useVisibilityPolling(() => void pullUnreadNotificationCount(), 3000, systemLifecycle === 'running')
 
   function doClick(appType: string) {
     const existingWindow = windows.find((windowItem) => windowItem.appType === appType)
@@ -60,17 +67,21 @@ export function LeftNavbar() {
     if (!window.confirm(runtime.shutdown.confirm)) return
 
     setIsShuttingDown(true)
+    beginSystemShutdown()
     try {
       await shutdownSystem()
+      completeSystemShutdown()
       setPowerComplete('shutdown')
     } catch (error: unknown) {
       // No status means network-layer failure — server likely exited before responding
-      if (error instanceof ApiRequestError && error.status === undefined) {
+      if (error instanceof ApiRequestError && (error.status === undefined || error.status >= 500)) {
+        completeSystemShutdown()
         setPowerComplete('shutdown')
         return
       }
       window.alert(getErrorMessage(error) || runtime.shutdown.fallbackError)
       setIsShuttingDown(false)
+      resetSystemLifecycle()
     }
   }
 

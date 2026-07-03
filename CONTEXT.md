@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 1 前端迁回完成 → Phase 2 大项目骨架与 API 契约对齐完成
-> **最近更新：** 2026-07-03，`fetch/tasks` 内部收敛到 `job-core`：创建/取消/删除下载任务时同步维护对应 `JobRecord`
+> **最近更新：** 2026-07-03，接入开发期 supervisor 与 `process-manager`：`npm run dev` 统一启动 Web/API，前端关闭请求可触发总控关闭子进程。
 
 ## 项目定位
 
@@ -15,7 +15,7 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 - **前端：** `apps/web`，React 18 + TypeScript + Vite + Zustand；保留远端已验收的 NAS 风格 UI、窗口系统、下载器、文件管理器、设置和日志入口。
 - **API：** `apps/api`，Fastify 本地服务骨架，已对齐前端下载、文件浏览、系统指标、日志、通知和 jobs 的最小契约；路由已按领域拆分，并对关键写入端点加入基础 schema 与虚拟工作区路径边界。
 - **桌面壳：** `apps/desktop`，Electron 配置入口骨架。
-- **共享包：** `packages/contracts`、`job-core`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
+- **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`psd-worker` 已建立入口。
 - **治理：** 保留红绿灯审查机制，规则见 `docs/AI_RULES.md`。
 - **验证：** `npm run verify` 已通过，覆盖测试、typecheck 和 build。
@@ -28,6 +28,7 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 
 - `apps/web` 仍保留历史 `fnos-*` CSS 类名前缀；仅作为实现细节，不进入用户文案。
 - API、desktop、workers 目前仍是架构骨架，尚未接真实执行器、数据库和任务队列；前端已明确标注为本地 API 契约模式。
+- 开发期 supervisor 已接管 Web/API 共同启停；workers 与 Electron main 复用 `packages/process-manager` 的接入仍待后续阶段完成。
 - `npm install` 报告 1 个 high severity 依赖审计项，尚未执行可能带来破坏性升级的 `npm audit fix --force`。
 
 ## 下一步
@@ -40,8 +41,9 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm run dev:web` | 启动前端开发服务器 |
-| `npm run dev:api` | 启动本地 API 服务 |
+| `npm run dev` | 通过 supervisor 统一启动前端开发服务器和本地 API，并支持关闭按钮联动退出 |
+| `npm run dev:web` | 单独启动前端开发服务器 |
+| `npm run dev:api` | 单独启动本地 API 服务 |
 | `npm run dev:desktop` | 启动桌面壳开发入口 |
 | `npm run typecheck` | workspace 类型检查 |
 | `npm run test` | workspace 测试 |

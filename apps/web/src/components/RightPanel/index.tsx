@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cancelTask, getSystemMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
+import { useSystemStore } from '@/store'
 import { getErrorMessage } from '@/utils'
 
 import { DualLineChart } from './DualLineChart'
@@ -24,15 +25,20 @@ export function RightPanel() {
   const [error, setError] = useState('')
   const [expandedTaskType, setExpandedTaskType] = useState<string | null>(null)
   const [servicesExpanded, setServicesExpanded] = useState(false)
+  const systemLifecycle = useSystemStore((state) => state.systemLifecycle)
 
   async function refresh() {
+    if (useSystemStore.getState().systemLifecycle !== 'running') return
+
     try {
       const data = await getSystemMetrics()
+      if (useSystemStore.getState().systemLifecycle !== 'running') return
       setMetrics(data)
       setError('')
       setNetUpData((items) => [...items.slice(1), Number(data.network?.upload_bytes_per_sec || 0)])
       setNetDownData((items) => [...items.slice(1), Number(data.network?.download_bytes_per_sec || 0)])
     } catch (err: unknown) {
+      if (useSystemStore.getState().systemLifecycle !== 'running') return
       setError(getErrorMessage(err) || '监控数据读取失败')
     }
   }
@@ -46,7 +52,7 @@ export function RightPanel() {
     }
   }
 
-  useVisibilityPolling(refresh, 1000)
+  useVisibilityPolling(refresh, 1000, systemLifecycle === 'running')
 
   const system = metrics.system || EMPTY_METRICS.system!
   const network = metrics.network || EMPTY_METRICS.network!
