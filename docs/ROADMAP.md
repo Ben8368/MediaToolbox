@@ -26,9 +26,9 @@
 
 ## Phase 3：真实下载与转码
 
-状态：**待开始**。
+状态：**进行中**。
 
-- 接入 `yt-dlp` 执行器。
+- [x] 接入 `yt-dlp` adapter 与 download worker 执行入口。
 - 接入下载任务进度解析、取消、失败重试和历史记录。
 - 接入 `ffprobe` 媒体探测。
 - 接入 `ffmpeg` 转码预设。
@@ -63,6 +63,6 @@
 | 007 | 本地 API 服务 | 骨架 |
 | 008 | Electron 桌面壳 | 骨架 |
 | 009 | 任务状态机 | 骨架 |
-| 010 | yt-dlp adapter | 骨架 |
+| 010 | yt-dlp adapter | 进行中 |
 | 011 | ffmpeg adapter | 骨架 |
 | 012 | PSD 模版引擎 | 骨架 |
