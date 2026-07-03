@@ -1,4 +1,5 @@
 import { getApiRuntimePresentation, shutdownSystem } from '@/api'
+import { ApiRequestError } from '@/api/http'
 import { getAppIcon } from '@/icon-library'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import {
@@ -63,8 +64,8 @@ export function LeftNavbar() {
       await shutdownSystem()
       setPowerComplete('shutdown')
     } catch (error: unknown) {
-      // TypeError means fetch failed at network layer — server likely exited before responding
-      if (error instanceof TypeError) {
+      // No status means network-layer failure — server likely exited before responding
+      if (error instanceof ApiRequestError && error.status === undefined) {
         setPowerComplete('shutdown')
         return
       }
