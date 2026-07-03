@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 3 真实下载与转码进行中
-> **最近更新：** 2026-07-03，下载 adapter 拆出 `yt-dlp` 参数构建、工具探测、进度解析、错误归一与进程执行入口，`download-worker` 已可调用真实执行器。
+> **最近更新：** 2026-07-03，打通 API → download-worker 执行通路；下载任务提交后立即异步调用真实 yt-dlp 执行，进度事件和日志流回写 FetchTaskRecord/LogEntry，AbortController 实现取消，YtdlpRunError/YtdlpToolNotFoundError 归一错误映射。
 
 ## 项目定位
 
@@ -27,16 +27,15 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 ## 剩余黄灯
 
 - `apps/web` 仍保留历史 `fnos-*` CSS 类名前缀；仅作为实现细节，不进入用户文案。
-- API、desktop、部分 workers 目前仍是架构骨架，尚未接数据库和任务队列；前端已明确标注为本地 API 契约模式。
-- `yt-dlp` 执行器已在 adapter/worker 层具备最小运行入口，但尚未接入 `apps/api` 的任务调度和前端实时状态。
-- 开发期 supervisor 已接管 Web/API 共同启停；workers 与 Electron main 复用 `packages/process-manager` 的接入仍待后续阶段完成。
-- `npm install` 报告 1 个 high severity 依赖审计项，尚未执行可能带来破坏性升级的 `npm audit fix --force`。
+- desktop 目前仍是骨架配置入口，尚未实现真实 BrowserWindow 和 IPC 通信。
+- 部分 workers（transcode/psd）仍为骨架。
+- 数据库持久化层（SQLite）待 Phase 4 接入。
 
 ## 下一步
 
-1. 将 `apps/api` 下载任务从骨架记录接入 `download-worker`，打通进度、日志、取消和失败状态。
-2. 接入 SQLite 持久化任务、资产和日志。
-3. 评估 Electron 依赖审计项并制定非破坏性修复路径。
+1. 接入 `ffprobe` 媒体探测和 `ffmpeg` 转码预设（Phase 3 剩余）。
+2. 接入 SQLite 持久化任务、资产和日志（Phase 4）。
+3. 前端下载工作台实际对接真实下载流（手动验证）。
 
 ## 常用命令
 
