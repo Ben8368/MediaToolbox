@@ -55,10 +55,10 @@ export function getApiRuntimePresentation(): ApiRuntimePresentation {
       detail: `此窗口通过 ${apiBase} 访问本地 API 骨架契约。`,
     },
     shutdown: {
-      confirm: '将向本地 API 发送关闭请求。确定继续？',
+      confirm: '将关闭本地 API 服务，前端将无法继续使用。确定继续？',
       fallbackError: '关闭请求失败，请检查本地 API 服务状态。',
-      completeTitle: '关闭请求已发送',
-      completeBody: '本地 API 已接受关闭请求。当前仍处于骨架联调阶段，若前端页面保持打开，可以返回桌面继续查看状态。',
+      completeTitle: '本地服务已关闭',
+      completeBody: '本地 API 已停止运行。如需重新使用，请在终端重新启动服务后刷新页面。',
     },
     settings: {
       initialNotice: '本地 API 契约模式：本页偏好暂存浏览器，真实执行器和服务配置以后端接口为准。',

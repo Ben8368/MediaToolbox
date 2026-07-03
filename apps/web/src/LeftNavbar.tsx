@@ -63,6 +63,11 @@ export function LeftNavbar() {
       await shutdownSystem()
       setPowerComplete('shutdown')
     } catch (error: unknown) {
+      // TypeError means fetch failed at network layer — server likely exited before responding
+      if (error instanceof TypeError) {
+        setPowerComplete('shutdown')
+        return
+      }
       window.alert(getErrorMessage(error) || runtime.shutdown.fallbackError)
       setIsShuttingDown(false)
     }
