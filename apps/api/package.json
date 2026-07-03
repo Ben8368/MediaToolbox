@@ -14,7 +14,9 @@
     "@mediatoolbox/contracts": "0.1.0",
     "@mediatoolbox/downloader": "0.1.0",
     "@mediatoolbox/download-worker": "0.1.0",
+    "@mediatoolbox/ffmpeg": "0.1.0",
     "@mediatoolbox/job-core": "0.1.0",
+    "@mediatoolbox/transcode-worker": "0.1.0",
     "fastify": "^5.2.1"
   },
   "devDependencies": {

@@ -2,8 +2,8 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 3 真实下载与转码进行中
-> **最近更新：** 2026-07-03，打通 API → download-worker 执行通路；下载任务提交后立即异步调用真实 yt-dlp 执行，进度事件和日志流回写 FetchTaskRecord/LogEntry，AbortController 实现取消，YtdlpRunError/YtdlpToolNotFoundError 归一错误映射。
+> **当前阶段：** Phase 3 已完成，Phase 4 待开始
+> **最近更新：** 2026-07-03，完成 ffmpeg 包（tool/probe/progress/errors/run）及 transcode-worker，API 接入转码任务提交和取消路由；`npm run verify` 全通过（35 tests，build ✓）。
 
 ## 项目定位
 
@@ -33,8 +33,8 @@ MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎
 
 ## 下一步
 
-1. 接入 `ffprobe` 媒体探测和 `ffmpeg` 转码预设（Phase 3 剩余）。
-2. 接入 SQLite 持久化任务、资产和日志（Phase 4）。
+1. 接入 SQLite 持久化任务、资产和日志（Phase 4）。
+2. 前端转码工作台实际对接真实转码流（手动验证）。
 3. 前端下载工作台实际对接真实下载流（手动验证）。
 
 ## 常用命令
