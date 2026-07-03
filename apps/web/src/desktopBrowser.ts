@@ -38,6 +38,15 @@ export type DesktopBrowserPermissionEvent = {
   reason?: string
 }
 
+export type DesktopBrowserUploadSelection = {
+  view_id: string
+  session_id: string
+  filename: string
+  path: string
+  size: number
+  confirmed: boolean
+}
+
 export type DesktopBrowserEvent =
   | {
       type: 'state'
@@ -50,6 +59,10 @@ export type DesktopBrowserEvent =
   | {
       type: 'permission'
       permission: DesktopBrowserPermissionEvent
+    }
+  | {
+      type: 'upload-selection'
+      selection: DesktopBrowserUploadSelection
     }
 
 export type DesktopBrowserResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -65,6 +78,7 @@ export type DesktopBrowserBridge = {
   focus: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   downloadUrl: (id: string, url?: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   cancelDownload: (downloadId: string) => Promise<DesktopBrowserResult<{ id: string; canceled: boolean }>>
+  selectUploadFile: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserUploadSelection | null>>
   onEvent: (listener: (event: DesktopBrowserEvent) => void) => () => void
 }
 

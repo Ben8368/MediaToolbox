@@ -7,6 +7,7 @@ import {
   type DesktopBrowserPermissionEvent,
   type DesktopBrowserResult,
   type DesktopBrowserState,
+  type DesktopBrowserUploadSelection,
 } from '@/desktopBrowser'
 import { useWindowStore } from '@/windowStore'
 
@@ -36,6 +37,7 @@ export function BrowserApp() {
   const [status, setStatus] = useState({ tone: 'pending', text: '正在连接桌面浏览器内核' })
   const [downloads, setDownloads] = useState<DesktopBrowserDownloadEvent[]>([])
   const [permissions, setPermissions] = useState<DesktopBrowserPermissionEvent[]>([])
+  const [uploads, setUploads] = useState<DesktopBrowserUploadSelection[]>([])
 
   const handleResult = useCallback(<T,>(result: DesktopBrowserResult<T>): T | undefined => {
     if (result.ok) return result.data
@@ -91,6 +93,13 @@ export function BrowserApp() {
       if (event.type === 'permission') {
         if (event.permission.view_id !== viewId) return
         setPermissions((items) => [event.permission, ...items].slice(0, 4))
+        return
+      }
+
+      if (event.type === 'upload-selection') {
+        if (event.selection.view_id !== viewId) return
+        setUploads((items) => [event.selection, ...items].slice(0, 4))
+        setStatus({ tone: event.selection.confirmed ? 'online' : 'pending', text: event.selection.confirmed ? '已确认工作区上传文件' : '上传选择已取消' })
       }
     })
 
@@ -165,6 +174,12 @@ export function BrowserApp() {
     void bridge.cancelDownload(downloadId).then(handleResult)
   }, [bridge, handleResult])
 
+  const selectUploadFile = useCallback(() => {
+    if (!bridge) return
+    setStatus({ tone: 'pending', text: '正在选择工作区上传文件' })
+    void bridge.selectUploadFile(viewId).then(handleResult)
+  }, [bridge, handleResult, viewId])
+
   const showOverlay = !bridge || !isActive || browserState.url === HOME_URL || Boolean(browserState.error)
 
   return (
@@ -183,7 +198,7 @@ export function BrowserApp() {
           <div className="browser-sidebar-card browser-network-card">
             <span>网络事件</span>
             <div className="browser-network-list">
-              {downloads.length === 0 && permissions.length === 0 && <p>暂无下载或权限事件。</p>}
+              {downloads.length === 0 && permissions.length === 0 && uploads.length === 0 && <p>暂无下载、上传或权限事件。</p>}
               {downloads.map((download) => (
                 <div className="browser-network-item" key={download.id}>
                   <strong>{download.filename}</strong>
@@ -197,6 +212,12 @@ export function BrowserApp() {
                 <div className="browser-network-item browser-network-item--permission" key={`${permission.session_id}-${permission.permission}-${index}`}>
                   <strong>{permission.permission}</strong>
                   <small>{permission.decision === 'granted' ? '已允许' : '已拒绝'} · {permission.origin}</small>
+                </div>
+              ))}
+              {uploads.map((upload, index) => (
+                <div className="browser-network-item browser-network-item--upload" key={`${upload.session_id}-${upload.path}-${index}`}>
+                  <strong>{upload.filename}</strong>
+                  <small>{upload.confirmed ? '已确认' : '已取消'} · {upload.path}</small>
                 </div>
               ))}
             </div>
@@ -223,6 +244,15 @@ export function BrowserApp() {
               onClick={downloadCurrentPage}
             >
               <svg viewBox="0 0 24 24"><path d="M12 4v10M7 9l5 5 5-5M5 20h14" /></svg>
+            </button>
+            <button
+              className="browser-icon-button"
+              type="button"
+              title="选择工作区上传文件"
+              disabled={!bridge || browserState.url === HOME_URL || Boolean(browserState.error)}
+              onClick={selectUploadFile}
+            >
+              <svg viewBox="0 0 24 24"><path d="M12 20V10M7 15l5-5 5 5M5 4h14" /></svg>
             </button>
           </div>
 

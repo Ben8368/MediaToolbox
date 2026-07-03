@@ -135,3 +135,14 @@ export const browserNetworkPermissionEventSchema = {
     },
   },
 } as const
+
+export const psdInspectSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['psdPath'],
+    properties: {
+      psdPath: { type: 'string', minLength: 1 },
+    },
+  },
+} as const

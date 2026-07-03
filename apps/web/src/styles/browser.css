@@ -172,6 +172,10 @@
   border-color: rgba(255,212,59,.16);
 }
 
+.browser-network-item--upload {
+  border-color: rgba(84,255,183,.16);
+}
+
 .browser-panel {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) auto;

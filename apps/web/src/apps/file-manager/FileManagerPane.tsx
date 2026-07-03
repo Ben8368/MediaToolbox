@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { createFilebrowserDirectory, deleteFilebrowserPath } from '@/api'
+import { createFilebrowserDirectory, deleteFilebrowserPath, fetchAssets } from '@/api'
+import type { AssetRecord } from '@/api/types'
 import { FileManagerEntryTable, FileManagerToolbar } from '@/apps/file-manager/FileManagerMainPanel'
 import { FileManagerSidebar } from '@/apps/file-manager/FileManagerSidebar'
 import type { DiskInfo } from '@/apps/file-manager/types'
@@ -32,6 +33,7 @@ export function FileManagerPane() {
   const [searchText, setSearchText] = useState('')
   const [activeDiskPath, setActiveDiskPath] = useState('')
   const [lastLocalPath, setLastLocalPath] = useState('')
+  const [assets, setAssets] = useState<AssetRecord[]>([])
 
   const enterTrashView = useCallback(() => {
     setCurrentPath(TRASH_PATH)
@@ -51,6 +53,19 @@ export function FileManagerPane() {
     setActiveDiskPath,
     setLastLocalPath,
   })
+
+  const refreshAssets = useCallback(async () => {
+    try {
+      const result = await fetchAssets()
+      setAssets(result.assets ?? [])
+    } catch {
+      setAssets([])
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshAssets()
+  }, [refreshAssets])
 
   useEffect(() => {
     if (currentPath && currentPath !== TRASH_PATH) {
@@ -151,6 +166,7 @@ export function FileManagerPane() {
       <FileManagerSidebar
         activeSection={trash.activeSection}
         disks={disks}
+        assets={assets}
         activeDiskPath={activeDiskPath}
         currentPath={currentPath}
         onOpenLocal={openLocalFiles}
@@ -182,6 +198,31 @@ export function FileManagerPane() {
           onPurgeSelected={() => void purgeSelected()}
           onEmptyTrash={() => void emptyTrash()}
         />
+
+        {!trash.isTrashView && assets.length > 0 && (
+          <section className="fm-assets">
+            <div className="fm-assets__head">
+              <strong>产出资产</strong>
+              <button type="button" onClick={() => void refreshAssets()}>刷新</button>
+            </div>
+            <div className="fm-asset-list">
+              {assets.slice(0, 5).map((asset) => (
+                <button
+                  type="button"
+                  className="fm-asset-item"
+                  key={asset.id}
+                  onClick={() => {
+                    const parent = parentPath(asset.path)
+                    if (parent) void navigate(parent)
+                  }}
+                >
+                  <span>{asset.name}</span>
+                  <small>{asset.kind} · {asset.path}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <FileManagerEntryTable
           loading={loading}

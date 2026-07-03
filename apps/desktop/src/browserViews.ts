@@ -1,5 +1,5 @@
 import type { IpcMainInvokeEvent, Rectangle } from 'electron'
-import { cancelBrowserNetworkDownload, createBrowserNetworkSession } from './browserNetwork.js'
+import { cancelBrowserNetworkDownload, createBrowserNetworkSession, selectWorkspaceUploadFile } from './browserNetwork.js'
 
 type ElectronModule = typeof import('electron')
 type BrowserHostWindow = import('electron').BrowserWindow
@@ -19,6 +19,7 @@ type BrowserViewState = {
 type BrowserViewRecord = {
   id: string
   sessionId: string
+  networkOptions: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv }
   view: BrowserWebContentsView
   state: BrowserViewState
 }
@@ -68,6 +69,7 @@ export function registerBrowserViewIpcHandlers(
     const record: BrowserViewRecord = {
       id,
       sessionId: browserNetwork.sessionId,
+      networkOptions: options,
       view,
       state: {
         id,
@@ -176,6 +178,21 @@ export function registerBrowserViewIpcHandlers(
     const id = getStringField(payload, 'downloadId')
     if (!id) return fail('Missing browser download id')
     return ok({ id, canceled: cancelBrowserNetworkDownload(id) })
+  })
+
+  electron.ipcMain.handle('mediatoolbox:browser:select-upload-file', async (event, payload: unknown) => {
+    assertSender(event)
+    const record = getRecord(payload)
+    if (!record) return fail('Browser view not found')
+    const selection = await selectWorkspaceUploadFile({
+      electron,
+      hostWindow,
+      viewId: record.id,
+      apiUrl: record.networkOptions.apiUrl,
+      rootDir: record.networkOptions.rootDir,
+      env: record.networkOptions.env,
+    }, record.sessionId)
+    return ok(selection ?? null)
   })
 
   hostWindow.on('closed', () => {

@@ -43,31 +43,32 @@
 - [x] 文件浏览接入受控本地工作区映射。
 - [x] 日志清理、通知已读和统一 jobs cancel 接入真实状态更新。
 - [x] 系统指标接入 uptime、CPU 负载近似值和内存占用采样。
-- [ ] 文件库统一管理下载、转码和 PSD 产出（UI 联调待后续）。
-- [ ] 全局任务中心显示 worker 状态、进度、日志和失败原因（UI 联调待后续）。
+- [x] 文件库接入资产索引，统一显示浏览器下载和转码产出。
+- [x] 全局任务中心显示下载、浏览器下载、转码/PSD jobs 的状态、进度和失败原因，并统一走 jobs cancel。
 - [x] 前端转码工作台接入真实 `/api/transcode/jobs` 和统一 jobs 取消/轮询链路。
 
 ## Phase 4.5：浏览器网络能力层
 
-状态：**第一版已接入，待桌面端主观验收与上传确认流补齐**。
+状态：**非验收类能力已接入，待桌面端统一体验验收**。
 
 目标：把现有真浏览器 app 沉淀为可复用的 Browser Network adapter，让下载、文件管理和后续新增 app 可以按浏览器网络行为执行受控上传下载，同时保留 worker adapter 处理媒体解析和后处理。
 
 - [x] 在 `apps/desktop` 建立 browser session 管理边界，区分默认会话和应用隔离会话。
 - [x] 接管 Electron 下载事件，支持下载目标目录、文件名冲突、进度、取消、失败原因和完成通知。
-- [ ] 建立受控文件选择 / 上传桥接，上传来源仅允许工作区内文件，并要求用户确认。当前第一版对 File System Access 权限默认拒绝并写入权限审计。
+- [x] 建立受控文件选择 / 上传桥接，上传来源仅允许工作区内文件，并要求用户确认；网页 File System Access 权限仍默认拒绝并写入权限审计。
 - [x] 在 `apps/api` 冻结 Browser Network 任务契约，纳入统一 jobs、日志、权限校验和工作区路径约束。
-- [ ] 下载 app 增加双通道策略：普通网页资源走浏览器下载；视频、音频、字幕和后处理继续走 `yt-dlp` / worker。
+- [x] 下载 app 增加双通道策略：普通网页资源走浏览器下载；视频、音频、字幕和后处理继续走 `yt-dlp` / worker。
 - [x] 定义权限策略：下载、上传、弹窗、剪贴板、通知、跨域读取和 cookie 访问分别授权，默认不向 Web UI 暴露原始 cookie。
 - [ ] 补齐浏览器 app 的弹窗策略、错误页、标签页和生产打包资源加载验收。
 
 ## Phase 5：PS / PSD 工作台
 
-状态：**待开始**。
+状态：**第一版工作台已接入，待 Photoshop 本机联调与批量渲染 UI**。
 
 - 定义 PSD template manifest。
 - 支持 slot 检查、文案替换、底图替换、尺寸变体和批量导出。
 - [x] 建立 Photoshop JSX adapter 与可配置命令 runner。
+- [x] 前端 PSD 工作台接入模板检查入口，Photoshop 未配置时返回可读错误。
 - [ ] 复杂 PSD 接 Photoshop 本机联调；优先 DOM，复杂命令再 batchPlay。
 
 ## Feature 索引
@@ -85,6 +86,6 @@
 | 009 | 任务状态机 | jobs cancel 已联动 |
 | 010 | yt-dlp adapter | 执行入口已接入 |
 | 011 | ffmpeg adapter | 执行入口已接入，转码工作台 beta 已对接真实 API |
-| 012 | PSD 模版引擎 | engine 接口与 Photoshop JSX adapter 已建立 |
+| 012 | PSD 模版引擎 | engine 接口、Photoshop JSX adapter 与 PSD 检查工作台已建立 |
 | 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽和缩放已主观验收 |
-| 014 | Browser Network adapter | 第一版已接入：隔离 session、下载事件、权限审计、API/jobs 契约 |
+| 014 | Browser Network adapter | 非验收类能力已接入：隔离 session、下载事件、受控上传选择、权限审计、API/jobs 契约 |

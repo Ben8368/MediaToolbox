@@ -319,6 +319,7 @@ describe('api skeleton contract', () => {
       payload: { status: 'succeeded', received_bytes: 100, total_bytes: 100 },
     })
     const job = await app.inject({ method: 'GET', url: `/api/jobs/${download.job_id}` })
+    const assets = await app.inject({ method: 'GET', url: '/api/assets' })
 
     expect(created.statusCode).toBe(200)
     expect(download.id).toBe('desktop-generated-download-1')
@@ -331,6 +332,10 @@ describe('api skeleton contract', () => {
         status: 'succeeded',
         progress: { current: 100, total: 100, unit: 'bytes' },
       }),
+    })
+    expect(assets.json()).toMatchObject({
+      ok: true,
+      assets: [expect.objectContaining({ id: 'asset-desktop-generated-download-1', path: '/Workspace/Downloads/file.zip' })],
     })
     await app.close()
   })
@@ -381,6 +386,20 @@ describe('api skeleton contract', () => {
     expect(created.statusCode).toBe(200)
     expect(duplicate.statusCode).toBe(409)
     expect(duplicate.json()).toMatchObject({ ok: false, message: '浏览器下载记录已存在。' })
+    await app.close()
+  })
+
+  it('returns a readable PSD adapter error when Photoshop is not configured', async () => {
+    const app = buildApiServer()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/psd/templates/inspect',
+      payload: { psdPath: '/Workspace/PSD/template.psd' },
+    })
+
+    expect(response.statusCode).toBe(503)
+    expect(response.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能检查 PSD 模板。' })
     await app.close()
   })
 })

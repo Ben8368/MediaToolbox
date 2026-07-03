@@ -53,6 +53,14 @@ export async function executeTranscode(job: JobRecord, workerJob: TranscodeWorke
       addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
     } else {
       await updateTranscodeJob(state, job.id, 'succeeded', { current: 100, total: 100, unit: 'percent' })
+      await state.db.assets.create({
+        id: `asset-${job.id}`,
+        kind: workerJob.preset === 'audio-mp3' ? 'audio' : 'video',
+        name: workerJob.outputPath.split('/').pop() || job.title,
+        path: workerJob.outputPath,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).catch(() => undefined)
       addLog(state.db, 'INFO', 'transcode', `转码完成：${job.title}`)
     }
   } catch (error) {

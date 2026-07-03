@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
-import { cancelTask, getSystemMetrics } from '@/api'
+import { cancelJob, getSystemMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import { useSystemStore } from '@/store'
 import { getErrorMessage } from '@/utils'
@@ -45,7 +45,7 @@ export function RightPanel() {
 
   async function handleTaskAction(taskId: string) {
     try {
-      await cancelTask(taskId)
+      await cancelJob(taskId)
       await refresh()
     } catch (err: unknown) {
       setError(getErrorMessage(err) || '任务操作失败')

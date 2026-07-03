@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { submitFetch } from '@/api'
+import { getDesktopBrowserBridge } from '@/desktopBrowser'
 import { DownloaderAddForm } from '@/apps/downloader/DownloaderAddForm'
 import { DownloaderDetailDrawer } from '@/apps/downloader/DownloaderDetailDrawer'
 import {
@@ -27,6 +28,8 @@ const COOKIE_BROWSER_LABELS: Record<CookieBrowser, string> = {
   safari: 'Safari',
   firefox: 'Firefox',
 }
+
+const BROWSER_DOWNLOAD_CHANNEL_ID = 'download-browser-channel'
 
 export function DownloaderApp() {
   const { historyTasks, queueTasks, mergedTasks, pollError, fetchHistoryTasks, refreshLists, setOptimisticTasks } = useDownloaderTaskData()
@@ -108,7 +111,19 @@ export function DownloaderApp() {
         .map((url) => url.trim())
         .filter((url) => url.length > 0)
 
-      await submitTaskPayloads(urls)
+      if (form.taskChannel === 'browser') {
+        const bridge = getDesktopBrowserBridge()
+        if (!bridge) throw new Error('浏览器资源下载需要在 MediaToolbox 桌面端中使用。')
+        const channel = await bridge.create(BROWSER_DOWNLOAD_CHANNEL_ID, 'about:blank')
+        if (!channel.ok) throw new Error(channel.error)
+        for (const url of urls) {
+          const result = await bridge.downloadUrl(BROWSER_DOWNLOAD_CHANNEL_ID, url)
+          if (!result.ok) throw new Error(result.error)
+        }
+        void refreshLists()
+      } else {
+        await submitTaskPayloads(urls)
+      }
       form.setTaskUrl('')
       form.setShowAddForm(false)
     } catch (err: unknown) {
@@ -116,7 +131,7 @@ export function DownloaderApp() {
     } finally {
       form.setAddingTask(false)
     }
-  }, [form, submitTaskPayloads, actions])
+  }, [form, submitTaskPayloads, actions, refreshLists])
 
   const confirmCookieBrowserChange = useCallback(
     (browser: CookieBrowser) => {
@@ -192,6 +207,7 @@ export function DownloaderApp() {
           {form.showAddForm && (
             <DownloaderAddForm
               taskUrl={form.taskUrl}
+              taskChannel={form.taskChannel}
               taskPlatform={form.taskPlatform}
               taskSubtitles={form.taskSubtitles}
               taskOutputDir={form.taskOutputDir}
@@ -203,6 +219,7 @@ export function DownloaderApp() {
               addingTask={form.addingTask}
               submitError={form.submitError}
               onTaskUrlChange={form.setTaskUrl}
+              onTaskChannelChange={form.setTaskChannel}
               onTaskPlatformChange={form.setTaskPlatform}
               onTaskSubtitlesChange={form.setTaskSubtitles}
               onTaskOutputDirChange={form.setTaskOutputDir}

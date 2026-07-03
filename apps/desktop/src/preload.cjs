@@ -31,6 +31,9 @@ const browserApi = {
   cancelDownload(downloadId) {
     return ipcRenderer.invoke('mediatoolbox:browser:cancel-download', { downloadId })
   },
+  selectUploadFile(id) {
+    return ipcRenderer.invoke('mediatoolbox:browser:select-upload-file', { id })
+  },
   onEvent(listener) {
     const wrapped = (_event, payload) => listener(payload)
     ipcRenderer.on('mediatoolbox:browser:event', wrapped)

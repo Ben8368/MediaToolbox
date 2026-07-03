@@ -1,4 +1,6 @@
 import type {
+  AssetListResponse,
+  AssetRecord,
   CreateDirectoryResponse,
   DiskListResponse,
   DirectoryListResponse,
@@ -17,6 +19,7 @@ import type {
 } from '@mediatoolbox/contracts'
 
 export type {
+  AssetRecord,
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
@@ -36,6 +39,29 @@ export type TranscodeJobDraft = {
   title?: string
 }
 
+export type PsdTemplateManifest = {
+  id: string
+  name: string
+  version: number
+  sourcePath?: string
+  document: {
+    width: number
+    height: number
+    resolution?: number
+  }
+  slots: Array<{
+    id: string
+    kind: string
+    label: string
+    layerPath: string[]
+    required: boolean
+  }>
+}
+
+export type PsdInspectResponse = OkResult & {
+  manifest?: PsdTemplateManifest
+}
+
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
 export interface MediaToolboxApi {
   submitFetch(draft: Record<string, unknown>): Promise<SubmitFetchResponse>
@@ -47,8 +73,10 @@ export interface MediaToolboxApi {
   getFetchTaskFileUrl(taskId: string, path: string): string
 
   listJobs(): Promise<JobListResponse>
+  fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
+  inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>

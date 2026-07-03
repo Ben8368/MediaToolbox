@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { CookieBrowser, DownloadPlatform, SubtitleFormat } from '@/apps/downloader/types'
+import type { CookieBrowser, DownloadChannel, DownloadPlatform, SubtitleFormat } from '@/apps/downloader/types'
 import { getPlatformOption } from '@/apps/downloader/helpers'
 
 export function useDownloaderForm() {
   const [taskUrl, setTaskUrl] = useState('')
+  const [taskChannel, setTaskChannel] = useState<DownloadChannel>('media')
   const [taskPlatform, setTaskPlatform] = useState<DownloadPlatform>('auto')
   const [taskSubtitles, setTaskSubtitles] = useState(true)
   const [taskOutputDir, setTaskOutputDir] = useState('')
@@ -31,6 +32,8 @@ export function useDownloaderForm() {
   return {
     taskUrl,
     setTaskUrl,
+    taskChannel,
+    setTaskChannel,
     taskPlatform,
     setTaskPlatform,
     taskSubtitles,

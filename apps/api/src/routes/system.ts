@@ -33,9 +33,16 @@ function memoryPercent() {
   return Math.round(((total - os.freemem()) / total) * 100)
 }
 
-function buildMetrics(state: ApiState): RuntimeMetrics {
+async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const activeTasks = state.fetchTasks.filter((task) => !isTerminalTask(task))
   const activeBrowserDownloads = state.browserDownloads.filter((download) => download.status === 'pending' || download.status === 'running')
+  const jobs = await state.db.jobs.list()
+  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'retrying' || job.status === 'paused')
+  const browserReceivedBytes = state.browserDownloads.reduce((sum, download) => sum + download.received_bytes, 0)
+  const now = Date.now()
+  const elapsedSeconds = Math.max((now - state.networkSample.at) / 1000, 0.001)
+  const downloadBytesPerSec = Math.max(0, Math.round((browserReceivedBytes - state.networkSample.browserReceivedBytes) / elapsedSeconds))
+  state.networkSample = { at: now, browserReceivedBytes }
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
@@ -46,10 +53,10 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
       gpu_detail: 'GPU 指标采集尚未接入；当前返回 CPU 与内存运行时采样。',
     },
     network: {
-      upload: { text: '0 B/s' },
-      download: { text: '0 B/s' },
+      upload: { text: formatBytesPerSecond(0) },
+      download: { text: formatBytesPerSecond(downloadBytesPerSec) },
       upload_bytes_per_sec: 0,
-      download_bytes_per_sec: 0,
+      download_bytes_per_sec: downloadBytesPerSec,
     },
     services: [
       service('api', '本地 API', 'Fastify API 正在运行。'),
@@ -81,6 +88,18 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
         progress: download.total_bytes > 0 ? Math.round((download.received_bytes / download.total_bytes) * 100) : 0,
         can_cancel: true,
       })),
+      ...activeJobs
+        .filter((job) => job.kind === 'media.transcode' || job.kind === 'psd.batch')
+        .map((job) => ({
+          id: job.id,
+          name: job.title,
+          type: job.kind === 'media.transcode' ? 'transcode' : 'psd',
+          status: job.status,
+          status_label: jobStatusLabel(job.status),
+          stage: job.errorMessage || job.kind,
+          progress: job.progress ? Math.round((job.progress.current / Math.max(job.progress.total, 1)) * 100) : 0,
+          can_cancel: job.status === 'queued' || job.status === 'running' || job.status === 'retrying',
+        })),
     ],
     task_summary: {
       active_downloads: activeTasks.length + activeBrowserDownloads.length,
@@ -95,7 +114,7 @@ function buildMetrics(state: ApiState): RuntimeMetrics {
 export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
   app.get<{ Reply: RuntimeMetrics }>('/api/system/metrics', async () => buildMetrics(state))
   app.get<{ Reply: RuntimeMetricsSlice }>('/api/system/runtime', async () => {
-    const metrics = buildMetrics(state)
+    const metrics = await buildMetrics(state)
     const slice: RuntimeMetricsSlice = {}
     if (metrics.runtime) slice.runtime = metrics.runtime
     if (metrics.system) slice.system = metrics.system
@@ -120,6 +139,20 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
       app.close().then(() => process.exit(0)).catch(() => process.exit(1))
     }, 100)
   })
+}
+
+function formatBytesPerSecond(value: number): string {
+  if (value < 1024) return `${value} B/s`
+  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB/s`
+  return `${Math.round(value / 1024 / 102.4) / 10} MB/s`
+}
+
+function jobStatusLabel(status: string): string {
+  if (status === 'queued') return '排队中'
+  if (status === 'running') return '运行中'
+  if (status === 'retrying') return '重试中'
+  if (status === 'paused') return '暂停'
+  return status
 }
 
 async function notifySupervisorShutdown(url: string) {

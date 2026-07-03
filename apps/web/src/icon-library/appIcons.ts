@@ -6,6 +6,7 @@ export const APP_ICON_PATHS = {
   fileManager: `${BASE}/file-manager.png`,
   'file-manager': `${BASE}/file-manager.png`,
   transcode:   `${BASE}/setting.png`,
+  ps:          `${BASE}/setting.png`,
   settings:    `${BASE}/setting.png`,
   logs:        `${BASE}/log-center.png`,
 } as const

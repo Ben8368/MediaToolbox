@@ -2,10 +2,12 @@ import Fastify from 'fastify'
 
 import { registerBrowserNetworkRoutes } from './routes/browser-network.js'
 import { registerCoreRoutes } from './routes/core.js'
+import { registerAssetRoutes } from './routes/assets.js'
 import { registerFetchRoutes } from './routes/fetch.js'
 import { registerFilebrowserRoutes } from './routes/filebrowser.js'
 import { registerJobRoutes } from './routes/jobs.js'
 import { registerLogRoutes } from './routes/logs.js'
+import { registerPsdRoutes } from './routes/psd.js'
 import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
 import { createApiState } from './state.js'
@@ -47,6 +49,7 @@ export function buildApiServer() {
   })
 
   registerCoreRoutes(app)
+  registerAssetRoutes(app, state)
   registerBrowserNetworkRoutes(app, state)
   registerFetchRoutes(app, state)
   registerFilebrowserRoutes(app, state)
@@ -54,6 +57,7 @@ export function buildApiServer() {
   registerLogRoutes(app, state)
   registerJobRoutes(app, state)
   registerTranscodeRoutes(app, state)
+  registerPsdRoutes(app, state)
 
   return app
 }

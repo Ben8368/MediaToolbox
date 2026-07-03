@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { BrowserNetworkPermissionEvent } from '@mediatoolbox/contracts'
+import type { BrowserNetworkPermissionEvent, BrowserNetworkUploadSelection } from '@mediatoolbox/contracts'
 
 type ElectronModule = typeof import('electron')
 type BrowserHostWindow = import('electron').BrowserWindow
@@ -32,6 +32,7 @@ type BrowserNetworkDownloadEvent = {
 type BrowserNetworkEvent =
   | { type: 'download'; download: BrowserNetworkDownloadEvent }
   | { type: 'permission'; permission: BrowserNetworkPermissionEvent }
+  | { type: 'upload-selection'; selection: BrowserNetworkUploadSelection }
 
 const configuredSessions = new Set<string>()
 const downloadItems = new Map<string, DownloadItem>()
@@ -55,6 +56,73 @@ export function cancelBrowserNetworkDownload(id: string): boolean {
   if (!item || item.getState() !== 'progressing') return false
   item.cancel()
   return true
+}
+
+export async function selectWorkspaceUploadFile(options: BrowserNetworkOptions, sessionId: string): Promise<BrowserNetworkUploadSelection | undefined> {
+  const workspaceRoot = resolveWorkspaceDirectory(options)
+  const result = await options.electron.dialog.showOpenDialog(options.hostWindow, {
+    title: '选择要上传的工作区文件',
+    defaultPath: workspaceRoot,
+    properties: ['openFile'],
+  })
+  if (result.canceled || !result.filePaths[0]) {
+    emitPermissionEvent(options, sessionId, {
+      view_id: options.viewId,
+      session_id: sessionId,
+      origin: 'workspace-upload-bridge',
+      permission: 'fileSystem',
+      decision: 'denied',
+      reason: 'User canceled workspace upload file selection.',
+    })
+    return undefined
+  }
+
+  const physicalPath = path.resolve(result.filePaths[0])
+  const workspace = path.resolve(workspaceRoot)
+  if (physicalPath !== workspace && !physicalPath.startsWith(`${workspace}${path.sep}`)) {
+    emitPermissionEvent(options, sessionId, {
+      view_id: options.viewId,
+      session_id: sessionId,
+      origin: 'workspace-upload-bridge',
+      permission: 'fileSystem',
+      decision: 'denied',
+      reason: 'Selected file is outside the configured workspace.',
+    })
+    return undefined
+  }
+
+  const stat = fs.statSync(physicalPath)
+  if (!stat.isFile()) return undefined
+  const filename = path.basename(physicalPath)
+  const virtualPath = `/Workspace/${path.relative(workspace, physicalPath).split(path.sep).join('/')}`
+  const confirmed = await options.electron.dialog.showMessageBox(options.hostWindow, {
+    type: 'question',
+    buttons: ['允许上传', '取消'],
+    defaultId: 0,
+    cancelId: 1,
+    title: '确认上传工作区文件',
+    message: `允许当前浏览器页面使用工作区文件“${filename}”？`,
+    detail: virtualPath,
+  })
+  const selection: BrowserNetworkUploadSelection = {
+    view_id: options.viewId,
+    session_id: sessionId,
+    filename,
+    path: virtualPath,
+    size: stat.size,
+    confirmed: confirmed.response === 0,
+  }
+
+  emitPermissionEvent(options, sessionId, {
+    view_id: options.viewId,
+    session_id: sessionId,
+    origin: 'workspace-upload-bridge',
+    permission: 'fileSystem',
+    decision: selection.confirmed ? 'granted' : 'denied',
+    reason: selection.confirmed ? `Workspace file selected: ${virtualPath}` : 'User rejected workspace upload confirmation.',
+  })
+  emitBrowserNetworkEvent(options.hostWindow, { type: 'upload-selection', selection })
+  return selection.confirmed ? selection : undefined
 }
 
 function configurePermissions(session: BrowserSession, options: BrowserNetworkOptions, sessionId: string): void {
@@ -189,6 +257,13 @@ function resolveDownloadDirectory(options: BrowserNetworkOptions): string {
   if (workspace) return path.join(path.resolve(workspace), 'Downloads')
 
   return path.join(options.rootDir, '.tmp', 'workspace', 'Downloads')
+}
+
+function resolveWorkspaceDirectory(options: BrowserNetworkOptions): string {
+  const env = options.env ?? process.env
+  const workspace = env['MEDIATOOLBOX_WORKSPACE_DIR']?.trim()
+  if (workspace) return path.resolve(workspace)
+  return path.join(options.rootDir, '.tmp', 'workspace')
 }
 
 function emitDownloadEvent(options: BrowserNetworkOptions, download: BrowserNetworkDownloadEvent): void {
