@@ -142,8 +142,14 @@ export function BrowserApp() {
   const submitNavigation = useCallback((event: FormEvent) => {
     event.preventDefault()
     if (!bridge || !address.trim()) return
+    const nextUrl = normalizeBrowserAddress(address)
+    if (!nextUrl) {
+      setStatus({ tone: 'error', text: '仅支持 http、https 地址或 about:blank' })
+      return
+    }
     setStatus({ tone: 'pending', text: '正在打开页面' })
-    void bridge.navigate(viewId, address).then((result) => {
+    setAddress(nextUrl === HOME_URL ? '' : nextUrl)
+    void bridge.navigate(viewId, nextUrl).then((result) => {
       const state = handleResult(result)
       if (!state) return
       setBrowserState(state)
@@ -312,4 +318,25 @@ function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`
   if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB`
   return `${Math.round(value / 1024 / 102.4) / 10} MB`
+}
+
+function normalizeBrowserAddress(raw: string): string | null {
+  let input = raw.trim()
+  if (!input) return null
+  if (input === HOME_URL) return HOME_URL
+
+  const explicitScheme = input.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1]?.toLowerCase()
+  if (explicitScheme && explicitScheme !== 'http' && explicitScheme !== 'https') return null
+
+  if (!explicitScheme) {
+    const isLocal = /^(localhost|127\.|0\.0\.0\.0|\[::1\])(?::|\/|$)/i.test(input)
+    input = `${isLocal ? 'http' : 'https'}://${input}`
+  }
+
+  try {
+    const url = new URL(input)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null
+  } catch {
+    return null
+  }
 }

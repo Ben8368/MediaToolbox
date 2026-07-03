@@ -7,13 +7,13 @@ import { isTerminalTask } from '../utils.js'
 
 const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
 
-function service(id: string, name: string, detail: string, availabilityStatus = 'ready') {
+function service(id: string, name: string, detail: string, availabilityStatus = 'ready', online = true) {
   return {
     id,
     name,
-    online: true,
-    status: '运行中',
-    runtime_status: 'ready',
+    online,
+    status: online ? '运行中' : '未接入',
+    runtime_status: online ? 'ready' : 'unavailable',
     availability_status: availabilityStatus,
     mode: 'local',
     mode_label: '本地服务',
@@ -27,10 +27,16 @@ function cpuPercent() {
   return Math.max(0, Math.min(100, Math.round((oneMinuteLoad / cpuCount) * 100)))
 }
 
-function memoryPercent() {
+function memorySnapshot() {
   const total = os.totalmem()
-  if (!total) return 0
-  return Math.round(((total - os.freemem()) / total) * 100)
+  const free = os.freemem()
+  const used = Math.max(0, total - free)
+  return {
+    total,
+    free,
+    used,
+    percent: total > 0 ? Math.round((used / total) * 100) : 0,
+  }
 }
 
 async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
@@ -43,11 +49,15 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const elapsedSeconds = Math.max((now - state.networkSample.at) / 1000, 0.001)
   const downloadBytesPerSec = Math.max(0, Math.round((browserReceivedBytes - state.networkSample.browserReceivedBytes) / elapsedSeconds))
   state.networkSample = { at: now, browserReceivedBytes }
+  const memory = memorySnapshot()
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
       cpu_percent: cpuPercent(),
-      memory_percent: memoryPercent(),
+      memory_percent: memory.percent,
+      memory_used_bytes: memory.used,
+      memory_total_bytes: memory.total,
+      memory_free_bytes: memory.free,
       gpu_percent: 0,
       gpu_available: false,
       gpu_detail: 'GPU 指标采集尚未接入；当前返回 CPU 与内存运行时采样。',
@@ -64,6 +74,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
       service('browser-network', '浏览器网络', '浏览器下载事件、权限审计和工作区写入边界已接入。'),
       service('file-manager', '文件管理', `虚拟工作区映射到受控本地目录：${state.physicalWorkspaceRoot}`),
       service('logs', '日志服务', '日志、通知已接入 SQLite 状态。'),
+      service('gpu', 'GPU 指标', '系统级 GPU 采集器尚未接入。', 'degraded', false),
     ],
     tasks: [
       ...activeTasks.map((task) => ({

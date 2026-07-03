@@ -10,6 +10,7 @@ import { TaskGroupList } from './TaskGroupList'
 import { EMPTY_METRICS, type RuntimeMetrics } from './types'
 import {
   clampPercent,
+  formatBytes,
   formatUptime,
   frontendModeLabel,
   normalizeServices,
@@ -23,6 +24,7 @@ export function RightPanel() {
   const [netUpData, setNetUpData] = useState<number[]>(Array.from({ length: 40 }, () => 0))
   const [netDownData, setNetDownData] = useState<number[]>(Array.from({ length: 40 }, () => 0))
   const [error, setError] = useState('')
+  const [lastSampleAt, setLastSampleAt] = useState<Date | null>(null)
   const [expandedTaskType, setExpandedTaskType] = useState<string | null>(null)
   const [servicesExpanded, setServicesExpanded] = useState(false)
   const systemLifecycle = useSystemStore((state) => state.systemLifecycle)
@@ -34,6 +36,7 @@ export function RightPanel() {
       const data = await getSystemMetrics()
       if (useSystemStore.getState().systemLifecycle !== 'running') return
       setMetrics(data)
+      setLastSampleAt(new Date())
       setError('')
       setNetUpData((items) => [...items.slice(1), Number(data.network?.upload_bytes_per_sec || 0)])
       setNetDownData((items) => [...items.slice(1), Number(data.network?.download_bytes_per_sec || 0)])
@@ -78,16 +81,23 @@ export function RightPanel() {
     })
   }, [tasks])
   const expandedGroup = groupedTasks.find((group) => group.type === expandedTaskType) || null
+  const memoryDetail = system.memory_total_bytes
+    ? `${formatBytes(system.memory_used_bytes)} / ${formatBytes(system.memory_total_bytes)}`
+    : '等待采样'
+  const sampleTime = lastSampleAt
+    ? lastSampleAt.toLocaleTimeString('zh-CN', { hour12: false })
+    : '未采样'
 
   return (
     <div className="mt-right-panel">
       <div className="rp-card">
         <div className="rp-card-head rp-runtime-head">
           <div className="rp-card-title">运行状态</div>
+          <span className="rp-card-meta">{sampleTime}</span>
         </div>
         <div className="rp-gauges">
           <GaugeSvg value={system.cpu_percent || 0} color="#7CB3FF" label="CPU" />
-          <GaugeSvg value={system.memory_percent || 0} color="#7CB3FF" label="内存" />
+          <GaugeSvg value={system.memory_percent || 0} color="#7CB3FF" label="内存" title={memoryDetail} />
           <GaugeSvg
             value={system.gpu_percent || 0}
             color={system.gpu_available ? '#7CB3FF' : '#64748b'}
@@ -99,6 +109,10 @@ export function RightPanel() {
         <div className="rp-uptime">
           <span>本次运行 <span>{formatUptime(metrics.runtime?.uptime_seconds || 0)}</span></span>
           {frontendModeLabel(metrics.log_mode) && <span className="rp-runtime-mode">{frontendModeLabel(metrics.log_mode)}</span>}
+        </div>
+        <div className="rp-sample-detail">
+          <span>内存</span>
+          <strong>{memoryDetail}</strong>
         </div>
         {error && <div className="rp-error">{error}</div>}
       </div>
@@ -130,8 +144,9 @@ export function RightPanel() {
           <div className="rp-service-list">
             {services.map((service) => (
               <div key={service.id} className="rp-service-item" title={serviceTitle(service)}>
-                <span className={`rp-service-dot ${service.online ? 'rp-service-dot--online' : ''}`} />
+                <span className={`rp-service-dot ${service.online && service.availability_status !== 'degraded' ? 'rp-service-dot--online' : ''}`} />
                 <span className="rp-service-name">{serviceName(service)}</span>
+                <small>{service.status}</small>
               </div>
             ))}
             {!services.length && <div className="rp-empty">暂无服务状态</div>}

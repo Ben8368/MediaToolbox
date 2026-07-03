@@ -17,14 +17,12 @@ export function serviceTitle(service: NonNullable<RuntimeMetrics['services']>[nu
 }
 
 export function serviceName(service: NonNullable<RuntimeMetrics['services']>[number]) {
-  return service.id || service.name
+  return service.name || service.id
 }
 
 export function normalizeServices(services: NonNullable<RuntimeMetrics['services']>) {
-  const visibleIds = new Set(['downloader', 'mock-ffmpeg', 'mock-storage'])
   return services
     .filter((service) => service.id !== 'frontend')
-    .filter((service) => visibleIds.has(service.id))
 }
 
 export function frontendModeLabel(logMode?: string) {
@@ -54,4 +52,12 @@ export function appTypeForTaskGroup(type: string, label: string) {
   const text = `${type} ${label}`.toLowerCase()
   if (text.includes('download') || text.includes('下载')) return 'fetcher'
   return ''
+}
+
+export function formatBytes(value: number | undefined) {
+  const bytes = Number(value || 0)
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / 1024 / 102.4) / 10} MB`
+  return `${Math.round(bytes / 1024 / 1024 / 102.4) / 10} GB`
 }

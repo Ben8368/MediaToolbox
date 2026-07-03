@@ -86,7 +86,11 @@ export function registerBrowserViewIpcHandlers(
     browserViews.set(id, record)
     hostWindow.contentView.addChildView(view)
     view.setVisible(false)
-    configureBrowserView(electron, hostWindow, record)
+    const configureError = configureBrowserView(electron, hostWindow, record)
+    if (configureError) {
+      destroyBrowserView(hostWindow, id)
+      return fail(configureError)
+    }
     await loadBrowserUrl(record, initialUrl)
     emitBrowserState(hostWindow, record)
     return ok(record.state)
@@ -133,7 +137,9 @@ export function registerBrowserViewIpcHandlers(
     assertSender(event)
     const record = getRecord(payload)
     if (!record) return fail('Browser view not found')
-    if (record.view.webContents.canGoBack()) record.view.webContents.goBack()
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
+    if (webContents.canGoBack()) webContents.goBack()
     return ok(updateBrowserState(record))
   })
 
@@ -141,7 +147,9 @@ export function registerBrowserViewIpcHandlers(
     assertSender(event)
     const record = getRecord(payload)
     if (!record) return fail('Browser view not found')
-    if (record.view.webContents.canGoForward()) record.view.webContents.goForward()
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
+    if (webContents.canGoForward()) webContents.goForward()
     return ok(updateBrowserState(record))
   })
 
@@ -149,7 +157,9 @@ export function registerBrowserViewIpcHandlers(
     assertSender(event)
     const record = getRecord(payload)
     if (!record) return fail('Browser view not found')
-    record.view.webContents.reload()
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
+    webContents.reload()
     return ok(updateBrowserState(record))
   })
 
@@ -158,7 +168,9 @@ export function registerBrowserViewIpcHandlers(
     const record = getRecord(payload)
     if (!record) return fail('Browser view not found')
     hostWindow.contentView.addChildView(record.view)
-    record.view.webContents.focus()
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
+    webContents.focus()
     return ok(updateBrowserState(record))
   })
 
@@ -166,10 +178,12 @@ export function registerBrowserViewIpcHandlers(
     assertSender(event)
     const record = getRecord(payload)
     if (!record) return fail('Browser view not found')
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
     const explicitUrl = getStringField(payload, 'url')
-    const url = normalizeBrowserUrl(explicitUrl || record.view.webContents.getURL())
+    const url = normalizeBrowserUrl(explicitUrl || webContents.getURL())
     if (!url || url === 'about:blank') return fail('Only http and https URLs can be downloaded')
-    record.view.webContents.downloadURL(url)
+    webContents.downloadURL(url)
     return ok(updateBrowserState(record))
   })
 
@@ -200,40 +214,42 @@ export function registerBrowserViewIpcHandlers(
   })
 }
 
-function configureBrowserView(electron: ElectronModule, hostWindow: BrowserHostWindow, record: BrowserViewRecord) {
-  const { view } = record
-  view.webContents.setWindowOpenHandler(({ url }) => {
+function configureBrowserView(electron: ElectronModule, hostWindow: BrowserHostWindow, record: BrowserViewRecord): string | undefined {
+  const webContents = getWebContents(record)
+  if (!webContents) return 'Browser web contents unavailable'
+
+  webContents.setWindowOpenHandler(({ url }) => {
     const normalized = normalizeBrowserUrl(url)
     if (normalized) void loadBrowserUrl(record, normalized)
     return { action: 'deny' }
   })
-  view.webContents.on('will-navigate', (event, url) => {
+  webContents.on('will-navigate', (event, url) => {
     if (!normalizeBrowserUrl(url)) event.preventDefault()
   })
-  view.webContents.on('did-start-loading', () => {
+  webContents.on('did-start-loading', () => {
     record.state.loading = true
     record.state.error = undefined
     emitBrowserState(hostWindow, record)
   })
-  view.webContents.on('did-stop-loading', () => {
+  webContents.on('did-stop-loading', () => {
     updateBrowserState(record)
     emitBrowserState(hostWindow, record)
   })
-  view.webContents.on('did-navigate', (_event, url) => {
+  webContents.on('did-navigate', (_event, url) => {
     record.state.url = url
     updateBrowserState(record)
     emitBrowserState(hostWindow, record)
   })
-  view.webContents.on('did-navigate-in-page', (_event, url) => {
+  webContents.on('did-navigate-in-page', (_event, url) => {
     record.state.url = url
     updateBrowserState(record)
     emitBrowserState(hostWindow, record)
   })
-  view.webContents.on('page-title-updated', (_event, title) => {
+  webContents.on('page-title-updated', (_event, title) => {
     record.state.title = title || 'Browser'
     emitBrowserState(hostWindow, record)
   })
-  view.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+  webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     if (errorCode === -3) return
     record.state.loading = false
     record.state.url = validatedURL || record.state.url
@@ -241,31 +257,57 @@ function configureBrowserView(electron: ElectronModule, hostWindow: BrowserHostW
     emitBrowserState(hostWindow, record)
   })
   electron.app.on('web-contents-created', (_event, contents) => {
-    if (contents.id !== view.webContents.id) return
+    const currentContents = getWebContents(record)
+    if (!currentContents || contents.id !== currentContents.id) return
     contents.on('will-attach-webview', (event) => event.preventDefault())
   })
+  return undefined
 }
 
 async function loadBrowserUrl(record: BrowserViewRecord, url: string) {
   record.state.url = url
   record.state.error = undefined
+  const webContents = getWebContents(record)
+  if (!webContents) {
+    record.state.loading = false
+    record.state.error = 'Browser web contents unavailable'
+    return
+  }
   try {
-    await record.view.webContents.loadURL(url)
+    await webContents.loadURL(url)
   } catch (error) {
+    if (isNavigationAbortError(error)) {
+      record.state.loading = false
+      record.state.error = undefined
+      return
+    }
     record.state.loading = false
     record.state.error = error instanceof Error ? error.message : 'Page failed to load'
   }
 }
 
 function updateBrowserState(record: BrowserViewRecord): BrowserViewState {
+  const webContents = getWebContents(record)
+  if (!webContents) {
+    record.state = {
+      ...record.state,
+      sessionId: record.sessionId,
+      loading: false,
+      error: record.state.error ?? 'Browser web contents unavailable',
+      canGoBack: false,
+      canGoForward: false,
+    }
+    return record.state
+  }
+
   record.state = {
     ...record.state,
     sessionId: record.sessionId,
-    url: record.view.webContents.getURL() || record.state.url,
-    title: record.view.webContents.getTitle() || record.state.title,
-    loading: record.view.webContents.isLoading(),
-    canGoBack: record.view.webContents.canGoBack(),
-    canGoForward: record.view.webContents.canGoForward(),
+    url: webContents.getURL() || record.state.url,
+    title: webContents.getTitle() || record.state.title,
+    loading: webContents.isLoading(),
+    canGoBack: webContents.canGoBack(),
+    canGoForward: webContents.canGoForward(),
   }
   return record.state
 }
@@ -287,9 +329,15 @@ function destroyBrowserView(hostWindow: BrowserHostWindow, id: string) {
   } catch {
     // The host window may already be gone during app shutdown.
   }
-  if (!record.view.webContents.isDestroyed()) {
-    record.view.webContents.close()
+  const webContents = getWebContents(record)
+  if (webContents && !webContents.isDestroyed()) {
+    webContents.close()
   }
+}
+
+function getWebContents(record: BrowserViewRecord): import('electron').WebContents | undefined {
+  const webContents = (record.view as { webContents?: import('electron').WebContents }).webContents
+  return webContents && !webContents.isDestroyed() ? webContents : undefined
 }
 
 function getRecord(payload: unknown) {
@@ -302,9 +350,9 @@ function normalizeBrowserUrl(raw: string): string | null {
   if (!input) return null
   if (input === 'about:blank') return input
 
-  const scheme = input.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase()
+  const scheme = input.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1]?.toLowerCase()
   if (scheme && scheme !== 'http' && scheme !== 'https') return null
-  if (!input.includes('://')) {
+  if (!scheme) {
     const isLocal = /^(localhost|127\.|0\.0\.0\.0|\[::1\])(?::|\/|$)/i.test(input)
     input = `${isLocal ? 'http' : 'https'}://${input}`
   }
@@ -315,6 +363,14 @@ function normalizeBrowserUrl(raw: string): string | null {
   } catch {
     return null
   }
+}
+
+function isNavigationAbortError(error: unknown) {
+  if (!error) return false
+  const maybeError = error as { code?: unknown; errno?: unknown; message?: unknown }
+  return maybeError.code === -3
+    || maybeError.errno === -3
+    || (typeof maybeError.message === 'string' && maybeError.message.includes('ERR_ABORTED'))
 }
 
 function getStringField(payload: unknown, field: string): string | undefined {
