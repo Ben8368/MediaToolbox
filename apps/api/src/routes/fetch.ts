@@ -48,14 +48,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     addLog(state, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
 
     // 异步执行，不阻塞 HTTP 响应
-    void executeDownload(task, state).then(() => {
-      const job = state.jobs.find((j) => j.id === task.id)
-      if (!job) return
-      const idx = state.jobs.indexOf(job)
-      if (task.status === 'completed') state.jobs[idx] = transitionJob(job, 'succeeded')
-      else if (task.status === 'failed') state.jobs[idx] = transitionJob(job, 'failed')
-      else if (task.status === 'cancelled' && job.status !== 'canceled') state.jobs[idx] = transitionJob(job, 'canceled')
-    }).catch(() => {/* errors already handled inside executeDownload */})
+    void executeDownload(task, state)
 
     return { ok: true, task_id: id, status: task.status }
   })
