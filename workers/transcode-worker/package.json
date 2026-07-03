@@ -3,16 +3,23 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "dev": "tsx src/index.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@mediatoolbox/ffmpeg": "0.1.0"
+    "@mediatoolbox/ffmpeg": "0.1.0",
+    "@mediatoolbox/job-core": "0.1.0",
+    "@mediatoolbox/contracts": "0.1.0"
   },
   "devDependencies": {
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
   }
 }

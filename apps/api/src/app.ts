@@ -6,6 +6,7 @@ import { registerFilebrowserRoutes } from './routes/filebrowser.js'
 import { registerJobRoutes } from './routes/jobs.js'
 import { registerLogRoutes } from './routes/logs.js'
 import { registerSystemRoutes } from './routes/system.js'
+import { registerTranscodeRoutes } from './routes/transcode.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
@@ -50,6 +51,7 @@ export function buildApiServer() {
   registerSystemRoutes(app, state)
   registerLogRoutes(app, state)
   registerJobRoutes(app, state)
+  registerTranscodeRoutes(app, state)
 
   return app
 }
