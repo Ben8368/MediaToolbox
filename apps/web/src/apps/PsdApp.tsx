@@ -1,6 +1,7 @@
 import { useCallback, useState, type FormEvent } from 'react'
 
 import { inspectPsdTemplate, loadPsdManifest, renderPsdTemplate, savePsdManifest } from '@/api'
+import { ApiRequestError } from '@/api/http'
 import type { PsdTemplateManifest } from '@/api/types'
 
 type ActiveTab = 'inspect' | 'editor' | 'batch'
@@ -34,7 +35,12 @@ export function PsdApp() {
     setRenderResult(null)
     setSaveMessage(null)
     try {
-      const loaded = await loadPsdManifest(trimmedPath).catch(() => null)
+      // 优先加载已保存的 manifest；仅当 sidecar 不存在（404）时才回退到重新检查，
+      // 其它错误（权限/解析失败等）照常抛出，避免掩盖真实问题。
+      const loaded = await loadPsdManifest(trimmedPath).catch((err: unknown) => {
+        if (err instanceof ApiRequestError && err.status === 404) return null
+        throw err
+      })
       const result = loaded?.manifest ? loaded : await inspectPsdTemplate(trimmedPath)
       if (!result.manifest) throw new Error(result.message || 'PSD 模板检查未返回 manifest')
       setManifest(result.manifest)
@@ -230,6 +236,11 @@ export function PsdApp() {
 
         {activeTab === 'batch' && manifest && (
           <section className="psd-result">
+            {manifestDirty && (
+              <div className="psd-message psd-message--error">
+                Manifest 有未保存的编辑，批量渲染使用的是已保存版本。请先在「Manifest 编辑」保存。
+              </div>
+            )}
             {textSlots.length === 0 ? (
               <div className="psd-empty">当前模板无可编辑的文字 slot。</div>
             ) : (
