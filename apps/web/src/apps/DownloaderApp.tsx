@@ -1,7 +1,7 @@
 // Simplified DownloaderApp for v2 - AI features removed
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { submitFetch } from '@/api'
+import { analyzeDownloadStrategy, submitFetch } from '@/api'
 import { getDesktopBrowserBridge } from '@/desktopBrowser'
 import { DownloaderAddForm } from '@/apps/downloader/DownloaderAddForm'
 import { DownloaderDetailDrawer } from '@/apps/downloader/DownloaderDetailDrawer'
@@ -53,10 +53,12 @@ export function DownloaderApp() {
 
   // Submit task payloads (shared by single-URL and multi-URL paths)
   const submitTaskPayloads = useCallback(
-    async (urls: string[]) => {
+    async (urls: string[], route: 'auto' | 'ytdlp' = 'auto') => {
       const wantSubs = form.selectedPlatform.supportsSubtitles && form.taskSubtitles
       const draft = {
         urls: urls,
+        download_route: route,
+        transport: 'browser-network',
         output_dir: form.taskOutputDir || 'downloads',
         write_subs: wantSubs,
         write_auto_subs: wantSubs,
@@ -100,6 +102,18 @@ export function DownloaderApp() {
     ],
   )
 
+  const submitBrowserDownloads = useCallback(async (urls: string[]) => {
+    const bridge = getDesktopBrowserBridge()
+    if (!bridge) throw new Error('浏览器资源下载需要在 MediaToolbox 桌面端中使用。')
+    const channel = await bridge.create(BROWSER_DOWNLOAD_CHANNEL_ID, 'about:blank', { sessionScope: 'default' })
+    if (!channel.ok) throw new Error(channel.error)
+    for (const url of urls) {
+      const result = await bridge.downloadUrl(BROWSER_DOWNLOAD_CHANNEL_ID, url)
+      if (!result.ok) throw new Error(result.error)
+    }
+    void refreshLists()
+  }, [refreshLists])
+
   const submitNewTask = useCallback(async () => {
     if (!form.taskUrl.trim() || form.addingTask) return
     form.setAddingTask(true)
@@ -111,10 +125,16 @@ export function DownloaderApp() {
         .map((url) => url.trim())
         .filter((url) => url.length > 0)
 
-      if (form.taskChannel === 'browser') {
+      if (form.taskChannel === 'auto') {
+        const analyses = await Promise.all(urls.map((url) => analyzeDownloadStrategy({ url, requested_route: 'auto' })))
+        const browserUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route === 'browser')
+        const ytdlpUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route !== 'browser')
+        if (ytdlpUrls.length) await submitTaskPayloads(ytdlpUrls, 'auto')
+        if (browserUrls.length) await submitBrowserDownloads(browserUrls)
+      } else if (form.taskChannel === 'browser') {
         const bridge = getDesktopBrowserBridge()
         if (!bridge) throw new Error('浏览器资源下载需要在 MediaToolbox 桌面端中使用。')
-        const channel = await bridge.create(BROWSER_DOWNLOAD_CHANNEL_ID, 'about:blank')
+        const channel = await bridge.create(BROWSER_DOWNLOAD_CHANNEL_ID, 'about:blank', { sessionScope: 'default' })
         if (!channel.ok) throw new Error(channel.error)
         for (const url of urls) {
           const result = await bridge.downloadUrl(BROWSER_DOWNLOAD_CHANNEL_ID, url)
@@ -122,7 +142,7 @@ export function DownloaderApp() {
         }
         void refreshLists()
       } else {
-        await submitTaskPayloads(urls)
+        await submitTaskPayloads(urls, 'ytdlp')
       }
       form.setTaskUrl('')
       form.setShowAddForm(false)
@@ -131,7 +151,7 @@ export function DownloaderApp() {
     } finally {
       form.setAddingTask(false)
     }
-  }, [form, submitTaskPayloads, actions, refreshLists])
+  }, [form, submitTaskPayloads, submitBrowserDownloads, actions, refreshLists])
 
   const confirmCookieBrowserChange = useCallback(
     (browser: CookieBrowser) => {

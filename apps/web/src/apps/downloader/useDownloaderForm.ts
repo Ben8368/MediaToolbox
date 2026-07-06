@@ -5,7 +5,7 @@ import { getPlatformOption } from '@/apps/downloader/helpers'
 
 export function useDownloaderForm() {
   const [taskUrl, setTaskUrl] = useState('')
-  const [taskChannel, setTaskChannel] = useState<DownloadChannel>('media')
+  const [taskChannel, setTaskChannel] = useState<DownloadChannel>('auto')
   const [taskPlatform, setTaskPlatform] = useState<DownloadPlatform>('auto')
   const [taskSubtitles, setTaskSubtitles] = useState(true)
   const [taskOutputDir, setTaskOutputDir] = useState('')

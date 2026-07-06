@@ -1,5 +1,12 @@
 import { apiRequest, apiUrl } from '@/api/http'
-import type { SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
+import type { DownloadStrategyResponse, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
+
+export async function analyzeDownloadStrategy(draft: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }) {
+  return apiRequest<DownloadStrategyResponse>('/api/downloads/analyze', {
+    method: 'POST',
+    body: JSON.stringify(draft),
+  })
+}
 
 export async function submitFetch(draft: Record<string, unknown>) {
   return apiRequest<SubmitFetchResponse>('/api/fetch/tasks', {

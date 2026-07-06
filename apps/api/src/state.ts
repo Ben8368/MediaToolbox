@@ -1,4 +1,4 @@
-import type { BrowserNetworkDownloadRecord, FetchTaskRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
+import type { BrowserNetworkDownloadRecord, BrowserNetworkRequestRecord, FetchTaskRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
 import { SqliteDatabase } from '@mediatoolbox/db'
 import type { MediaToolboxDatabase } from '@mediatoolbox/db'
 import fs from 'node:fs'
@@ -33,6 +33,7 @@ export type ApiState = {
   physicalWorkspaceRoot: string
   fetchTasks: FetchTaskRecord[]
   browserDownloads: BrowserNetworkDownloadRecord[]
+  browserRequests: BrowserNetworkRequestRecord[]
   networkSample: { at: number; browserReceivedBytes: number }
   db: MediaToolboxDatabase
   notificationsReadAt: string | null
@@ -66,6 +67,7 @@ export function createApiState(): ApiState {
     physicalWorkspaceRoot,
     fetchTasks: [],
     browserDownloads: [],
+    browserRequests: [],
     networkSample: { at: Date.now(), browserReceivedBytes: 0 },
     db,
     notificationsReadAt: null,

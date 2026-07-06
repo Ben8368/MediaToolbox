@@ -14,8 +14,22 @@ export const fetchTaskSubmitSchema = {
       subtitle_format: { type: 'string' },
       max_concurrent: { type: 'number' },
       cookies_from_browser: { type: 'string' },
+      download_route: { type: 'string', enum: ['auto', 'ytdlp', 'browser'] },
+      transport: { type: 'string', enum: ['browser-network', 'direct'] },
     },
     anyOf: [{ required: ['url'] }, { required: ['urls'] }],
+  },
+} as const
+
+export const downloadAnalyzeSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['url'],
+    properties: {
+      url: { type: 'string', minLength: 1 },
+      requested_route: { type: 'string', enum: ['auto', 'ytdlp', 'browser'] },
+    },
   },
 } as const
 
@@ -132,6 +146,42 @@ export const browserNetworkPermissionEventSchema = {
       permission: { type: 'string', minLength: 1 },
       decision: { type: 'string', enum: ['granted', 'denied'] },
       reason: { type: 'string' },
+    },
+  },
+} as const
+
+export const browserNetworkRequestCreateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['url', 'method', 'view_id', 'session_id'],
+    properties: {
+      id: { type: 'string', minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9._:-]+$' },
+      url: { type: 'string', minLength: 1 },
+      method: { type: 'string', enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] },
+      view_id: { type: 'string', minLength: 1 },
+      session_id: { type: 'string', minLength: 1 },
+      request_headers: {
+        type: 'object',
+        additionalProperties: { type: 'string' },
+      },
+    },
+  },
+} as const
+
+export const browserNetworkRequestUpdateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      status: { type: 'string', enum: ['pending', 'running', 'succeeded', 'failed', 'canceled'] },
+      response_status: { type: 'number', minimum: 100, maximum: 599 },
+      response_headers: {
+        type: 'object',
+        additionalProperties: { type: 'string' },
+      },
+      response_bytes: { type: 'number', minimum: 0 },
+      error: { type: 'string' },
     },
   },
 } as const

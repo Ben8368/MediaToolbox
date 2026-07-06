@@ -15,7 +15,7 @@ export type AppsResponse = {
   apps: WorkbenchApp[]
 }
 
-export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'media.transcode' | 'psd.batch'
+export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'browser.request' | 'media.transcode' | 'psd.batch'
 
 export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'retrying' | 'canceled'
 
@@ -88,6 +88,16 @@ export type SubmitFetchResponse = OkResult & {
 
 export type BrowserNetworkDownloadStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'canceled'
 
+export type BrowserNetworkSessionScope = 'default' | 'isolated'
+
+export type BrowserNetworkHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+
+export type BrowserNetworkRequestStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'canceled'
+
+export type BrowserNetworkDownloadRoute = 'auto' | 'ytdlp' | 'browser'
+
+export type BrowserNetworkRequestMode = 'browser-session'
+
 export type BrowserNetworkPermissionDecision = 'granted' | 'denied'
 
 export type BrowserNetworkPermissionKind =
@@ -124,12 +134,58 @@ export type BrowserNetworkDownloadRecord = {
   error?: string | null
 }
 
+export type BrowserNetworkRequestRecord = {
+  id: string
+  job_id: string
+  view_id: string
+  session_id: string
+  mode: BrowserNetworkRequestMode
+  method: BrowserNetworkHttpMethod
+  url: string
+  status: BrowserNetworkRequestStatus
+  request_headers: Record<string, string>
+  response_status?: number
+  response_headers?: Record<string, string>
+  response_bytes: number
+  created_at: number
+  updated_at: number
+  completed_at: number | null
+  error?: string | null
+}
+
 export type BrowserNetworkDownloadListResponse = OkResult & {
   downloads: BrowserNetworkDownloadRecord[]
 }
 
 export type BrowserNetworkDownloadResponse = OkResult & {
   download?: BrowserNetworkDownloadRecord
+}
+
+export type BrowserNetworkRequestListResponse = OkResult & {
+  requests: BrowserNetworkRequestRecord[]
+}
+
+export type BrowserNetworkRequestResponse = OkResult & {
+  request?: BrowserNetworkRequestRecord
+}
+
+export type DownloadStrategyAnalysis = {
+  url: string
+  route: BrowserNetworkDownloadRoute
+  primary: 'yt-dlp' | 'browser-network'
+  fallback: 'browser-network' | null
+  reason: string
+  ytdlp_scope: {
+    supported_sites_source: 'yt-dlp supportedsites.md'
+    supports_generic_extractor: boolean
+    supports_embeds: boolean
+    reliable_check: 'try-extractor'
+    media: Array<'video' | 'audio' | 'subtitles' | 'playlists' | 'livestreams' | 'metadata'>
+  }
+}
+
+export type DownloadStrategyResponse = OkResult & {
+  analysis?: DownloadStrategyAnalysis
 }
 
 export type BrowserNetworkPermissionEvent = {
