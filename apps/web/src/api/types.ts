@@ -4,6 +4,7 @@ import type {
   CreateDirectoryResponse,
   DiskListResponse,
   DirectoryListResponse,
+  DownloadStrategyResponse,
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
@@ -65,6 +66,7 @@ export type PsdInspectResponse = OkResult & {
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
 export interface MediaToolboxApi {
   submitFetch(draft: Record<string, unknown>): Promise<SubmitFetchResponse>
+  analyzeDownloadStrategy(draft: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }): Promise<DownloadStrategyResponse>
   getActiveTasks(): Promise<TaskListResponse>
   getWeeklyHistory(): Promise<TaskListResponse>
   cancelTask(taskId: string): Promise<OkResult>

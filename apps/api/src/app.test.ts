@@ -353,6 +353,87 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('analyzes download routing with yt-dlp preferred and browser fallback', async () => {
+    const app = buildApiServer()
+
+    const media = await app.inject({
+      method: 'POST',
+      url: '/api/downloads/analyze',
+      payload: { url: 'https://www.youtube.com/watch?v=demo' },
+    })
+    const image = await app.inject({
+      method: 'POST',
+      url: '/api/downloads/analyze',
+      payload: { url: 'https://example.com/image.png' },
+    })
+
+    expect(media.json()).toMatchObject({
+      ok: true,
+      analysis: expect.objectContaining({
+        route: 'ytdlp',
+        primary: 'yt-dlp',
+        fallback: 'browser-network',
+        ytdlp_scope: expect.objectContaining({
+          supports_generic_extractor: true,
+          reliable_check: 'try-extractor',
+        }),
+      }),
+    })
+    expect(image.json()).toMatchObject({
+      ok: true,
+      analysis: expect.objectContaining({
+        route: 'browser',
+        primary: 'browser-network',
+      }),
+    })
+    await app.close()
+  })
+
+  it('records browser network requests as unified jobs', async () => {
+    const app = buildApiServer()
+    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/browser-network/requests',
+      headers,
+      payload: {
+        id: 'desktop-generated-request-1',
+        url: 'https://example.com/api',
+        method: 'POST',
+        view_id: 'browser',
+        session_id: 'mediatoolbox-browser-default',
+        request_headers: { accept: 'application/json' },
+      },
+    })
+    const requestRecord = created.json<{ request: { id: string; job_id: string } }>().request
+
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: `/api/browser-network/requests/${requestRecord.id}`,
+      headers,
+      payload: {
+        status: 'succeeded',
+        response_status: 204,
+        response_headers: { 'content-type': 'application/json' },
+        response_bytes: 12,
+      },
+    })
+    const job = await app.inject({ method: 'GET', url: `/api/jobs/${requestRecord.job_id}` })
+
+    expect(created.statusCode).toBe(200)
+    expect(updated.json()).toMatchObject({ ok: true, request: expect.objectContaining({ status: 'succeeded', response_status: 204 }) })
+    expect(job.json()).toMatchObject({
+      ok: true,
+      job: expect.objectContaining({
+        kind: 'browser.request',
+        status: 'succeeded',
+        progress: { current: 12, total: 12, unit: 'bytes' },
+      }),
+    })
+    await app.close()
+  })
+
   it('protects browser network write endpoints and target paths', async () => {
     const app = buildApiServer()
     const payload = {

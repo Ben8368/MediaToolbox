@@ -1,8 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 const browserApi = {
-  create(id, url) {
-    return ipcRenderer.invoke('mediatoolbox:browser:create', { id, url })
+  create(id, url, options) {
+    return ipcRenderer.invoke('mediatoolbox:browser:create', { id, url, sessionScope: options && options.sessionScope })
   },
   destroy(id) {
     return ipcRenderer.invoke('mediatoolbox:browser:destroy', { id })
@@ -27,6 +27,9 @@ const browserApi = {
   },
   downloadUrl(id, url) {
     return ipcRenderer.invoke('mediatoolbox:browser:download-url', { id, url })
+  },
+  request(id, draft) {
+    return ipcRenderer.invoke('mediatoolbox:browser:request', { id, ...draft })
   },
   cancelDownload(downloadId) {
     return ipcRenderer.invoke('mediatoolbox:browser:cancel-download', { downloadId })

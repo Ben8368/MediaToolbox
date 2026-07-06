@@ -16,6 +16,25 @@ export type DesktopBrowserState = {
   error?: string
 }
 
+export type DesktopBrowserSessionScope = 'default' | 'isolated'
+
+export type DesktopBrowserRequestDraft = {
+  url: string
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+  headers?: Record<string, string>
+  body?: string
+}
+
+export type DesktopBrowserRequestResult = {
+  id: string
+  url: string
+  method: string
+  status: number
+  headers: Record<string, string>
+  body: string
+  truncated: boolean
+}
+
 export type DesktopBrowserDownloadEvent = {
   id: string
   viewId: string
@@ -47,6 +66,18 @@ export type DesktopBrowserUploadSelection = {
   confirmed: boolean
 }
 
+export type DesktopBrowserRequestEvent = {
+  id: string
+  viewId: string
+  sessionId: string
+  url: string
+  method: string
+  status: 'running' | 'succeeded' | 'failed' | 'canceled'
+  responseStatus?: number
+  responseBytes: number
+  error?: string
+}
+
 export type DesktopBrowserEvent =
   | {
       type: 'state'
@@ -64,11 +95,15 @@ export type DesktopBrowserEvent =
       type: 'upload-selection'
       selection: DesktopBrowserUploadSelection
     }
+  | {
+      type: 'request'
+      request: DesktopBrowserRequestEvent
+    }
 
 export type DesktopBrowserResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
 export type DesktopBrowserBridge = {
-  create: (id: string, url?: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
+  create: (id: string, url?: string, options?: { sessionScope?: DesktopBrowserSessionScope }) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   destroy: (id: string) => Promise<DesktopBrowserResult<{ id: string }>>
   setBounds: (id: string, bounds: DesktopBrowserBounds, visible: boolean) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   navigate: (id: string, url: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
@@ -77,6 +112,7 @@ export type DesktopBrowserBridge = {
   reload: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   focus: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   downloadUrl: (id: string, url?: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
+  request: (id: string, draft: DesktopBrowserRequestDraft) => Promise<DesktopBrowserResult<DesktopBrowserRequestResult>>
   cancelDownload: (downloadId: string) => Promise<DesktopBrowserResult<{ id: string; canceled: boolean }>>
   selectUploadFile: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserUploadSelection | null>>
   onEvent: (listener: (event: DesktopBrowserEvent) => void) => () => void

@@ -1,5 +1,15 @@
-import type { IpcMainInvokeEvent, Rectangle } from 'electron'
-import { cancelBrowserNetworkDownload, createBrowserNetworkSession, selectWorkspaceUploadFile } from './browserNetwork.js'
+import type { IpcMainInvokeEvent } from 'electron'
+import { cancelBrowserNetworkDownload, createBrowserNetworkSession, requestBrowserNetworkUrl, selectWorkspaceUploadFile } from './browserNetwork.js'
+import {
+  getBooleanField,
+  getBoundsField,
+  getRequestMethodField,
+  getSessionScopeField,
+  getStringField,
+  getStringMapField,
+  isNavigationAbortError,
+  normalizeBrowserUrl,
+} from './browserViewPayload.js'
 
 type ElectronModule = typeof import('electron')
 type BrowserHostWindow = import('electron').BrowserWindow
@@ -49,14 +59,16 @@ export function registerBrowserViewIpcHandlers(
 
     const initialUrl = normalizeBrowserUrl(getStringField(payload, 'url') || 'about:blank')
     if (!initialUrl) return fail('Unsupported browser URL')
-    const browserNetwork = createBrowserNetworkSession({
+    const browserNetworkOptions = {
       electron,
       hostWindow,
       viewId: id,
       apiUrl: options.apiUrl,
       rootDir: options.rootDir,
-      env: options.env,
-    })
+    }
+    const browserNetworkOptionsWithEnv = options.env ? { ...browserNetworkOptions, env: options.env } : browserNetworkOptions
+    const sessionScope = getSessionScopeField(payload)
+    const browserNetwork = createBrowserNetworkSession(sessionScope ? { ...browserNetworkOptionsWithEnv, sessionScope } : browserNetworkOptionsWithEnv)
 
     const view = new electron.WebContentsView({
       webPreferences: {
@@ -185,6 +197,35 @@ export function registerBrowserViewIpcHandlers(
     if (!url || url === 'about:blank') return fail('Only http and https URLs can be downloaded')
     webContents.downloadURL(url)
     return ok(updateBrowserState(record))
+  })
+
+  electron.ipcMain.handle('mediatoolbox:browser:request', async (event, payload: unknown) => {
+    assertSender(event)
+    const record = getRecord(payload)
+    if (!record) return fail('Browser view not found')
+    const webContents = getWebContents(record)
+    if (!webContents) return fail('Browser web contents unavailable')
+    const url = normalizeBrowserUrl(getStringField(payload, 'url') || '')
+    if (!url || url === 'about:blank') return fail('Only http and https URLs are supported')
+    try {
+      const requestDraft: { url: string; headers?: Record<string, string>; body?: string } = { url }
+      const headers = getStringMapField(payload, 'headers')
+      const body = getStringField(payload, 'body')
+      if (headers) requestDraft.headers = headers
+      if (body !== undefined) requestDraft.body = body
+      const method = getRequestMethodField(payload)
+      const result = await requestBrowserNetworkUrl({
+        electron,
+        hostWindow,
+        viewId: record.id,
+        apiUrl: record.networkOptions.apiUrl,
+        rootDir: record.networkOptions.rootDir,
+        env: record.networkOptions.env,
+      }, webContents.session, record.sessionId, method ? { ...requestDraft, method } : requestDraft)
+      return ok(result)
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Browser Network request failed')
+    }
   })
 
   electron.ipcMain.handle('mediatoolbox:browser:cancel-download', (event, payload: unknown): IpcResult<{ id: string; canceled: boolean }> => {
@@ -343,68 +384,6 @@ function getWebContents(record: BrowserViewRecord): import('electron').WebConten
 function getRecord(payload: unknown) {
   const id = getStringField(payload, 'id')
   return id ? browserViews.get(id) : undefined
-}
-
-function normalizeBrowserUrl(raw: string): string | null {
-  let input = raw.trim()
-  if (!input) return null
-  if (input === 'about:blank') return input
-
-  const scheme = input.match(/^([a-z][a-z0-9+.-]*):\/\//i)?.[1]?.toLowerCase()
-  if (scheme && scheme !== 'http' && scheme !== 'https') return null
-  if (!scheme) {
-    const isLocal = /^(localhost|127\.|0\.0\.0\.0|\[::1\])(?::|\/|$)/i.test(input)
-    input = `${isLocal ? 'http' : 'https'}://${input}`
-  }
-
-  try {
-    const url = new URL(input)
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null
-  } catch {
-    return null
-  }
-}
-
-function isNavigationAbortError(error: unknown) {
-  if (!error) return false
-  const maybeError = error as { code?: unknown; errno?: unknown; message?: unknown }
-  return maybeError.code === -3
-    || maybeError.errno === -3
-    || (typeof maybeError.message === 'string' && maybeError.message.includes('ERR_ABORTED'))
-}
-
-function getStringField(payload: unknown, field: string): string | undefined {
-  if (!payload || typeof payload !== 'object') return undefined
-  const value = (payload as Record<string, unknown>)[field]
-  return typeof value === 'string' ? value : undefined
-}
-
-function getBooleanField(payload: unknown, field: string): boolean | undefined {
-  if (!payload || typeof payload !== 'object') return undefined
-  const value = (payload as Record<string, unknown>)[field]
-  return typeof value === 'boolean' ? value : undefined
-}
-
-function getBoundsField(payload: unknown): Rectangle | undefined {
-  if (!payload || typeof payload !== 'object') return undefined
-  const value = (payload as Record<string, unknown>).bounds
-  if (!value || typeof value !== 'object') return undefined
-  const bounds = value as Record<string, unknown>
-  const x = getFiniteNumber(bounds.x)
-  const y = getFiniteNumber(bounds.y)
-  const width = getFiniteNumber(bounds.width)
-  const height = getFiniteNumber(bounds.height)
-  if (x === undefined || y === undefined || width === undefined || height === undefined) return undefined
-  return {
-    x: Math.max(0, Math.round(x)),
-    y: Math.max(0, Math.round(y)),
-    width: Math.max(0, Math.round(width)),
-    height: Math.max(0, Math.round(height)),
-  }
-}
-
-function getFiniteNumber(value: unknown): number | undefined {
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
 function ok<T>(data: T): IpcResult<T> {

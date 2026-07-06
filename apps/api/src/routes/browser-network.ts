@@ -5,7 +5,12 @@ import type {
   BrowserNetworkDownloadRecord,
   BrowserNetworkDownloadResponse,
   BrowserNetworkDownloadStatus,
+  BrowserNetworkHttpMethod,
   BrowserNetworkPermissionEvent,
+  BrowserNetworkRequestListResponse,
+  BrowserNetworkRequestRecord,
+  BrowserNetworkRequestResponse,
+  BrowserNetworkRequestStatus,
   JobRecord,
   OkResult,
 } from '@mediatoolbox/contracts'
@@ -15,6 +20,8 @@ import {
   browserNetworkDownloadCreateSchema,
   browserNetworkDownloadUpdateSchema,
   browserNetworkPermissionEventSchema,
+  browserNetworkRequestCreateSchema,
+  browserNetworkRequestUpdateSchema,
 } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, entryName, nowSeconds } from '../utils.js'
@@ -37,6 +44,23 @@ type BrowserDownloadUpdateBody = {
   status?: BrowserNetworkDownloadStatus
   received_bytes?: number
   total_bytes?: number
+  error?: string
+}
+
+type BrowserRequestCreateBody = {
+  id?: string
+  url: string
+  method: BrowserNetworkHttpMethod
+  view_id: string
+  session_id: string
+  request_headers?: Record<string, string>
+}
+
+type BrowserRequestUpdateBody = {
+  status?: BrowserNetworkRequestStatus
+  response_status?: number
+  response_headers?: Record<string, string>
+  response_bytes?: number
   error?: string
 }
 
@@ -139,6 +163,67 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
       return { ok: true }
     },
   )
+
+  app.get<{ Reply: BrowserNetworkRequestListResponse }>('/api/browser-network/requests', async () => ({
+    ok: true,
+    requests: state.browserRequests,
+  }))
+
+  app.get<{ Params: { id: string }; Reply: BrowserNetworkRequestResponse }>('/api/browser-network/requests/:id', async (request) => {
+    const browserRequest = state.browserRequests.find((item) => item.id === request.params.id)
+    return browserRequest ? { ok: true, request: browserRequest } : { ok: false, message: '浏览器网络请求记录不存在。' }
+  })
+
+  app.post<{ Body: BrowserRequestCreateBody; Reply: BrowserNetworkRequestResponse }>(
+    '/api/browser-network/requests',
+    { schema: browserNetworkRequestCreateSchema },
+    async (request, reply) => {
+      if (!requireDesktopMarker(request, reply)) return { ok: false, message: '缺少桌面浏览器网络标记。' }
+
+      const now = nowSeconds()
+      const id = createBrowserRequestId(state, now, request.body.id)
+      const record: BrowserNetworkRequestRecord = {
+        id,
+        job_id: id,
+        view_id: request.body.view_id,
+        session_id: request.body.session_id,
+        mode: 'browser-session',
+        method: request.body.method,
+        url: normalizeBrowserRequestUrl(request.body.url),
+        status: 'running',
+        request_headers: request.body.request_headers ?? {},
+        response_bytes: 0,
+        created_at: now,
+        updated_at: now,
+        completed_at: null,
+        error: null,
+      }
+
+      state.browserRequests.unshift(record)
+      const job = createJobRecord({ id, kind: 'browser.request', title: `浏览器网络请求：${record.method} ${hostFromUrl(record.url)}` })
+      await state.db.jobs.create(transitionJob(job, 'running', new Date(now * 1000)))
+      addLog(state.db, 'NOTICE', 'browser-network', `浏览器网络请求开始：${record.method} ${record.url}`)
+      return { ok: true, request: record }
+    },
+  )
+
+  app.patch<{ Params: { id: string }; Body: BrowserRequestUpdateBody; Reply: BrowserNetworkRequestResponse }>(
+    '/api/browser-network/requests/:id',
+    { schema: browserNetworkRequestUpdateSchema },
+    async (request, reply) => {
+      if (!requireDesktopMarker(request, reply)) return { ok: false, message: '缺少桌面浏览器网络标记。' }
+
+      const browserRequest = state.browserRequests.find((item) => item.id === request.params.id)
+      if (!browserRequest) {
+        reply.status(404)
+        return { ok: false, message: '浏览器网络请求记录不存在。' }
+      }
+
+      applyBrowserRequestUpdate(browserRequest, request.body)
+      await syncBrowserRequestJob(state, browserRequest)
+      return { ok: true, request: browserRequest }
+    },
+  )
 }
 
 function requireDesktopMarker(request: FastifyRequest, reply: FastifyReply): boolean {
@@ -178,6 +263,39 @@ function createBrowserDownloadId(state: ApiState, now: number, requestedId?: str
   return id
 }
 
+function createBrowserRequestId(state: ApiState, now: number, requestedId?: string): string {
+  const id = requestedId?.trim() || `browser-request-${now}-${state.browserRequests.length + 1}`
+  if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) {
+    const error = new Error('浏览器网络请求 ID 不符合 API 契约。')
+    ;(error as Error & { statusCode?: number }).statusCode = 400
+    throw error
+  }
+  if (state.browserRequests.some((item) => item.id === id)) {
+    const error = new Error('浏览器网络请求记录已存在。')
+    ;(error as Error & { statusCode?: number }).statusCode = 409
+    throw error
+  }
+  return id
+}
+
+function normalizeBrowserRequestUrl(input: string): string {
+  const parsed = new URL(input)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    const error = new Error('浏览器网络请求仅支持 http 和 https。')
+    ;(error as Error & { statusCode?: number }).statusCode = 400
+    throw error
+  }
+  return parsed.href
+}
+
+function hostFromUrl(input: string): string {
+  try {
+    return new URL(input).hostname
+  } catch {
+    return input
+  }
+}
+
 function applyDownloadUpdate(download: BrowserNetworkDownloadRecord, update: BrowserDownloadUpdateBody): void {
   if (typeof update.received_bytes === 'number') download.received_bytes = Math.max(0, Math.floor(update.received_bytes))
   if (typeof update.total_bytes === 'number') download.total_bytes = Math.max(0, Math.floor(update.total_bytes))
@@ -186,6 +304,18 @@ function applyDownloadUpdate(download: BrowserNetworkDownloadRecord, update: Bro
   download.updated_at = nowSeconds()
   if (download.status === 'succeeded' || download.status === 'failed' || download.status === 'canceled') {
     download.completed_at = download.updated_at
+  }
+}
+
+function applyBrowserRequestUpdate(record: BrowserNetworkRequestRecord, update: BrowserRequestUpdateBody): void {
+  if (update.status) record.status = update.status
+  if (typeof update.response_status === 'number') record.response_status = Math.floor(update.response_status)
+  if (typeof update.response_bytes === 'number') record.response_bytes = Math.max(0, Math.floor(update.response_bytes))
+  if (update.response_headers) record.response_headers = update.response_headers
+  if (update.error !== undefined) record.error = update.error
+  record.updated_at = nowSeconds()
+  if (record.status === 'succeeded' || record.status === 'failed' || record.status === 'canceled') {
+    record.completed_at = record.updated_at
   }
 }
 
@@ -219,7 +349,44 @@ async function syncDownloadJob(state: ApiState, download: BrowserNetworkDownload
   }
 }
 
+async function syncBrowserRequestJob(state: ApiState, record: BrowserNetworkRequestRecord): Promise<void> {
+  const job = await state.db.jobs.findById(record.job_id)
+  if (!job) return
+
+  const withProgress: JobRecord = {
+    ...job,
+    progress: {
+      current: record.response_bytes,
+      total: Math.max(record.response_bytes, 1),
+      unit: 'bytes',
+    },
+  }
+  if (record.error) withProgress.errorMessage = record.error
+
+  const nextStatus = toBrowserRequestJobStatus(record.status)
+  const updated = canTransitionJob(withProgress.status, nextStatus)
+    ? transitionJob(withProgress, nextStatus)
+    : withProgress
+  await state.db.jobs.update(updated)
+
+  if (record.status === 'succeeded') {
+    addLog(state.db, 'INFO', 'browser-network', `浏览器网络请求完成：${record.method} ${record.url}`)
+  } else if (record.status === 'failed') {
+    addLog(state.db, 'ERROR', 'browser-network', `浏览器网络请求失败：${record.method} ${record.url}`)
+  } else if (record.status === 'canceled') {
+    addLog(state.db, 'WARNING', 'browser-network', `浏览器网络请求取消：${record.method} ${record.url}`)
+  }
+}
+
 function toJobStatus(status: BrowserNetworkDownloadStatus): JobRecord['status'] {
+  if (status === 'pending') return 'queued'
+  if (status === 'succeeded') return 'succeeded'
+  if (status === 'failed') return 'failed'
+  if (status === 'canceled') return 'canceled'
+  return 'running'
+}
+
+function toBrowserRequestJobStatus(status: BrowserNetworkRequestStatus): JobRecord['status'] {
   if (status === 'pending') return 'queued'
   if (status === 'succeeded') return 'succeeded'
   if (status === 'failed') return 'failed'

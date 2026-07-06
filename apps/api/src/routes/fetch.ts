@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify'
 import { createJobRecord } from '@mediatoolbox/job-core'
-import type { FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
+import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStrategyResponse, FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
-import { clearFetchTasksSchema, fetchTaskSubmitSchema } from '../schemas.js'
+import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 import { executeDownload, abortDownload, updateJob } from '../download-executor.js'
@@ -55,6 +55,15 @@ function createFetchTask(id: string, draft: Record<string, unknown>, createdAt: 
 }
 
 export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
+  app.post<{ Body: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }; Reply: DownloadStrategyResponse }>(
+    '/api/downloads/analyze',
+    { schema: downloadAnalyzeSchema },
+    async (request) => ({
+      ok: true,
+      analysis: analyzeDownloadStrategy(request.body.url, request.body.requested_route ?? 'auto'),
+    }),
+  )
+
   app.post<{ Body: Record<string, unknown>; Reply: SubmitFetchResponse }>('/api/fetch/tasks', { schema: fetchTaskSubmitSchema }, async (request) => {
     const createdAt = nowSeconds()
     const urls = urlsFromDraft(request.body)
@@ -135,4 +144,37 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     const path = request.query.path || ''
     return reply.type('text/plain; charset=utf-8').send(`任务 ${request.params.id} 的文件访问尚未接入：${path}`)
   })
+}
+
+function analyzeDownloadStrategy(url: string, requestedRoute: 'auto' | 'ytdlp' | 'browser'): DownloadStrategyAnalysis {
+  const normalized = normalizeDownloadUrl(url)
+  const browserReason = '静态文件、图片或用户明确选择浏览器后备时，使用 Browser Network 承接真实浏览器会话下载。'
+  const ytdlpReason = '优先使用 yt-dlp：它维护站点 extractor 列表，并支持 embed/generic extractor；是否真正支持以试解析为准。'
+  const looksLikeStaticFile = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp|zip|7z|rar|pdf|docx?|xlsx?|pptx?)(?:$|[?#])/i.test(normalized)
+  const route: BrowserNetworkDownloadRoute = requestedRoute === 'browser' || (requestedRoute === 'auto' && looksLikeStaticFile) ? 'browser' : 'ytdlp'
+
+  return {
+    url: normalized,
+    route,
+    primary: route === 'browser' ? 'browser-network' as const : 'yt-dlp' as const,
+    fallback: route === 'browser' ? null : 'browser-network' as const,
+    reason: route === 'browser' ? browserReason : ytdlpReason,
+    ytdlp_scope: {
+      supported_sites_source: 'yt-dlp supportedsites.md' as const,
+      supports_generic_extractor: true,
+      supports_embeds: true,
+      reliable_check: 'try-extractor' as const,
+      media: ['video', 'audio', 'subtitles', 'playlists', 'livestreams', 'metadata'],
+    },
+  }
+}
+
+function normalizeDownloadUrl(input: string): string {
+  const parsed = new URL(input)
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    const error = new Error('下载分析仅支持 http 和 https URL。')
+    ;(error as Error & { statusCode?: number }).statusCode = 400
+    throw error
+  }
+  return parsed.href
 }

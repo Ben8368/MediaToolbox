@@ -71,6 +71,7 @@ export function DownloaderAddForm({
         <div className="dl-field">
           <label>任务通道</label>
           <select value={taskChannel} onChange={(event) => onTaskChannelChange(event.target.value as DownloadChannel)}>
+            <option value="auto">智能路由（yt-dlp 优先，浏览器后备）</option>
             <option value="media">媒体解析（yt-dlp）</option>
             <option value="browser">浏览器资源（Browser Network）</option>
           </select>

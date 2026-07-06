@@ -10,6 +10,7 @@ function forwardMethod<K extends keyof MediaToolboxApi>(method: K): MediaToolbox
 }
 
 export const submitFetch = forwardMethod('submitFetch')
+export const analyzeDownloadStrategy = forwardMethod('analyzeDownloadStrategy')
 export const getActiveTasks = forwardMethod('getActiveTasks')
 export const getWeeklyHistory = forwardMethod('getWeeklyHistory')
 export const cancelTask = forwardMethod('cancelTask')
