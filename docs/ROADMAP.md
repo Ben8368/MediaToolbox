@@ -62,7 +62,8 @@
 - [x] 补齐浏览器 app 的基础弹窗策略：支持的弹窗 URL 收敛到受控当前视图，不支持的弹窗给出可见错误并写入权限审计。
 - [x] 补齐浏览器 app 的错误页：overlay 在 `browserState.error` 存在时显示错误文案与重试按钮。
 - [x] `apps/web` Vite 构建加入 `base: './'`，修复生产打包 `file://` 协议资源路径。
-- [ ] 标签页 UI 和 Electron 完整打包工具链（electron-builder/forge、preload 与本地 API 生产运行时）验收。
+- [x] 前端多标签页 UI 接入：`useBrowserTabs` 管理多 `viewId`、独立地址/状态、活动标签独占原生 view、切换时隐藏旧 view，网络事件按窗口聚合（待桌面端真机验收）。
+- [ ] Electron 完整打包工具链（electron-builder/forge、preload 与本地 API 生产运行时）验收。
 
 ## Phase 5：PS / PSD 工作台
 
@@ -95,6 +96,6 @@
 | 010 | yt-dlp adapter | 执行入口已接入 |
 | 011 | ffmpeg adapter | 执行入口已接入，转码工作台 beta 已对接真实 API |
 | 012 | PSD 模版引擎 | engine 接口、Photoshop JSX adapter、检查/编辑/渲染/持久化闭环已建立，待 Photoshop 本机联调 |
-| 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽、缩放和错误页重试已主观验收 |
+| 013 | 真浏览器 app | 多标签页 UI 已接入（前端），拖拽、缩放和错误页重试已主观验收，标签切换/生命周期待真机验收 |
 | 014 | Browser Network adapter | 非验收类能力已接入：隔离 session、下载事件、受控上传选择、权限审计、API/jobs 契约 |
 | 015 | PSD 渐进式渲染工作台 | manifest 编辑、批量渲染表单、manifest sidecar 持久化已接入，待真实 Photoshop 联调 |
