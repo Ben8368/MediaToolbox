@@ -6,6 +6,8 @@ import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } f
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 import { executeDownload, abortDownload, updateJob } from '../download-executor.js'
+import { readWorkspaceFileForDownload } from '../workspace-files.js'
+import { normalizeWorkspacePath } from '../workspace-path.js'
 
 function titleFromDraft(draft: Record<string, unknown>) {
   const urls = Array.isArray(draft.urls) ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
@@ -141,8 +143,30 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
   })
 
   app.get<{ Params: { id: string }; Querystring: { path?: string } }>('/api/fetch/tasks/:id/file', async (request, reply) => {
-    const path = request.query.path || ''
-    return reply.type('text/plain; charset=utf-8').send(`任务 ${request.params.id} 的文件访问尚未接入：${path}`)
+    const task = state.fetchTasks.find((item) => item.id === request.params.id || item.task_id === request.params.id)
+    if (!task) {
+      reply.status(404)
+      return { ok: false, message: '下载任务不存在。' }
+    }
+
+    const outputFiles = task.output_files ?? []
+    const virtualPath = request.query.path
+      ? normalizeWorkspacePath(request.query.path, state.workspaceRoot)
+      : outputFiles[0]
+    if (!virtualPath) {
+      reply.status(404)
+      return { ok: false, message: '任务尚未记录可下载文件。' }
+    }
+    if (!outputFiles.includes(virtualPath)) {
+      reply.status(403)
+      return { ok: false, message: '请求文件不属于该下载任务。' }
+    }
+
+    const file = await readWorkspaceFileForDownload(state, virtualPath)
+    return reply
+      .header('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`)
+      .type('application/octet-stream')
+      .send(file.buffer)
   })
 }
 

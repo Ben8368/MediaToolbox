@@ -15,6 +15,7 @@ import type {
 import { filebrowserDeleteSchema, filebrowserListSchema, filebrowserMkdirSchema, setWorkspaceSchema } from '../schemas.js'
 import { ensureDefaultPhysicalWorkspace, physicalWorkspaceForVirtualRoot, WORKSPACE_ROOT, type ApiState } from '../state.js'
 import { addLog, entryName, formatLogTime, nowSeconds } from '../utils.js'
+import { toPhysicalWorkspacePath, toVirtualWorkspacePath } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
 const TRASH_DIR = '.trash'
@@ -48,7 +49,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
 
   app.post<{ Body: { directory?: string }; Reply: DirectoryListResponse }>('/api/filebrowser/list', { schema: filebrowserListSchema }, async (request) => {
     const directory = normalizeWorkspacePath(request.body.directory, state.workspaceRoot)
-    const physicalDirectory = toPhysicalPath(state, directory)
+    const physicalDirectory = toPhysicalWorkspacePath(state, directory)
     const entries = await fs.readdir(physicalDirectory, { withFileTypes: true })
     const directories: FileEntry[] = []
     const files: FileEntry[] = []
@@ -57,7 +58,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
       if (item.name === TRASH_DIR) continue
       const physicalPath = path.join(physicalDirectory, item.name)
       const stat = await fs.stat(physicalPath)
-      const virtualPath = toVirtualPath(state, physicalPath)
+      const virtualPath = toVirtualWorkspacePath(state, physicalPath)
       const entry: FileEntry = {
         name: item.name,
         path: virtualPath,
@@ -75,7 +76,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
 
   app.post<{ Body: { path?: string }; Reply: CreateDirectoryResponse }>('/api/filebrowser/mkdir', { schema: filebrowserMkdirSchema }, async (request) => {
     const virtualPath = normalizeWorkspacePath(request.body.path, state.workspaceRoot)
-    await fs.mkdir(toPhysicalPath(state, virtualPath), { recursive: true })
+    await fs.mkdir(toPhysicalWorkspacePath(state, virtualPath), { recursive: true })
     addLog(state.db, 'INFO', 'file-manager', `创建本地目录：${virtualPath}`)
     return { ok: true, path: virtualPath }
   })
@@ -84,7 +85,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     const virtualPath = normalizeWorkspacePath(request.body.path, state.workspaceRoot)
     if (virtualPath === state.workspaceRoot) return { ok: false, message: '工作区根目录受保护。' }
 
-    const physicalPath = toPhysicalPath(state, virtualPath)
+    const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
     const stat = await fs.stat(physicalPath).catch(() => undefined)
     if (!stat) return { ok: false, message: '路径不存在。' }
 
@@ -122,7 +123,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     if (!item) return { ok: false, message: '回收站条目不存在。' }
 
     const from = path.join(state.physicalWorkspaceRoot, TRASH_DIR, item.id)
-    const to = toPhysicalPath(state, item.original_path)
+    const to = toPhysicalWorkspacePath(state, item.original_path)
     if (await exists(to)) {
       state.trash.splice(index, 0, item)
       return { ok: false, message: '原路径已存在，无法恢复。' }
@@ -146,21 +147,6 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     state.trash.splice(0, state.trash.length)
     return { ok: true }
   })
-}
-
-function toPhysicalPath(state: ApiState, virtualPath: string): string {
-  const relative = virtualPath === state.workspaceRoot ? '' : virtualPath.slice(state.workspaceRoot.length + 1)
-  const resolved = path.resolve(state.physicalWorkspaceRoot, ...relative.split('/').filter(Boolean))
-  const root = path.resolve(state.physicalWorkspaceRoot)
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error('Physical path escaped workspace root.')
-  }
-  return resolved
-}
-
-function toVirtualPath(state: ApiState, physicalPath: string): string {
-  const relative = path.relative(state.physicalWorkspaceRoot, physicalPath).split(path.sep).filter(Boolean).join('/')
-  return relative ? `${state.workspaceRoot}/${relative}` : state.workspaceRoot
 }
 
 async function hasVisibleChildren(physicalPath: string): Promise<boolean> {
