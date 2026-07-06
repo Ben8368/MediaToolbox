@@ -53,21 +53,22 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       return { ok: false, message: 'Missing input in request body' }
     }
 
-    // Convert virtual sourcePath to physical
-    if (template.sourcePath) {
-      template.sourcePath = toPhysicalPath(state, template.sourcePath)
+    let payload: ResolvedRenderPayload
+    try {
+      payload = resolveRenderPayload(state, template, input)
+    } catch (error) {
+      reply.status(400)
+      return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
 
     try {
-      const result = await runPsdWorkerJob({ type: 'render', template, input })
+      const result = await runPsdWorkerJob({ type: 'render', template: payload.template, input: payload.input })
       if (result.type !== 'render') {
         return { ok: false, message: 'PSD worker 返回了非渲染结果。' }
       }
 
-      // Convert physical outputPath back to virtual workspace path
-      const virtualOutput = result.outputPath.startsWith(state.physicalWorkspaceRoot)
-        ? state.workspaceRoot + result.outputPath.slice(state.physicalWorkspaceRoot.length).replace(/\\/g, '/')
-        : result.outputPath
+      // 输出路径由服务端在工作区内生成，回写虚拟路径供前端展示。
+      const virtualOutput = toVirtualWorkspacePath(state, result.outputPath) ?? payload.virtualOutput
 
       addLog(state.db, 'INFO', 'psd', `PSD 模板渲染完成：${template.name}`)
       return { ok: true, outputPath: virtualOutput }
@@ -90,11 +91,13 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         reply.status(400)
         return { ok: false, message: 'Missing manifest.sourcePath in request body' }
       }
-      const physicalPsdPath = toPhysicalPath(state, manifest.sourcePath)
+      const virtualPath = normalizeWorkspacePath(manifest.sourcePath, state.workspaceRoot)
+      const physicalPsdPath = toPhysicalPath(state, virtualPath)
       const sidecarPath = `${physicalPsdPath}.manifest.json`
       try {
-        await fs.writeFile(sidecarPath, JSON.stringify(manifest, null, 2), 'utf-8')
-        addLog(state.db, 'INFO', 'psd', `PSD manifest 已保存：${manifest.sourcePath}`)
+        const persisted: PsdTemplateManifest = { ...manifest, sourcePath: virtualPath }
+        await fs.writeFile(sidecarPath, JSON.stringify(persisted, null, 2), 'utf-8')
+        addLog(state.db, 'INFO', 'psd', `PSD manifest 已保存：${virtualPath}`)
         return { ok: true }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -125,6 +128,55 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       }
     },
   )
+}
+
+export type ResolvedRenderPayload = {
+  template: PsdTemplateManifest
+  input: PsdRenderInput
+  virtualOutput: string
+}
+
+// 收口渲染入参：源路径必须落在工作区内，输出路径完全由服务端生成，
+// 客户端传入的 `__` 保留键（如 __outputPath / __psdPath）一律剥离，杜绝工作区逃逸。
+export function resolveRenderPayload(
+  state: ApiState,
+  template: PsdTemplateManifest,
+  input: PsdRenderInput,
+): ResolvedRenderPayload {
+  if (!template.sourcePath) {
+    throw new Error('Missing template.sourcePath in request body')
+  }
+  const virtualSource = normalizeWorkspacePath(template.sourcePath, state.workspaceRoot)
+  const physicalSource = toPhysicalPath(state, virtualSource)
+
+  const safeInput: PsdRenderInput = {}
+  for (const [key, value] of Object.entries(input)) {
+    if (key.startsWith('__')) continue
+    safeInput[key] = value
+  }
+
+  const virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
+  const physicalOutput = toPhysicalPath(state, virtualOutput)
+  safeInput.__outputPath = physicalOutput
+
+  return {
+    template: { ...template, sourcePath: physicalSource },
+    input: safeInput,
+    virtualOutput,
+  }
+}
+
+function safeFileStem(id: string): string {
+  const stem = id.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '')
+  return stem || 'render'
+}
+
+function toVirtualWorkspacePath(state: ApiState, physicalPath: string): string | null {
+  const root = path.resolve(state.physicalWorkspaceRoot)
+  const resolved = path.resolve(physicalPath)
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) return null
+  const relative = resolved.slice(root.length).replace(/\\/g, '/')
+  return relative ? `${state.workspaceRoot}${relative}` : state.workspaceRoot
 }
 
 function toPhysicalPath(state: ApiState, virtualPath: string): string {

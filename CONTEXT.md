@@ -3,7 +3,7 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5 浏览器错误页与生产资源路径黄灯已收口，Phase 5 PSD 工作台核心能力（渲染 API、manifest 编辑、批量渲染、manifest 持久化）已接入
-> **最近更新：** 2026-07-06，浏览器 app 错误态 overlay 增加错误文案与重试按钮；`apps/web` Vite 构建加入 `base: './'` 修复 `file://` 协议资源路径；PSD 工作台新增渲染 API 路由 `POST /api/psd/render`、manifest 编辑标签页（slot label/kind/required 可编辑）、批量渲染标签页（文字 slot 表单 + 提交渲染）、manifest JSON sidecar 持久化（`POST/GET /api/psd/manifests/save|load`）；真实 Photoshop 联调、多标签页 UI 与 Electron 生产打包仍待后续验收。
+> **最近更新：** 2026-07-06，浏览器 app 错误态 overlay 增加错误文案与重试按钮；`apps/web` Vite 构建加入 `base: './'` 修复 `file://` 协议资源路径；PSD 工作台新增渲染 API 路由 `POST /api/psd/render`、manifest 编辑标签页（slot label/kind/required 可编辑）、批量渲染标签页（文字 slot 表单 + 提交渲染）、manifest JSON sidecar 持久化（`POST/GET /api/psd/manifests/save|load`）。Code Review 收口 `POST /api/psd/render` 工作区逃逸：源模版经工作区校验、输出路径由服务端固定生成到 `/Workspace/Exports` 且剥离客户端 `__` 保留键（含单元测试）；save/load 统一走 `normalizeWorkspacePath`，前端 inspect 仅在 404 时回退检查、批量渲染对未保存编辑给出提示。真实 Photoshop 联调、多标签页 UI 与 Electron 生产打包仍待后续验收。
 
 ## 项目定位
 
@@ -28,7 +28,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示。
 - Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 仍缺失（IPC/session 层已支持多 viewId，前端无标签栏）。
 - desktop 已有主进程能力；`apps/web` 构建已加 `base: './'` 支持 `file://` 加载，但 Electron 打包工具链（electron-builder/forge）、preload 生产路径和本地 API 生产运行时（当前依赖 `tsx` + 源码）仍待后续阶段验收。
-- PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调。
+- PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内（服务端受控生成、剥离客户端 `__` 保留键）；真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调。
 - 网络速率已接入浏览器下载增量采样；GPU 指标仍未接入系统级采集器。
 
 ## 下一步

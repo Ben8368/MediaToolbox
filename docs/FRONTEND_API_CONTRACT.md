@@ -83,6 +83,9 @@ Workers / adapters 负责：
 | `POST /api/transcode/jobs` | 创建转码任务，输入必须在工作区内，输出必须在 `/Workspace/Exports` 内 | 执行入口 |
 | `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot，需配置 Photoshop 命令 runner；未配置返回 503 可读错误 | 执行入口 |
+| `POST /api/psd/render` | 渲染 PSD 模版；`template.sourcePath` 必须在工作区内，输出由服务端固定生成到 `/Workspace/Exports`，回写虚拟路径。**客户端传入的 `__` 保留键（`__outputPath`/`__psdPath` 等）一律被剥离**，前端不得依赖它们指定路径 | 执行入口 |
+| `POST /api/psd/manifests/save` | 保存 manifest JSON sidecar 到 PSD 同目录（`<psd>.manifest.json`）；`sourcePath` 必须在工作区内，持久化时规范化为虚拟路径 | 本地映射 |
+| `GET /api/psd/manifests/load` | 读取已保存的 manifest sidecar；无 sidecar 返回 404 可读错误 | 本地映射 |
 | `POST /api/psd/batch-jobs` | 创建 PSD 批处理任务 | 待设计 |
 
 `GET /api/system/metrics` 的 `system.memory_percent` 表示右侧状态面板的内存仪表值：macOS 优先使用 `memory_pressure -Q` 推导系统内存压力，其他平台回退为物理内存占用比例；`memory_used_bytes`、`memory_total_bytes` 和 `memory_free_bytes` 保留原始物理内存明细。
@@ -96,7 +99,7 @@ Workers / adapters 负责：
 
 说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。系统指标当前采样 uptime、CPU 负载近似值和内存占用；网络速率和 GPU 仍保留为未接入采集器的 0 值。
 
-当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear`、`GET /api/fetch/tasks/{id}/file`、`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect` 和浏览器网络写入端点已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`；`GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID；受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态；`GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear`、`GET /api/fetch/tasks/{id}/file`、`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect` 和浏览器网络写入端点已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`；`GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID；受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**，并剥离客户端传入的 `__outputPath`/`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；越界的物理路径不会回泄给前端。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态；`GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
 
 文件浏览端点会更新当前虚拟工作区到本地目录的映射，并通过 `.trash` 子目录实现回收站；非空目录删除会被拒绝，避免误删整棵目录。
 
