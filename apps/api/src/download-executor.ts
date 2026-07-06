@@ -55,8 +55,10 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
           } else if (event.stage === 'already-downloaded') {
             task.stage = '已下载过，跳过'
             rememberOutputFile(outputFiles, state, event.message)
-          }
-          else if (event.stage === 'finished') task.stage = '后处理完成'
+          } else if (event.stage === 'merger') {
+            task.stage = `合并：${event.message}`
+            rememberOutputFile(outputFiles, state, event.message)
+          } else if (event.stage === 'finished') task.stage = '后处理完成'
           else task.stage = event.message
         } else if (event.type === 'error') {
           task.stage = `错误：${event.message}`
@@ -90,7 +92,6 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
         command: result.command,
         args: result.args,
         exitCode: result.exitCode,
-        output_files: task.output_files,
       }
       await updateJob(state, task.id, 'succeeded')
       addLog(state.db, 'INFO', 'downloader', `下载完成：${task.title}`)
@@ -133,7 +134,8 @@ export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): Downl
 
 function buildOutputTemplate(state?: ApiState): string {
   if (!state) return '%(title)s.%(ext)s'
-  return path.join(state.physicalWorkspaceRoot, 'Downloads', '%(title)s.%(ext)s')
+  const root = state.physicalWorkspaceRoot.replace(/\\/g, '/')
+  return `${root}/Downloads/%(title)s.%(ext)s`
 }
 
 function rememberOutputFile(outputFiles: Set<string>, state: ApiState, outputPath: string): void {

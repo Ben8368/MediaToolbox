@@ -9,7 +9,7 @@ export type YtdlpProgressEvent =
     }
   | {
       type: 'stage'
-      stage: 'destination' | 'already-downloaded' | 'finished' | 'info'
+      stage: 'destination' | 'already-downloaded' | 'finished' | 'info' | 'merger'
       message: string
       raw: string
     }
@@ -30,6 +30,11 @@ export function parseYtdlpProgressLine(line: string): YtdlpProgressEvent | null 
   const errorMatch = raw.match(/^ERROR:\s*(.+)$/)
   if (errorMatch?.[1]) {
     return { type: 'error', message: errorMatch[1].trim(), raw }
+  }
+
+  const mergerMatch = raw.match(/^\[Merger\]\s+Merging formats into\s+"(.+)"$/)
+  if (mergerMatch?.[1]) {
+    return { type: 'stage', stage: 'merger', message: mergerMatch[1].trim(), raw }
   }
 
   const destinationMatch = raw.match(/^\[download\]\s+Destination:\s+(.+)$/)

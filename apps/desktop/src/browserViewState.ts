@@ -24,6 +24,7 @@ export type BrowserViewRecord = {
   networkOptions: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv }
   view: BrowserWebContentsView
   state: BrowserViewState
+  cleanup?: () => void
 }
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: string }
@@ -86,11 +87,13 @@ export function configureBrowserView(electron: ElectronModule, hostWindow: Brows
     record.state.error = errorDescription || 'Page failed to load'
     emitBrowserState(hostWindow, record)
   })
-  electron.app.on('web-contents-created', (_event, contents) => {
+  const webContentsCreatedHandler = (_event: Electron.Event, contents: import('electron').WebContents) => {
     const currentContents = getWebContents(record)
     if (!currentContents || contents.id !== currentContents.id) return
     contents.on('will-attach-webview', (event) => event.preventDefault())
-  })
+  }
+  electron.app.on('web-contents-created', webContentsCreatedHandler)
+  record.cleanup = () => electron.app.off('web-contents-created', webContentsCreatedHandler)
   return undefined
 }
 
@@ -153,6 +156,7 @@ export function emitBrowserState(hostWindow: BrowserHostWindow, record: BrowserV
 export function destroyBrowserView(hostWindow: BrowserHostWindow, id: string): void {
   const record = browserViews.get(id)
   if (!record) return
+  record.cleanup?.()
   browserViews.delete(id)
   try {
     hostWindow.contentView.removeChildView(record.view)
