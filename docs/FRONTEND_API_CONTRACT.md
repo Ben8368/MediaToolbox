@@ -62,14 +62,14 @@ Workers / adapters 负责：
 | `PATCH /api/browser-network/downloads/{id}` | 桌面端更新浏览器下载进度、完成、失败或取消，需桌面标记 | 状态联动 |
 | `POST /api/browser-network/downloads/{id}/cancel` | 桌面端同步浏览器下载取消状态，需桌面标记 | 状态联动 |
 | `POST /api/browser-network/permission-events` | 桌面端写入浏览器权限审计，需桌面标记 | SQLite 日志 |
-| `POST /api/downloads/analyze` | 解析下载 URL | 待设计 |
+| `POST /api/downloads/analyze` | 解析下载 URL 并给出 yt-dlp / Browser Network 双通道策略 | 策略分析 |
 | `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交；多 URL 会拆分为多任务并返回 `task_ids` | 执行入口 |
 | `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 本地状态 |
 | `GET /api/fetch/tasks/history` | 兼容迁回前端的历史任务 | 本地状态 |
 | `POST /api/fetch/tasks/{id}/cancel` | 取消兼容下载任务 | 状态联动 |
 | `DELETE /api/fetch/tasks/{id}` | 删除兼容下载记录 | 本地状态 |
 | `POST /api/fetch/tasks/clear` | 清理兼容下载记录 | 本地状态 |
-| `GET /api/fetch/tasks/{id}/file` | 兼容下载文件访问 | 骨架 |
+| `GET /api/fetch/tasks/{id}/file` | 兼容下载文件访问，仅返回任务记录的工作区产物 | 工作区文件返回 |
 | `GET /api/filebrowser/workspace` | 工作区信息 | 本地映射 |
 | `PUT /api/filebrowser/workspace` | 设置工作区 | 本地映射 |
 | `GET /api/filebrowser/disks` | 磁盘列表 | 本地映射 |
@@ -96,7 +96,7 @@ Workers / adapters 负责：
 
 说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。系统指标当前采样 uptime、CPU 负载近似值和内存占用；网络速率和 GPU 仍保留为未接入采集器的 0 值。
 
-当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear`、`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect` 和浏览器网络写入端点已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs。浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID；受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态；`GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
+当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear`、`GET /api/fetch/tasks/{id}/file`、`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect` 和浏览器网络写入端点已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`；`GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID；受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态；`GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
 
 文件浏览端点会更新当前虚拟工作区到本地目录的映射，并通过 `.trash` 子目录实现回收站；非空目录删除会被拒绝，避免误删整棵目录。
 

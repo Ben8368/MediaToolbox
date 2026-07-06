@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
 import { runDownloadWorkerJob, type DownloadWorkerJob } from '@mediatoolbox/download-worker'
 import { YtdlpRunError, YtdlpToolNotFoundError, type YtdlpProgressEvent } from '@mediatoolbox/downloader'
@@ -5,6 +6,7 @@ import { transitionJob, canTransitionJob } from '@mediatoolbox/job-core'
 
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
+import { toVirtualWorkspacePath } from './workspace-files.js'
 
 const activeAbortControllers = new Map<string, AbortController>()
 
@@ -34,7 +36,8 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
   addLog(state.db, 'INFO', 'downloader', `开始下载：${task.title}`)
 
   try {
-    const job = buildDownloadJob(task)
+    const job = buildDownloadJob(task, state)
+    const outputFiles = new Set<string>()
 
     const result = await runDownloadWorkerJob(job, {
       signal: controller.signal,
@@ -46,8 +49,13 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
           const eta = event.etaText ? ` ETA ${event.etaText}` : ''
           task.stage = `${event.percent}% of ${event.totalText}${speed}${eta}`
         } else if (event.type === 'stage') {
-          if (event.stage === 'destination') task.stage = `写入：${event.message}`
-          else if (event.stage === 'already-downloaded') task.stage = '已下载过，跳过'
+          if (event.stage === 'destination') {
+            task.stage = `写入：${event.message}`
+            rememberOutputFile(outputFiles, state, event.message)
+          } else if (event.stage === 'already-downloaded') {
+            task.stage = '已下载过，跳过'
+            rememberOutputFile(outputFiles, state, event.message)
+          }
           else if (event.stage === 'finished') task.stage = '后处理完成'
           else task.stage = event.message
         } else if (event.type === 'error') {
@@ -76,6 +84,14 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       task.stage = '下载完成'
       task.completed_at = nowSeconds()
       task.updated_at = task.completed_at
+      task.output_files = [...outputFiles]
+      task.result = {
+        status: result.status,
+        command: result.command,
+        args: result.args,
+        exitCode: result.exitCode,
+        output_files: task.output_files,
+      }
       await updateJob(state, task.id, 'succeeded')
       addLog(state.db, 'INFO', 'downloader', `下载完成：${task.title}`)
     }
@@ -107,10 +123,22 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
   }
 }
 
-export function buildDownloadJob(task: FetchTaskRecord): DownloadWorkerJob {
+export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): DownloadWorkerJob {
   const params = task.params as Record<string, unknown>
   const urls = Array.isArray(params.urls) ? params.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   const url = typeof params.url === 'string' && params.url.trim().length > 0 ? params.url.trim() : (urls[0]?.trim() ?? '')
   const mode = params.mode === 'audio' ? 'audio' : params.mode === 'subtitles' ? 'subtitles' : 'video'
-  return { url, mode, outputTemplate: '%(title)s.%(ext)s' }
+  return { url, mode, outputTemplate: buildOutputTemplate(state) }
+}
+
+function buildOutputTemplate(state?: ApiState): string {
+  if (!state) return '%(title)s.%(ext)s'
+  return path.join(state.physicalWorkspaceRoot, 'Downloads', '%(title)s.%(ext)s')
+}
+
+function rememberOutputFile(outputFiles: Set<string>, state: ApiState, outputPath: string): void {
+  const physicalPath = path.resolve(outputPath)
+  const root = path.resolve(state.physicalWorkspaceRoot)
+  if (physicalPath !== root && !physicalPath.startsWith(`${root}${path.sep}`)) return
+  outputFiles.add(toVirtualWorkspacePath(state, physicalPath))
 }
