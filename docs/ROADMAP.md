@@ -60,17 +60,24 @@
 - [x] 下载 app 增加双通道策略：普通网页资源走浏览器下载；视频、音频、字幕和后处理继续走 `yt-dlp` / worker。
 - [x] 定义权限策略：下载、上传、弹窗、剪贴板、通知、跨域读取和 cookie 访问分别授权，默认不向 Web UI 暴露原始 cookie。
 - [x] 补齐浏览器 app 的基础弹窗策略：支持的弹窗 URL 收敛到受控当前视图，不支持的弹窗给出可见错误并写入权限审计。
-- [ ] 补齐浏览器 app 的错误页、标签页和生产打包资源加载验收。
+- [x] 补齐浏览器 app 的错误页：overlay 在 `browserState.error` 存在时显示错误文案与重试按钮。
+- [x] `apps/web` Vite 构建加入 `base: './'`，修复生产打包 `file://` 协议资源路径。
+- [ ] 标签页 UI 和 Electron 完整打包工具链（electron-builder/forge、preload 与本地 API 生产运行时）验收。
 
 ## Phase 5：PS / PSD 工作台
 
-状态：**第一版工作台已接入，待 Photoshop 本机联调与批量渲染 UI**。
+状态：**核心工作台闭环已接入（检查/编辑/渲染/持久化），待 Photoshop 本机联调**。
 
 - 定义 PSD template manifest。
 - 支持 slot 检查、文案替换、底图替换、尺寸变体和批量导出。
 - [x] 建立 Photoshop JSX adapter 与可配置命令 runner。
 - [x] 前端 PSD 工作台接入模板检查入口，Photoshop 未配置时返回可读错误。
+- [x] 新增渲染 API 路由 `POST /api/psd/render`，接入 `psd-worker` render job。
+- [x] 前端新增 manifest 编辑标签页（slot label/kind/required 可编辑）。
+- [x] 前端新增批量渲染标签页（文字 slot 表单提交渲染，展示成功/失败与输出路径）。
+- [x] manifest 持久化：`POST /api/psd/manifests/save` / `GET /api/psd/manifests/load`，JSON sidecar 存于 PSD 同目录。
 - [ ] 复杂 PSD 接 Photoshop 本机联调；优先 DOM，复杂命令再 batchPlay。
+- [ ] image / smart-object slot 渲染实现（当前渲染脚本仅处理 text slot）。
 
 ## Feature 索引
 
@@ -87,6 +94,7 @@
 | 009 | 任务状态机 | jobs cancel 已联动 |
 | 010 | yt-dlp adapter | 执行入口已接入 |
 | 011 | ffmpeg adapter | 执行入口已接入，转码工作台 beta 已对接真实 API |
-| 012 | PSD 模版引擎 | engine 接口、Photoshop JSX adapter 与 PSD 检查工作台已建立 |
-| 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽和缩放已主观验收 |
+| 012 | PSD 模版引擎 | engine 接口、Photoshop JSX adapter、检查/编辑/渲染/持久化闭环已建立，待 Photoshop 本机联调 |
+| 013 | 真浏览器 app | 单窗口 beta 已接入，拖拽、缩放和错误页重试已主观验收 |
 | 014 | Browser Network adapter | 非验收类能力已接入：隔离 session、下载事件、受控上传选择、权限审计、API/jobs 契约 |
+| 015 | PSD 渐进式渲染工作台 | manifest 编辑、批量渲染表单、manifest sidecar 持久化已接入，待真实 Photoshop 联调 |

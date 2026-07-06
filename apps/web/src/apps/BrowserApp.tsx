@@ -293,9 +293,27 @@ export function BrowserApp() {
           >
             {showOverlay && (
               <div className="browser-empty">
-                <div className="browser-empty__mark">WWW</div>
-                <strong>{bridge ? '输入地址开始浏览' : '桌面端能力未连接'}</strong>
-                <p>{bridge ? (isActive ? status.text : '点击浏览器窗口后会显示真实网页内容。') : '真浏览器需要 Electron preload 与主进程 IPC 支持，纯 Web 模式不会创建本机浏览器视图。'}</p>
+                {browserState.error ? (
+                  <>
+                    <div className="browser-empty__mark browser-empty__mark--error">⚠</div>
+                    <strong>页面加载失败</strong>
+                    <p>{browserState.error}</p>
+                    <button
+                      className="mt-btn mt-btn--primary"
+                      type="button"
+                      onClick={() => runNavigationAction('reload')}
+                      disabled={!bridge}
+                    >
+                      重试
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="browser-empty__mark">WWW</div>
+                    <strong>{bridge ? '输入地址开始浏览' : '桌面端能力未连接'}</strong>
+                    <p>{bridge ? (isActive ? status.text : '点击浏览器窗口后会显示真实网页内容。') : '真浏览器需要 Electron preload 与主进程 IPC 支持，纯 Web 模式不会创建本机浏览器视图。'}</p>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -102,6 +102,12 @@
   color: #ffb5b5;
 }
 
+.psd-message--ok {
+  border-color: rgba(84,255,183,.26);
+  background: rgba(84,255,183,.1);
+  color: #baffe0;
+}
+
 .psd-result {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -176,6 +182,55 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.psd-nav:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.psd-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+}
+
+.psd-slot-row--edit {
+  grid-template-columns: minmax(140px, 1fr) 140px 60px;
+}
+
+.psd-slot-input,
+.psd-slot-select {
+  min-width: 0;
+  height: 30px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.86);
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.psd-batch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: auto;
+  padding-top: 4px;
+}
+
+.psd-batch-title {
+  margin: 0;
+  color: rgba(255,255,255,.72);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.psd-required {
+  color: #ff8b8b;
 }
 
 @media (max-width: 760px) {
