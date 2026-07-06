@@ -2,8 +2,8 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 4 已完成，Phase 4.5 浏览器网络能力层第一版已接入，Phase 5 待开始
-> **最近更新：** 2026-07-06，继续收口 API 契约债与大文件技术债：兼容下载文件访问改为仅返回任务记录的工作区产物，yt-dlp 产物固定写入 Workspace/Downloads，Browser Network API 与桌面浏览器 IPC 已拆分模型/状态模块，浏览器基础弹窗策略已接入权限审计，API 骨架测试已按 Browser Network 路由拆分；真实桌面体验与生产打包验收后续统一处理。
+> **当前阶段：** Phase 4.5 浏览器错误页与生产资源路径黄灯已收口，Phase 5 PSD 工作台核心能力（渲染 API、manifest 编辑、批量渲染、manifest 持久化）已接入
+> **最近更新：** 2026-07-06，浏览器 app 错误态 overlay 增加错误文案与重试按钮；`apps/web` Vite 构建加入 `base: './'` 修复 `file://` 协议资源路径；PSD 工作台新增渲染 API 路由 `POST /api/psd/render`、manifest 编辑标签页（slot label/kind/required 可编辑）、批量渲染标签页（文字 slot 表单 + 提交渲染）、manifest JSON sidecar 持久化（`POST/GET /api/psd/manifests/save|load`）；真实 Photoshop 联调、多标签页 UI 与 Electron 生产打包仍待后续验收。
 
 ## 项目定位
 
@@ -26,17 +26,18 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 ## 剩余黄灯
 
 - 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示。
-- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页、标签页和生产打包资源加载仍需后续体验验收。
-- desktop 已有主进程能力，但 Electron 打包、安装包和生产资源加载仍待后续阶段验收。
-- PSD Photoshop adapter 已建立脚本命令边界，PSD 工作台已接入模板检查入口；真实 Photoshop 本机命令路径、复杂 batchPlay 和批量渲染 UI 尚未联调。
+- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 仍缺失（IPC/session 层已支持多 viewId，前端无标签栏）。
+- desktop 已有主进程能力；`apps/web` 构建已加 `base: './'` 支持 `file://` 加载，但 Electron 打包工具链（electron-builder/forge）、preload 生产路径和本地 API 生产运行时（当前依赖 `tsx` + 源码）仍待后续阶段验收。
+- PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调。
 - 网络速率已接入浏览器下载增量采样；GPU 指标仍未接入系统级采集器。
 
 ## 下一步
 
-1. 验收 Phase 4.5 第一版：桌面浏览器下载真实文件、进度回写、取消、失败提示和权限日志。
-2. 统一体验验收：受控上传文件选择、下载 app 双通道、转码工作台真实 ffmpeg 流、PSD 模板检查和生产资源加载。
-3. 进入 Phase 5 深水区：PSD 模板 manifest 编辑流、批量渲染 UI、Photoshop 本机命令路径和复杂 batchPlay 联调。
-4. 后续接入系统级 GPU 指标和更完整的网络上下行采集器。
+1. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
+2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
+3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
+4. 补齐多标签页 UI 和 Electron 生产打包工具链（electron-builder/forge、preload 与 API 运行时打包）。
+5. 后续接入系统级 GPU 指标和更完整的网络上下行采集器。
 
 ## 常用命令
 

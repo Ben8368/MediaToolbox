@@ -426,6 +426,13 @@
   font-weight: 900;
 }
 
+.browser-empty__mark--error {
+  border-color: rgba(255,107,107,.28);
+  background: rgba(255,107,107,.1);
+  color: #ff8b8b;
+  font-size: 28px;
+}
+
 .browser-empty strong {
   color: #fff;
   font-size: 17px;

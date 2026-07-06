@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/http'
 import type { AssetListResponse, OkResult } from '@mediatoolbox/contracts'
-import type { JobListResponse, JobRecord, PsdInspectResponse, TranscodeJobDraft } from '@/api/types'
+import type { JobListResponse, JobRecord, PsdInspectResponse, PsdTemplateManifest, TranscodeJobDraft } from '@/api/types'
 
 export function listJobs(): Promise<JobListResponse> {
   return apiRequest<JobListResponse>('/api/jobs')
@@ -28,4 +28,25 @@ export function inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
     method: 'POST',
     body: JSON.stringify({ psdPath }),
   })
+}
+
+export function renderPsdTemplate(
+  template: PsdTemplateManifest,
+  input: Record<string, string | number | boolean>,
+): Promise<OkResult & { outputPath?: string }> {
+  return apiRequest<OkResult & { outputPath?: string }>('/api/psd/render', {
+    method: 'POST',
+    body: JSON.stringify({ template, input }),
+  })
+}
+
+export function savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult> {
+  return apiRequest<OkResult>('/api/psd/manifests/save', {
+    method: 'POST',
+    body: JSON.stringify({ manifest }),
+  })
+}
+
+export function loadPsdManifest(psdPath: string): Promise<PsdInspectResponse> {
+  return apiRequest<PsdInspectResponse>(`/api/psd/manifests/load?psdPath=${encodeURIComponent(psdPath)}`)
 }

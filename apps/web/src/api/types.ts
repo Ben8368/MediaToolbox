@@ -79,6 +79,9 @@ export interface MediaToolboxApi {
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
   inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
+  renderPsdTemplate(template: PsdTemplateManifest, input: Record<string, string | number | boolean>): Promise<OkResult & { outputPath?: string }>
+  savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult>
+  loadPsdManifest(psdPath: string): Promise<PsdInspectResponse>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>
