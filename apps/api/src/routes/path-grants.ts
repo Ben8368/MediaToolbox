@@ -61,8 +61,7 @@ export function registerPathGrantRoutes(app: FastifyInstance, state: ApiState): 
       ...(jobId ? { jobId } : {}),
     }
 
-    // TODO: 待 db 数据层实装 pathGrants 命名空间
-    await (state.db as any).pathGrants.create(grant)
+    await state.db.pathGrants.create(grant)
     addLog(state.db, 'INFO', 'path-grants', `签发 ${kind} grant：${displayName}`)
 
     const { physicalPath: _omit, ...grantInfo } = grant
@@ -72,8 +71,7 @@ export function registerPathGrantRoutes(app: FastifyInstance, state: ApiState): 
   // GET /api/path-grants/:id — 查询 grant
   app.get<{ Params: { id: string } }>('/api/path-grants/:id', async (request, reply) => {
     const { id } = request.params
-    // TODO: 待 db 数据层实装 pathGrants 命名空间
-    const grant = await (state.db as any).pathGrants.findActiveById(id)
+    const grant = await state.db.pathGrants.findActiveById(id)
     if (!grant) {
       reply.status(404)
       return { ok: false, message: '路径授权不存在或已过期。' }
@@ -85,14 +83,12 @@ export function registerPathGrantRoutes(app: FastifyInstance, state: ApiState): 
   // DELETE /api/path-grants/:id — 吊销 grant
   app.delete<{ Params: { id: string } }>('/api/path-grants/:id', async (request, reply) => {
     const { id } = request.params
-    // TODO: 待 db 数据层实装 pathGrants 命名空间
-    const grant = await (state.db as any).pathGrants.findById(id)
+    const grant = await state.db.pathGrants.findById(id)
     if (!grant) {
       reply.status(404)
       return { ok: false, message: '路径授权不存在。' }
     }
-    // TODO: 待 db 数据层实装 pathGrants 命名空间
-    await (state.db as any).pathGrants.update({ id, status: 'revoked', updatedAt: Date.now() })
+    await state.db.pathGrants.update({ id, status: 'revoked', updatedAt: Date.now() })
     addLog(state.db, 'INFO', 'path-grants', `吊销 grant：${grant.displayName}`)
     return { ok: true }
   })
