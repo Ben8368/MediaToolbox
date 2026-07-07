@@ -90,6 +90,12 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
   }
 
   const electron = await import('electron')
+
+  // In a packaged build the API cannot be started via tsx; require an external instance.
+  if (electron.app.isPackaged) {
+    config = { ...config, autoStartApi: false }
+  }
+
   let apiProcess: DesktopApiProcess | null = config.autoStartApi ? startLocalApi(config) : null
 
   electron.app.setName('MediaToolbox')
@@ -112,6 +118,14 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
 }
 
 function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) {
+  const preloadPath = electron.app.isPackaged
+    ? path.join(electron.app.getAppPath(), 'src', 'preload.cjs')
+    : path.join(rootDir, 'apps', 'desktop', 'src', 'preload.cjs')
+
+  const rendererUrl = electron.app.isPackaged
+    ? `file://${path.join(process.resourcesPath, 'renderer', 'index.html')}`
+    : config.webUrl
+
   const win = new electron.BrowserWindow({
     width: 1440,
     height: 920,
@@ -124,7 +138,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(rootDir, 'apps', 'desktop', 'src', 'preload.cjs'),
+      preload: preloadPath,
     },
   })
 
@@ -133,7 +147,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
     void electron.shell.openExternal(url)
     return { action: 'deny' }
   })
-  void win.loadURL(config.webUrl)
+  void win.loadURL(rendererUrl)
   return win
 }
 
@@ -165,7 +179,9 @@ function registerIpcHandlers(
 }
 
 function createTray(electron: ElectronModule) {
-  const iconPath = path.join(rootDir, 'apps', 'web', 'public', 'static', 'app', 'icons', 'default', 'setting.png')
+  const iconPath = electron.app.isPackaged
+    ? path.join(process.resourcesPath, 'renderer', 'static', 'app', 'icons', 'default', 'setting.png')
+    : path.join(rootDir, 'apps', 'web', 'public', 'static', 'app', 'icons', 'default', 'setting.png')
   const image = electron.nativeImage.createFromPath(iconPath)
   if (image.isEmpty()) return
 

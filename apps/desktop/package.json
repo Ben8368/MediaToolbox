@@ -3,12 +3,45 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "main": "src/main.ts",
+  "main": "dist/main.js",
   "scripts": {
     "dev": "electron --import tsx src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit"
+    "build": "tsc -p tsconfig.build.json",
+    "package": "electron-builder",
+    "package:win": "electron-builder --win",
+    "package:mac": "electron-builder --mac",
+    "package:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.mediatoolbox.desktop",
+    "productName": "MediaToolbox",
+    "files": [
+      "dist/**/*",
+      "src/preload.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "../../apps/web/dist",
+        "to": "renderer"
+      }
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [{ "target": "AppImage", "arch": ["x64"] }],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "dependencies": {
     "@mediatoolbox/contracts": "0.1.0",
@@ -16,6 +49,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "electron-builder": "^26.0.12",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
