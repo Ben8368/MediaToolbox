@@ -165,6 +165,7 @@ export const browserNetworkRequestCreateSchema = {
         type: 'object',
         additionalProperties: { type: 'string' },
       },
+      request_bytes: { type: 'number', minimum: 0 },
     },
   },
 } as const

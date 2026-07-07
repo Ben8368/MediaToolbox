@@ -27,5 +27,5 @@ commit message 的标题与正文统一使用中文；Conventional Commit 类型
 Cursor 产出实质改动并提交时，在 commit message 末尾追加：
 
 ```text
-Co-authored-by: Cursor <cursor@cursor.sh>
+Co-authored-by: Cursor <cursoragent@cursor.com>
 ```

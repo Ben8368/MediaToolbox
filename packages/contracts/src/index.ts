@@ -147,6 +147,7 @@ export type BrowserNetworkRequestRecord = {
   response_status?: number
   response_headers?: Record<string, string>
   response_bytes: number
+  request_bytes?: number
   created_at: number
   updated_at: number
   completed_at: number | null

@@ -4,6 +4,12 @@ import { promisify } from 'node:util'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult, RuntimeMetrics, RuntimeMetricsSlice } from '@mediatoolbox/contracts'
 
+import {
+  formatBytesPerSecond,
+  sampleCpuPercent,
+  sampleGpu,
+  sampleProjectNetworkRates,
+} from '../system-sampler.js'
 import type { ApiState } from '../state.js'
 import { isTerminalTask } from '../utils.js'
 
@@ -22,12 +28,6 @@ function service(id: string, name: string, detail: string, availabilityStatus = 
     mode_label: '本地服务',
     detail,
   }
-}
-
-function cpuPercent() {
-  const cpuCount = Math.max(os.cpus().length, 1)
-  const oneMinuteLoad = os.loadavg()[0] ?? 0
-  return Math.max(0, Math.min(100, Math.round((oneMinuteLoad / cpuCount) * 100)))
 }
 
 async function memorySnapshot() {
@@ -54,31 +54,29 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const activeBrowserDownloads = state.browserDownloads.filter((download) => download.status === 'pending' || download.status === 'running')
   const jobs = await state.db.jobs.list()
   const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'retrying' || job.status === 'paused')
-  const browserReceivedBytes = state.browserDownloads.reduce((sum, download) => sum + download.received_bytes, 0)
-  const now = Date.now()
-  const elapsedSeconds = Math.max((now - state.networkSample.at) / 1000, 0.001)
-  const downloadBytesPerSec = Math.max(0, Math.round((browserReceivedBytes - state.networkSample.browserReceivedBytes) / elapsedSeconds))
-  state.networkSample = { at: now, browserReceivedBytes }
+  const networkRates = sampleProjectNetworkRates(state)
+  state.networkSample = networkRates.nextSample
   const memory = await memorySnapshot()
+  const gpu = await sampleGpu()
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {
-      cpu_percent: cpuPercent(),
+      cpu_percent: sampleCpuPercent(),
       memory_percent: memory.percent,
       ...(memory.pressurePercent === undefined ? {} : { memory_pressure_percent: memory.pressurePercent }),
       ...(memory.pressureLabel === undefined ? {} : { memory_pressure_label: memory.pressureLabel }),
       memory_used_bytes: memory.used,
       memory_total_bytes: memory.total,
       memory_free_bytes: memory.free,
-      gpu_percent: 0,
-      gpu_available: false,
-      gpu_detail: 'GPU 指标采集尚未接入；当前返回 CPU 与内存运行时采样。',
+      gpu_percent: gpu.percent,
+      gpu_available: gpu.available,
+      gpu_detail: gpu.detail,
     },
     network: {
-      upload: { text: formatBytesPerSecond(0) },
-      download: { text: formatBytesPerSecond(downloadBytesPerSec) },
-      upload_bytes_per_sec: 0,
-      download_bytes_per_sec: downloadBytesPerSec,
+      upload: { text: formatBytesPerSecond(networkRates.uploadBytesPerSec) },
+      download: { text: formatBytesPerSecond(networkRates.downloadBytesPerSec) },
+      upload_bytes_per_sec: networkRates.uploadBytesPerSec,
+      download_bytes_per_sec: networkRates.downloadBytesPerSec,
     },
     services: [
       service('api', '本地 API', 'Fastify API 正在运行。'),
@@ -86,7 +84,13 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
       service('browser-network', '浏览器网络', '浏览器下载事件、权限审计和工作区写入边界已接入。'),
       service('file-manager', '文件管理', `虚拟工作区映射到受控本地目录：${state.physicalWorkspaceRoot}`),
       service('logs', '日志服务', '日志、通知已接入 SQLite 状态。'),
-      service('gpu', 'GPU 指标', '系统级 GPU 采集器尚未接入。', 'degraded', false),
+      service(
+        'gpu',
+        'GPU 指标',
+        gpu.available ? `GPU 利用率采样已接入：${gpu.detail}` : gpu.detail,
+        gpu.available ? 'ready' : 'degraded',
+        gpu.available,
+      ),
     ],
     tasks: [
       ...activeTasks.map((task) => ({
@@ -179,12 +183,6 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
       app.close().then(() => process.exit(0)).catch(() => process.exit(1))
     }, 100)
   })
-}
-
-function formatBytesPerSecond(value: number): string {
-  if (value < 1024) return `${value} B/s`
-  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB/s`
-  return `${Math.round(value / 1024 / 102.4) / 10} MB/s`
 }
 
 function jobStatusLabel(status: string): string {

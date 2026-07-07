@@ -44,6 +44,9 @@ export async function requestBrowserNetworkUrl(
     view_id: options.viewId,
     session_id: sessionId,
     request_headers: headers,
+    request_bytes: method !== 'GET' && method !== 'HEAD' && draft.body !== undefined
+      ? Buffer.byteLength(draft.body, 'utf8')
+      : 0,
   }
 
   emitRequestEvent(options, { id, viewId: options.viewId, sessionId, url, method, status: 'running', responseBytes: 0 })

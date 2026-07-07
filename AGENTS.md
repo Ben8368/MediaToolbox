@@ -66,5 +66,5 @@
 - AI 工具参与实质改动且工具未自动记录来源时，在 commit message 末尾追加对应 Git trailer，前方保留一个空行。
 - 已确认 trailer：
   - Claude Code：`Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`
-  - Cursor：`Co-authored-by: Cursor <cursor@cursor.sh>`
+  - Cursor：`Co-authored-by: Cursor <cursoragent@cursor.com>`
   - Codex：`Co-authored-by: Codex <codex@openai.com>`

@@ -4,6 +4,7 @@ import type { MediaToolboxDatabase } from '@mediatoolbox/db'
 import fs from 'node:fs'
 import path from 'node:path'
 
+import type { ProjectNetworkSample } from './system-sampler.js'
 import { formatLogTime } from './utils.js'
 
 export const WORKSPACE_ROOT = '/Workspace'
@@ -34,7 +35,7 @@ export type ApiState = {
   fetchTasks: FetchTaskRecord[]
   browserDownloads: BrowserNetworkDownloadRecord[]
   browserRequests: BrowserNetworkRequestRecord[]
-  networkSample: { at: number; browserReceivedBytes: number }
+  networkSample: ProjectNetworkSample
   db: MediaToolboxDatabase
   notificationsReadAt: string | null
   folders: Set<string>
@@ -68,7 +69,7 @@ export function createApiState(): ApiState {
     fetchTasks: [],
     browserDownloads: [],
     browserRequests: [],
-    networkSample: { at: Date.now(), browserReceivedBytes: 0 },
+    networkSample: { at: Date.now(), browserReceivedBytes: 0, browserResponseBytes: 0, browserRequestBytes: 0 },
     db,
     notificationsReadAt: null,
     folders: new Set(['/Workspace', '/Workspace/Downloads', '/Workspace/Exports', '/Workspace/PSD', '/Workspace/Transcodes']),

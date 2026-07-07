@@ -4,6 +4,8 @@ import { runDownloadWorkerJob, type DownloadWorkerJob } from '@mediatoolbox/down
 import { YtdlpRunError, YtdlpToolNotFoundError, type YtdlpProgressEvent } from '@mediatoolbox/downloader'
 import { transitionJob, canTransitionJob } from '@mediatoolbox/job-core'
 
+import { parseDataRateText } from './system-sampler.js'
+
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
 import { toVirtualWorkspacePath } from './workspace-files.js'
@@ -45,6 +47,8 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
         task.updated_at = nowSeconds()
         if (event.type === 'progress') {
           task.progress = event.percent
+          const speedBps = parseDataRateText(event.speedText)
+          task.state = { ...(task.state ?? {}), download_bytes_per_sec: speedBps }
           const speed = event.speedText ? ` @ ${event.speedText}` : ''
           const eta = event.etaText ? ` ETA ${event.etaText}` : ''
           task.stage = `${event.percent}% of ${event.totalText}${speed}${eta}`

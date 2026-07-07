@@ -40,6 +40,7 @@ export type BrowserRequestCreateBody = {
   view_id: string
   session_id: string
   request_headers?: Record<string, string>
+  request_bytes?: number
 }
 
 export type BrowserRequestUpdateBody = {
