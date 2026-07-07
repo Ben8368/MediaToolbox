@@ -2,7 +2,7 @@
  * Database schema definitions and migrations
  */
 
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 export const SCHEMA_V1 = `
 -- Schema version tracking
@@ -65,4 +65,21 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+`
+
+export const SCHEMA_V3_PATH_GRANTS = `
+CREATE TABLE IF NOT EXISTS path_grants (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  physical_path TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  job_id TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_path_grants_status ON path_grants(status);
+CREATE INDEX IF NOT EXISTS idx_path_grants_expires_at ON path_grants(expires_at);
+CREATE INDEX IF NOT EXISTS idx_path_grants_job_id ON path_grants(job_id);
 `
