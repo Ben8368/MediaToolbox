@@ -4,6 +4,7 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5 浏览器错误页、生产资源路径与多标签页前端 UI 已接入，Phase 5 PSD 工作台核心能力（渲染 API、manifest 编辑、批量渲染、manifest 持久化）已接入
 > **最近更新：** 2026-07-07
+> - 文件管理器上传与下载能力落地：`POST /api/filebrowser/upload`（multipart，500 MB 上限，文件名净化，工作区边界）和 `GET /api/filebrowser/file`（流式下载，Content-Disposition attachment）已接入真实 API；前端工具栏上传按钮和下载按钮均已接通。
 > - 治理文档已同步当前阶段：`main` / `master` 默认只自动提交不自动推送，`UI_COMPAT.md` 与 `API_VALIDATION.md` 已补齐系统指标、浏览器多标签页和 PSD 渲染/manifest 验收项。
 > - 应用 ID 契约已对齐到前端 registry；PSD manifest/slot/render input 类型已收敛到 `packages/contracts`，当前仅支持文字 slot，非文字输入会返回可读错误。
 > - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
