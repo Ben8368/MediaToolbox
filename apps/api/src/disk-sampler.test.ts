@@ -15,7 +15,7 @@ const windowsCandidates: LocalDiskCandidate[] = [
 ]
 
 describe('disk sampler', () => {
-  it('resolves the hosting Windows drive from a workspace path', () => {
+  it.skipIf(process.platform !== 'win32')('resolves the hosting Windows drive from a workspace path', () => {
     expect(findHostingDiskRoot('C:\\MediaToolbox\\.tmp\\workspace', windowsCandidates)).toBe('C:\\')
     expect(findHostingDiskRoot('D:\\Projects\\workspace', windowsCandidates)).toBe('D:\\')
   })
@@ -54,7 +54,7 @@ describe('disk sampler', () => {
     })
   })
 
-  it('builds filebrowser disks for all system volumes', async () => {
+  it.skipIf(process.platform !== 'win32')('builds filebrowser disks for all system volumes', async () => {
     const disks = await buildFilebrowserDisks({
       workspaceVirtualPath: '/Workspace',
       physicalWorkspaceRoot: process.cwd(),
