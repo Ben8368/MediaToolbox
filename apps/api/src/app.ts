@@ -8,6 +8,7 @@ import { registerFilebrowserRoutes } from './routes/filebrowser.js'
 import { registerJobRoutes } from './routes/jobs.js'
 import { registerLogRoutes, hydrateNotificationState } from './routes/logs.js'
 import { registerPsdRoutes } from './routes/psd.js'
+import { registerPathGrantRoutes } from './routes/path-grants.js'
 import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
 import { createApiState } from './state.js'
@@ -59,6 +60,7 @@ export async function buildApiServer() {
   registerJobRoutes(app, state)
   registerTranscodeRoutes(app, state)
   registerPsdRoutes(app, state)
+  registerPathGrantRoutes(app, state)
 
   return app
 }
