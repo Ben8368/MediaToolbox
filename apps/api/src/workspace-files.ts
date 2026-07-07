@@ -14,7 +14,12 @@ export function toPhysicalWorkspacePath(state: ApiState, virtualPath: string): s
 }
 
 export function toVirtualWorkspacePath(state: ApiState, physicalPath: string): string {
-  const relative = path.relative(state.physicalWorkspaceRoot, physicalPath).split(path.sep).filter(Boolean).join('/')
+  const resolved = path.resolve(physicalPath)
+  const root = path.resolve(state.physicalWorkspaceRoot)
+  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
+    throw new Error('Physical path escaped workspace root.')
+  }
+  const relative = path.relative(root, resolved).split(path.sep).filter(Boolean).join('/')
   return relative ? `${state.workspaceRoot}/${relative}` : state.workspaceRoot
 }
 

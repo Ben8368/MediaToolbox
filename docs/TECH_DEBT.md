@@ -16,83 +16,13 @@
 
 ## 未偿还债务
 
-### 🔴 P0 — 正确性缺陷（5 项）
+### 🔴 P0 — 正确性缺陷（0 项）
 
-#### TD-001: PowerShell 空输出误报 GPU 可用
-- **位置：** `apps/api/src/system-sampler.ts:123`
-- **发现时间：** 2026-07-07
-- **问题：** Windows GPU 计数器不存在时，PowerShell 返回空字符串 → `Number('')` 为 0（而非 NaN）→ 误报 GPU 利用率 0% 可用
-- **影响：** 无 GPU 机器显示"GPU 可用且利用率 0%"，误导用户
-- **建议方案：** 检查 `stdout.trim().length === 0` 时直接返回 `undefined`
-- **估算工作量：** 1 行修复 + 1 个测试用例
-
-#### TD-002: parseDataRateText 无法匹配波浪号前缀
-- **位置：** `apps/api/src/system-sampler.ts:137`
-- **发现时间：** 2026-07-07
-- **问题：** yt-dlp 输出 `~4.20MiB/s`（预估速率）时，正则 `/^[\d.]+/` 要求开头必须是数字，导致解析失败返回 0
-- **影响：** 下载任务网络速率显示为 0，用户误判停滞
-- **建议方案：** 正则改为 `/^~?([\d.]+)\s*([KMGT]?i?B)\/s$/i`，支持可选波浪号前缀
-- **估算工作量：** 1 行修复 + 2 个测试用例
-
-#### TD-003: parseDataRateText 接受不合法单位 'IB/s'
-- **位置：** `apps/api/src/system-sampler.ts:146`
-- **发现时间：** 2026-07-07
-- **问题：** 输入 `'10 IB/s'`（无 K/M/G/T 前缀的 I 单位）被错误解析为 10 bytes/s
-- **影响：** 异常格式数据未被拒绝，可能掩盖 yt-dlp 输出异常
-- **建议方案：** 二进制单位 `i` 必须与 K/M/G/T 配对，否则返回 0；或调整正则为 `/^~?([\d.]+)\s*([KMGT]i?B|B)\/s$/i`（明确枚举合法单位）
-- **估算工作量：** 3-5 行逻辑调整 + 3 个测试用例
-
-#### TD-004: sampleGpu 缓存击穿竞态
-- **位置：** `apps/api/src/system-sampler.ts:66`
-- **发现时间：** 2026-07-07
-- **问题：** 多个并发 `/api/system/metrics` 请求在缓存过期瞬间同时通过检查 → 启动多个 PowerShell/nvidia-smi 进程（3.5s/1.5s 超时）
-- **影响：** 高并发场景下（多标签页刷新指标）CPU 和系统资源浪费
-- **建议方案：** 引入 in-flight 标志或 Promise 缓存，首个请求发起后续请求等待同一个 Promise
-- **估算工作量：** 10-15 行重构 + 并发测试用例
-
-#### TD-005: parseDataRateText 返回 0 无法区分解析失败
-- **位置：** `apps/api/src/download-executor.ts:50`
-- **发现时间：** 2026-07-07
-- **问题：** yt-dlp 未输出速率或格式异常时返回 0 → UI 显示 `0 B/s` → 用户误判下载停滞（但 progress 百分比可能仍在增长）
-- **影响：** 用户体验混乱，"0 B/s" 可能表示"解析失败"或"真实静止"
-- **建议方案：** 将 `parseDataRateText` 返回类型改为 `number | null`，`null` 表示解析失败；UI 显示 "—" 或 "计算中"
-- **估算工作量：** 5-8 行类型调整 + UI 条件渲染 + 测试用例
+暂无。
 
 ---
 
-### 🟡 P1 — 性能与可维护性（5 项）
-
-#### TD-006: buildMetrics 串行执行独立异步操作
-- **位置：** `apps/api/src/routes/system.ts:59`
-- **发现时间：** 2026-07-07
-- **问题：** `memorySnapshot()` 和 `sampleGpu()` 串行等待 → 总延迟为两者之和（最坏 ~1s+）
-- **影响：** API 响应时间增加 30-50%，影响仪表盘刷新体验
-- **建议方案：** 改为 `const [memory, gpu] = await Promise.all([memorySnapshot(), sampleGpu()])`
-- **估算工作量：** 1 行重构
-
-#### TD-007: sampleProjectNetworkRates 两次遍历同一数组
-- **位置：** `apps/api/src/system-sampler.ts:164`
-- **发现时间：** 2026-07-07
-- **问题：** 对 `browserRequests` 先求 `response_bytes` 再求 `request_bytes`，可合并为单次 reduce
-- **影响：** 每次网络采样（1-2 Hz）浪费一半迭代成本，高频请求场景下累积性能损耗
-- **建议方案：** 单次 reduce 同时累加两个字段
-- **估算工作量：** 5 行重构
-
-#### TD-008: formatBytesPerSecond 缺少 GB/s 支持
-- **位置：** `apps/api/src/system-sampler.ts:191`
-- **发现时间：** 2026-07-07
-- **问题：** 2 GB/s 显示为 `2048 MB/s`，10 Gbps+ 网络或本地高速传输时显示不友好
-- **影响：** 用户体验不佳，数值难以快速识别
-- **建议方案：** 新增 `>= 1GB` 分支，显示 `X.X GB/s`
-- **估算工作量：** 3 行代码 + 1 个测试用例
-
-#### TD-009: task.state 对象频繁展开
-- **位置：** `apps/api/src/download-executor.ts:51`
-- **发现时间：** 2026-07-07
-- **问题：** 每个 yt-dlp 进度事件（~1-2 Hz）都展开重建 `task.state`，长下载中累积数百次小对象分配
-- **影响：** 产生不必要 GC 压力，10+ 并发下载时可能影响事件循环
-- **建议方案：** 仅在 `speedBps` 变化时更新，或直接赋值 `task.state.download_bytes_per_sec` 而非重建对象
-- **估算工作量：** 5 行优化
+### 🟡 P1 — 性能与可维护性（1 项）
 
 #### TD-010: formatBytesPerSecond 与 formatSpeed 重复实现
 - **位置：** `apps/api/src/system-sampler.ts:188` + `apps/web/src/mockApi/shared.ts:16`
@@ -173,7 +103,17 @@
 
 ## 已偿还债务（归档）
 
-_偿还完成的债务移至此处，保留修复时间和 commit hash 供后续审计_
+### 2026-07-07
+
+- TD-001: PowerShell 空输出误报 GPU 可用。已通过空输出解析保护修复，并补充单元测试。
+- TD-002: `parseDataRateText` 无法匹配波浪号前缀。已支持 `~4.20MiB/s` 等 yt-dlp 预估速率格式。
+- TD-003: `parseDataRateText` 接受不合法单位 `IB/s`。已改为枚举合法单位并补充测试。
+- TD-004: `sampleGpu` 缓存击穿竞态。已加入 in-flight Promise 缓存，缓存过期瞬间复用同一次采样。
+- TD-005: `parseDataRateText` 返回 0 无法区分解析失败。已改为 `number | null`，下载进度解析失败时不写入假 0 速率。
+- TD-006: `buildMetrics` 串行执行独立异步操作。已改为并发采样内存与 GPU。
+- TD-007: `sampleProjectNetworkRates` 两次遍历同一数组。已合并为单次 reduce。
+- TD-008: `formatBytesPerSecond` 缺少 GB/s 支持。已新增 GB/s 显示分支。
+- TD-009: `task.state` 对象频繁展开。已改为速率变化时才写入，解析失败时清理速率字段。
 
 ---
 

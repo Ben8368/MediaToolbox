@@ -48,7 +48,13 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
         if (event.type === 'progress') {
           task.progress = event.percent
           const speedBps = parseDataRateText(event.speedText)
-          task.state = { ...(task.state ?? {}), download_bytes_per_sec: speedBps }
+          if (speedBps === null) {
+            const nextState = { ...(task.state ?? {}) }
+            delete nextState.download_bytes_per_sec
+            task.state = nextState
+          } else if (task.state?.download_bytes_per_sec !== speedBps) {
+            task.state = { ...(task.state ?? {}), download_bytes_per_sec: speedBps }
+          }
           const speed = event.speedText ? ` @ ${event.speedText}` : ''
           const eta = event.etaText ? ` ETA ${event.etaText}` : ''
           task.stage = `${event.percent}% of ${event.totalText}${speed}${eta}`

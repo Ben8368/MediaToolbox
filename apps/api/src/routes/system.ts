@@ -56,8 +56,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'retrying' || job.status === 'paused')
   const networkRates = sampleProjectNetworkRates(state)
   state.networkSample = networkRates.nextSample
-  const memory = await memorySnapshot()
-  const gpu = await sampleGpu()
+  const [memory, gpu] = await Promise.all([memorySnapshot(), sampleGpu()])
   return {
     runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
     system: {

@@ -64,13 +64,29 @@ export function resolveWorkspaceDirectory(options: BrowserNetworkOptions): strin
 
 export function resolveDownloadDirectory(options: BrowserNetworkOptions): string {
   const env = options.env ?? process.env
+  const workspaceDownloads = path.join(resolveWorkspaceDirectory(options), 'Downloads')
   const explicit = env['MEDIATOOLBOX_BROWSER_DOWNLOAD_DIR']?.trim()
-  if (explicit) return path.resolve(explicit)
+  if (!explicit) return workspaceDownloads
 
-  const workspace = env['MEDIATOOLBOX_WORKSPACE_DIR']?.trim()
-  if (workspace) return path.join(path.resolve(workspace), 'Downloads')
+  const resolved = path.resolve(explicit)
+  if (isSameOrChildPath(resolved, workspaceDownloads)) return resolved
+  return workspaceDownloads
+}
 
-  return path.join(options.rootDir, '.tmp', 'workspace', 'Downloads')
+export function toVirtualWorkspacePath(options: BrowserNetworkOptions, physicalPath: string): string | undefined {
+  const workspace = path.resolve(resolveWorkspaceDirectory(options))
+  const resolved = path.resolve(physicalPath)
+  if (!isSameOrChildPath(resolved, workspace)) return undefined
+
+  const relative = path.relative(workspace, resolved).split(path.sep).filter(Boolean).join('/')
+  return relative ? `/Workspace/${relative}` : '/Workspace'
+}
+
+function isSameOrChildPath(candidate: string, parent: string): boolean {
+  const resolvedCandidate = path.resolve(candidate)
+  const resolvedParent = path.resolve(parent)
+  const relative = path.relative(resolvedParent, resolvedCandidate)
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }
 
 export function sanitizeFilename(filename: string): string {

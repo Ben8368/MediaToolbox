@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatBytesPerSecond,
   parseDataRateText,
+  parseWindowsGpuCounterOutput,
   resetCpuSamplerForTests,
   sampleCpuPercent,
   sampleProjectNetworkRates,
@@ -12,9 +13,18 @@ import {
 describe('system sampler', () => {
   it('parses yt-dlp style transfer rates', () => {
     expect(parseDataRateText('4.20MiB/s')).toBe(Math.round(4.2 * 1024 * 1024))
+    expect(parseDataRateText('~4.20MiB/s')).toBe(Math.round(4.2 * 1024 * 1024))
     expect(parseDataRateText('512KiB/s')).toBe(512 * 1024)
+    expect(parseDataRateText('10 B/s')).toBe(10)
     expect(parseDataRateText('1.5MB/s')).toBe(Math.round(1.5 * 1000 * 1000))
-    expect(parseDataRateText('')).toBe(0)
+    expect(parseDataRateText('10 IB/s')).toBeNull()
+    expect(parseDataRateText('')).toBeNull()
+  })
+
+  it('rejects empty Windows GPU counter output', () => {
+    expect(parseWindowsGpuCounterOutput('')).toBeUndefined()
+    expect(parseWindowsGpuCounterOutput('  \r\n')).toBeUndefined()
+    expect(parseWindowsGpuCounterOutput('12.4')).toBe(12.4)
   })
 
   it('samples CPU usage from consecutive deltas', () => {
@@ -41,6 +51,7 @@ describe('system sampler', () => {
     expect(rates.uploadBytesPerSec).toBe(512)
     expect(rates.downloadBytesPerSec).toBe(1024 + 1024 + 4096)
     expect(formatBytesPerSecond(rates.downloadBytesPerSec)).toContain('/s')
+    expect(formatBytesPerSecond(2 * 1024 * 1024 * 1024)).toBe('2 GB/s')
   })
 
   it('sums active yt-dlp download speeds only', () => {

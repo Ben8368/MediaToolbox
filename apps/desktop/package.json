@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/main.ts",
   "scripts": {
-    "dev": "NODE_OPTIONS='--import tsx' electron src/main.ts",
+    "dev": "electron --import tsx src/main.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit"
   },

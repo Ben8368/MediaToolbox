@@ -7,6 +7,7 @@ import {
   postBrowserNetworkJson,
   resolveDownloadDirectory,
   sanitizeFilename,
+  toVirtualWorkspacePath,
   type BrowserNetworkDownloadEvent,
   type BrowserNetworkOptions,
 } from './browserNetworkShared.js'
@@ -96,10 +97,16 @@ function createDownloadTarget(options: BrowserNetworkOptions, filename: string):
     counter += 1
   }
 
+  const physicalPath = path.join(downloadDir, candidate)
+  const virtualPath = toVirtualWorkspacePath(options, physicalPath)
+  if (!virtualPath?.startsWith('/Workspace/Downloads/')) {
+    throw new Error('Browser download target must stay inside the workspace Downloads directory.')
+  }
+
   return {
     filename: candidate,
-    physicalPath: path.join(downloadDir, candidate),
-    virtualPath: `/Workspace/Downloads/${candidate}`,
+    physicalPath,
+    virtualPath,
   }
 }
 

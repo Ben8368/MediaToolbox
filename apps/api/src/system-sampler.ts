@@ -29,6 +29,7 @@ export type ProjectNetworkRates = {
 
 let cpuPrevious: CpuTotals | null = null
 let gpuCache: { at: number; snapshot: GpuSnapshot } | null = null
+let gpuInflight: Promise<GpuSnapshot> | null = null
 
 function readCpuTotals(): CpuTotals {
   return os.cpus().reduce(
@@ -60,15 +61,23 @@ export function sampleCpuPercent(): number {
 export function resetCpuSamplerForTests(): void {
   cpuPrevious = null
   gpuCache = null
+  gpuInflight = null
 }
 
 export async function sampleGpu(): Promise<GpuSnapshot> {
   const now = Date.now()
   if (gpuCache && now - gpuCache.at < GPU_CACHE_MS) return gpuCache.snapshot
+  if (gpuInflight) return gpuInflight
 
-  const snapshot = await readGpuUtilization()
-  gpuCache = { at: now, snapshot }
-  return snapshot
+  gpuInflight = readGpuUtilization()
+    .then((snapshot) => {
+      gpuCache = { at: Date.now(), snapshot }
+      return snapshot
+    })
+    .finally(() => {
+      gpuInflight = null
+    })
+  return gpuInflight
 }
 
 async function readGpuUtilization(): Promise<GpuSnapshot> {
@@ -120,8 +129,8 @@ async function readWindowsGpuCounter(): Promise<GpuSnapshot | undefined> {
       ],
       { timeout: 3500, windowsHide: true },
     )
-    const percent = Number(stdout.trim())
-    if (!Number.isFinite(percent)) return undefined
+    const percent = parseWindowsGpuCounterOutput(stdout)
+    if (percent === undefined) return undefined
     return {
       percent: Math.max(0, Math.min(100, Math.round(percent))),
       available: true,
@@ -132,13 +141,20 @@ async function readWindowsGpuCounter(): Promise<GpuSnapshot | undefined> {
   }
 }
 
-export function parseDataRateText(text: string | undefined): number {
-  if (!text) return 0
-  const match = text.trim().match(/^([\d.]+)\s*([KMGT]?i?B)\/s$/i)
-  if (!match?.[1] || !match[2]) return 0
+export function parseWindowsGpuCounterOutput(stdout: string): number | undefined {
+  const trimmed = stdout.trim()
+  if (!trimmed) return undefined
+  const percent = Number(trimmed)
+  return Number.isFinite(percent) ? percent : undefined
+}
+
+export function parseDataRateText(text: string | undefined): number | null {
+  if (!text) return null
+  const match = text.trim().match(/^~?([\d.]+)\s*(B|[KMGT]i?B)\/s$/i)
+  if (!match?.[1] || !match[2]) return null
 
   const value = Number(match[1])
-  if (!Number.isFinite(value)) return 0
+  if (!Number.isFinite(value)) return null
 
   const unit = match[2].toUpperCase()
   const binary = unit.includes('I')
@@ -150,7 +166,10 @@ export function parseDataRateText(text: string | undefined): number {
 export function sumYtdlpDownloadBytesPerSec(fetchTasks: FetchTaskRecord[]): number {
   return fetchTasks
     .filter((task) => task.status === 'running')
-    .reduce((sum, task) => sum + Math.max(0, Number(task.state?.download_bytes_per_sec ?? 0)), 0)
+    .reduce((sum, task) => {
+      const speed = Number(task.state?.download_bytes_per_sec ?? 0)
+      return sum + (Number.isFinite(speed) ? Math.max(0, speed) : 0)
+    }, 0)
 }
 
 export function sampleProjectNetworkRates(input: {
@@ -161,8 +180,15 @@ export function sampleProjectNetworkRates(input: {
 }): ProjectNetworkRates {
   const now = Date.now()
   const browserReceivedBytes = input.browserDownloads.reduce((sum, download) => sum + download.received_bytes, 0)
-  const browserResponseBytes = input.browserRequests.reduce((sum, request) => sum + request.response_bytes, 0)
-  const browserRequestBytes = input.browserRequests.reduce((sum, request) => sum + (request.request_bytes ?? 0), 0)
+  const browserRequestTotals = input.browserRequests.reduce(
+    (totals, request) => ({
+      responseBytes: totals.responseBytes + request.response_bytes,
+      requestBytes: totals.requestBytes + (request.request_bytes ?? 0),
+    }),
+    { responseBytes: 0, requestBytes: 0 },
+  )
+  const browserResponseBytes = browserRequestTotals.responseBytes
+  const browserRequestBytes = browserRequestTotals.requestBytes
   const elapsedSeconds = Math.max((now - input.networkSample.at) / 1000, 0.001)
 
   const receivedDelta = browserReceivedBytes - input.networkSample.browserReceivedBytes
@@ -188,5 +214,6 @@ export function sampleProjectNetworkRates(input: {
 export function formatBytesPerSecond(value: number): string {
   if (value < 1024) return `${value} B/s`
   if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB/s`
-  return `${Math.round(value / 1024 / 102.4) / 10} MB/s`
+  if (value < 1024 * 1024 * 1024) return `${Math.round(value / 1024 / 102.4) / 10} MB/s`
+  return `${Math.round(value / 1024 / 1024 / 102.4) / 10} GB/s`
 }
