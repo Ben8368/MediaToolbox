@@ -52,16 +52,13 @@
 - **建议方案：** 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），重点覆盖后台标签下载归属、权限提示和取消下载隔离。
 - **估算工作量：** 主要是测试验收
 
-#### TD-014: Electron 生产打包工具链
-- **位置：** `apps/desktop/` + `apps/api/`
-- **来源：** CONTEXT.md 剩余黄灯
-- **问题：** `apps/web` 构建已加 `base: './'` 支持 `file://` 加载，但 Electron 打包工具链（electron-builder/forge）、preload 生产路径和本地 API 生产运行时（当前依赖 `tsx` + 源码）仍待验收
-- **影响：** 无法打包生产版本，当前只能开发模式运行
-- **建议方案：** 
-  1. 引入 electron-builder 或 electron-forge 配置
-  2. 配置 preload 脚本的生产构建路径
-  3. 将本地 API 从 `tsx` + 源码改为打包后的 JS 运行时
-- **估算工作量：** 20-40 行配置 + 路径调整 + 打包验证
+#### TD-019: Electron 发布 polish
+- **位置：** `apps/desktop/` + `.github/workflows/release.yml`
+- **来源：** TD-014 偿还后的剩余发布项
+- **问题：** Electron 目录包、preload 路径和本地 API 生产 runtime 已通过 macOS arm64 `--dir` 与包内 `/api/health` 烟测；但应用图标、macOS/Windows 签名、公证和完整安装包发布仍待验收
+- **影响：** 当前可生成可运行目录包，但正式分发体验仍不完整
+- **建议方案：** 配置正式图标、签名证书、公证和 release tag 流程，分别验收 `.dmg` / `.exe` / `.AppImage`
+- **估算工作量：** 发布配置与证书准备为主
 
 #### TD-015: PSD 真实 Photoshop 联调
 - **位置：** `packages/psd-core/` + `workers/psd-worker/`
@@ -105,6 +102,7 @@
 - TD-018: PSD manifest 类型重复且非文字 slot 会被隐式忽略。已将 PSD manifest/slot/render input 类型收敛到 `packages/contracts`，并在 API/worker/UI 明确当前仅支持文字 slot。
 - TD-010: `formatBytesPerSecond` 与 `formatSpeed` 重复实现。已提取为 `packages/shared/utils/formatBytesPerSecond.ts` 统一实现，API 和 Web 端均改为引用共享包。
 - TD-011: `cpuPrevious` 模块级全局状态。已将 CPU 采样状态封装为 `createCpuSampler()` 闭包，`sampleCpuPercent` 和 `resetCpuSamplerForTests` 保持原有公共 API 不变。
+- TD-014: Electron 生产打包工具链。已接入 API 生产 runtime bundle、packaged Electron `ELECTRON_RUN_AS_NODE` 启动、`userData` 工作区/DB 默认路径、electron-builder 目录包资源和 macOS arm64 包内 API health 烟测；剩余签名/图标/完整安装包发布项迁移为 TD-019。
 
 ---
 
