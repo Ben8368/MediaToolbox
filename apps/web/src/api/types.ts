@@ -9,6 +9,8 @@ import type {
   LogListResponse,
   LogMetadataResponse,
   OkResult,
+  PsdRenderInput,
+  PsdTemplateManifest,
   RuntimeMetrics,
   RuntimeMetricsSlice,
   SetWorkspaceResponse,
@@ -24,6 +26,8 @@ export type {
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
+  PsdRenderInput,
+  PsdTemplateManifest,
   RuntimeMetricsSlice,
   TaskListResponse,
   UnreadNotificationResponse,
@@ -38,25 +42,6 @@ export type TranscodeJobDraft = {
   outputPath: string
   preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
   title?: string
-}
-
-export type PsdTemplateManifest = {
-  id: string
-  name: string
-  version: number
-  sourcePath?: string
-  document: {
-    width: number
-    height: number
-    resolution?: number
-  }
-  slots: Array<{
-    id: string
-    kind: string
-    label: string
-    layerPath: string[]
-    required: boolean
-  }>
 }
 
 export type PsdInspectResponse = OkResult & {
@@ -79,7 +64,7 @@ export interface MediaToolboxApi {
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
   inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
-  renderPsdTemplate(template: PsdTemplateManifest, input: Record<string, string | number | boolean>): Promise<OkResult & { outputPath?: string }>
+  renderPsdTemplate(template: PsdTemplateManifest, input: PsdRenderInput): Promise<OkResult & { outputPath?: string }>
   savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult>
   loadPsdManifest(psdPath: string): Promise<PsdInspectResponse>
 

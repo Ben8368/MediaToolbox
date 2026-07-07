@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit"
   },
+  "dependencies": {
+    "@mediatoolbox/contracts": "0.1.0"
+  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
