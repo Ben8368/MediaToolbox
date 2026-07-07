@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 
 import { cancelJob, listJobs, submitTranscodeJob } from '@/api'
 import type { JobRecord, TranscodeJobDraft } from '@/api/types'
+import { requestReadGrant } from '@/api/real/pathGrants'
 
 const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
   { value: 'mp4-h264-aac', label: 'MP4 H.264 / AAC' },
@@ -31,6 +32,8 @@ export function TranscodeApp() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [inputGrantId, setInputGrantId] = useState<string | null>(null)
+  const [inputGrantLabel, setInputGrantLabel] = useState<string>('')
 
   const transcodeJobs = useMemo(
     () => jobs.filter((job) => job.kind === 'media.transcode'),
@@ -55,18 +58,27 @@ export function TranscodeApp() {
     return () => window.clearInterval(timer)
   }, [refreshJobs])
 
+  const importExternal = useCallback(async () => {
+    const grant = await requestReadGrant()
+    if (!grant) return
+    setInputGrantId(grant.id)
+    setInputGrantLabel(grant.displayName)
+    setInputPath(`[外部文件] ${grant.displayName}`)
+  }, [])
+
   const submit = useCallback(async (event: FormEvent) => {
     event.preventDefault()
-    if (!inputPath.trim() || !outputPath.trim() || submitting) return
+    if ((!inputPath.trim() && !inputGrantId) || !outputPath.trim() || submitting) return
     setSubmitting(true)
     setError('')
     setNotice('')
     try {
       const job = await submitTranscodeJob({
-        inputPath: inputPath.trim(),
+        inputPath: inputGrantId ? '' : inputPath.trim(),
         outputPath: outputPath.trim(),
         preset,
         ...(title.trim() ? { title: title.trim() } : {}),
+        ...(inputGrantId ? { inputGrantId } : {}),
       })
       setNotice(`已创建：${job.title}`)
       await refreshJobs()
@@ -75,7 +87,7 @@ export function TranscodeApp() {
     } finally {
       setSubmitting(false)
     }
-  }, [inputPath, outputPath, preset, refreshJobs, submitting, title])
+  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId])
 
   const cancel = useCallback(async (jobId: string) => {
     setError('')
@@ -102,7 +114,36 @@ export function TranscodeApp() {
         <form className="transcode-form" onSubmit={submit}>
           <label className="mt-field">
             <span>输入路径</span>
-            <input value={inputPath} onChange={(event) => setInputPath(event.target.value)} placeholder="/Workspace/Downloads/source.mov" />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <input
+                value={inputPath}
+                onChange={(event) => {
+                  setInputPath(event.target.value)
+                  if (inputGrantId) { setInputGrantId(null); setInputGrantLabel('') }
+                }}
+                placeholder="/Workspace/Downloads/source.mov"
+                readOnly={!!inputGrantId}
+                style={{ flex: 1 }}
+              />
+              {inputGrantId && (
+                <button
+                  type="button"
+                  className="mt-btn"
+                  onClick={() => { setInputGrantId(null); setInputGrantLabel(''); setInputPath('') }}
+                  title="清除外部文件授权"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                type="button"
+                className="mt-btn"
+                onClick={() => void importExternal()}
+                title="从外部导入文件（需要桌面版）"
+              >
+                从外部导入
+              </button>
+            </div>
           </label>
           <label className="mt-field">
             <span>输出路径</span>
@@ -118,7 +159,7 @@ export function TranscodeApp() {
             <span>任务名</span>
             <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="可选" />
           </label>
-          <button className="mt-btn mt-btn--primary transcode-submit" type="submit" disabled={!inputPath.trim() || !outputPath.trim() || submitting}>
+          <button className="mt-btn mt-btn--primary transcode-submit" type="submit" disabled={(!inputPath.trim() && !inputGrantId) || !outputPath.trim() || submitting}>
             {submitting ? '提交中' : '开始转码'}
           </button>
         </form>

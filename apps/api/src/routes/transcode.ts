@@ -6,15 +6,23 @@ import type { TranscodePreset } from '@mediatoolbox/ffmpeg'
 import { transcodeJobCreateSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
-import { normalizeWorkspacePath, WorkspacePathError } from '../workspace-path.js'
+import { resolveGrantPath, normalizeWorkspacePath, WorkspacePathError } from '../workspace-path.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
-  app.post<{ Body: { inputPath?: string; outputPath?: string; preset?: string; title?: string }; Reply: JobRecord }>(
+  app.post<{ Body: { inputPath?: string; outputPath?: string; preset?: string; title?: string; inputGrantId?: string }; Reply: JobRecord }>(
     '/api/transcode/jobs',
     { schema: transcodeJobCreateSchema },
     async (request) => {
-      const { inputPath, outputPath, preset, title } = request.body
-      const normalizedInputPath = normalizeWorkspacePath(inputPath, state.workspaceRoot)
+      const { inputPath, outputPath, preset, title, inputGrantId } = request.body
+
+      let effectiveInputPath: string
+      if (inputGrantId) {
+        // grant 模式：resolveGrantPath 返回物理路径，直接传给 worker
+        effectiveInputPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
+      } else {
+        effectiveInputPath = normalizeWorkspacePath(inputPath, state.workspaceRoot)
+      }
+
       const normalizedOutputPath = normalizeWorkspacePath(outputPath, state.workspaceRoot)
       const exportsRoot = `${state.workspaceRoot}/Exports`
       if (normalizedOutputPath === exportsRoot || !normalizedOutputPath.startsWith(`${exportsRoot}/`)) {
@@ -25,14 +33,14 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
       const job = createJobRecord({
         id: jobId,
         kind: 'media.transcode',
-        title: title || `转码任务：${normalizedInputPath.split('/').pop() ?? 'unknown'}`,
+        title: title || `转码任务：${effectiveInputPath.split('/').pop() ?? 'unknown'}`,
       })
       await state.db.jobs.create(job)
 
       // 异步执行转码，不阻塞 HTTP 响应
       void executeTranscode(
         job,
-        { inputPath: normalizedInputPath, outputPath: normalizedOutputPath, preset: safePreset },
+        { inputPath: effectiveInputPath, outputPath: normalizedOutputPath, preset: safePreset },
         state,
       )
 
