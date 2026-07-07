@@ -3,14 +3,15 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
-> **最近更新：** 2026-07-07
+> **最近更新：** 2026-07-08
+> - Electron 生产打包基础链路已打通：`apps/api` 新增 esbuild 生产 runtime bundle；`apps/desktop` 打包资源包含 Web renderer 与 API runtime；packaged 主进程通过 Electron `ELECTRON_RUN_AS_NODE` 启动本地 API，并将工作区和 SQLite DB 默认收敛到 `userData`；macOS arm64 `electron-builder --dir` 已通过，包内 `/api/health` 烟测已通过。
 > - Phase 6A-C PathGrant 已接入：`packages/contracts` 新增 PathGrant 类型族；`packages/db` schema V3 新增 `path_grants` 表及 `pathGrants` DB 命名空间；`POST/GET/DELETE /api/path-grants` 三条路由已注册（仅桌面端可签发，TTL file.read=1h / file.write=30min / dir.read=2h）；`workspace-path.ts` 新增 `resolveGrantPath()`；Electron 新增三个 IPC handler（`mediatoolbox:path-grant:request-read/write/dir-read`）及对应 dialog 流程；前端 `apps/web/src/api/real/pathGrants.ts` 适配层已实现（含纯 Web 模式降级）。
 > - 文件管理器上传与下载能力落地：`POST /api/filebrowser/upload`（multipart，500 MB 上限，文件名净化，工作区边界）和 `GET /api/filebrowser/file`（流式下载，Content-Disposition attachment）已接入真实 API；前端工具栏上传按钮和下载按钮均已接通。
 > - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
 > - PathGrant 已全面集成：transcode/PSD 路由支持 inputGrantId（外部输入）；前端转码工作台新增「从外部导入」按钮，调用 requestReadGrant() 获取授权并自动填充输入。
 > - Phase 6B outputGrantId 已落地：transcode/PSD render 支持 outputGrantId 工作区外写授权；PSD 工作台加「导出到外部」按钮（requestWriteGrant）；全部已推送至远端。
 > - 浏览器多标签网络事件继续推进：下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消校验发起标签归属，避免后台标签事件干扰当前标签。
-> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包。
+> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收、完整安装包签名/图标与跨平台 release 验收。
 
 ## 项目定位
 
@@ -36,12 +37,13 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 - Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
+- Electron 发布 polish 待补齐：应用图标、macOS/Windows 签名与完整安装包发布验收。
 - macOS GPU 指标与更完整的项目上传流量采集仍待补齐。
 
 **已迁移至技术债追踪：**
 - TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
-- TD-014: Electron 生产打包工具链（electron-builder/forge、preload 路径、API 运行时）
+- TD-019: Electron 发布 polish（应用图标、签名、公证与完整安装包验收）
 - TD-015: PSD 真实 Photoshop 联调（本机命令路径、复杂 batchPlay、image/smart-object slot）
 - TD-016: macOS GPU 指标采集
 
@@ -50,7 +52,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 1. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
 2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
-4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并补齐 Electron 生产打包工具链（electron-builder/forge、preload 与 API 运行时打包）。
+4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
 5. 后续补齐 macOS GPU 指标与更完整的项目上传流量采集（非浏览器请求体场景）。
 6. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 

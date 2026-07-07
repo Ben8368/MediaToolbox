@@ -21,6 +21,21 @@ export type DesktopApiProcess = {
   url: string
 }
 
+export type DesktopRuntimePaths = {
+  rootDir: string
+  resourcesPath: string
+  electronExecutable: string
+  appPath?: string
+  userDataPath?: string
+}
+
+export type DesktopApiLaunchCommand = {
+  command: string
+  args: string[]
+  cwd: string
+  env: NodeJS.ProcessEnv
+}
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 let trayRef: import('electron').Tray | null = null
 
@@ -44,15 +59,68 @@ export function isElectronRuntime() {
   return Boolean(process.versions.electron)
 }
 
-export function startLocalApi(config: DesktopShellConfig, env: NodeJS.ProcessEnv = process.env): DesktopApiProcess {
-  const nodeBin = env.MEDIATOOLBOX_NODE_BIN?.trim() || 'node'
-  const child = spawn(nodeBin, [path.join(rootDir, 'node_modules', 'tsx', 'dist', 'cli.mjs'), 'src/server.ts'], {
-    cwd: path.join(rootDir, 'apps', 'api'),
-    env: {
-      ...process.env,
-      HOST: config.host,
-      PORT: String(config.apiPort),
-    },
+export function createDesktopRuntimePaths(electron?: ElectronModule): DesktopRuntimePaths {
+  return {
+    rootDir,
+    resourcesPath: process.resourcesPath ?? rootDir,
+    electronExecutable: process.execPath,
+    ...(electron ? { appPath: electron.app.getAppPath(), userDataPath: electron.app.getPath('userData') } : {}),
+  }
+}
+
+export function createLocalApiLaunchCommand(
+  config: DesktopShellConfig,
+  env: NodeJS.ProcessEnv = process.env,
+  paths: DesktopRuntimePaths = createDesktopRuntimePaths(),
+): DesktopApiLaunchCommand {
+  const explicitNodeBin = env.MEDIATOOLBOX_NODE_BIN?.trim()
+  const baseEnv: NodeJS.ProcessEnv = {
+    ...env,
+    HOST: config.host,
+    PORT: String(config.apiPort),
+  }
+
+  if (config.mode === 'production') {
+    const apiDir = path.join(paths.resourcesPath, 'api')
+    const command = explicitNodeBin || paths.electronExecutable
+    const userDataPath = paths.userDataPath ?? path.join(paths.resourcesPath, 'user-data')
+    const nodePath = [
+      paths.appPath ? path.join(paths.appPath, 'node_modules') : undefined,
+      env.NODE_PATH,
+    ].filter(Boolean).join(path.delimiter)
+    const runtimeEnv: NodeJS.ProcessEnv = {
+      ...baseEnv,
+      NODE_ENV: 'production',
+      MEDIATOOLBOX_WORKSPACE_DIR: env.MEDIATOOLBOX_WORKSPACE_DIR ?? path.join(userDataPath, 'workspace'),
+      MEDIATOOLBOX_DB_PATH: env.MEDIATOOLBOX_DB_PATH ?? path.join(userDataPath, 'mediatoolbox.db'),
+      ...(nodePath ? { NODE_PATH: nodePath } : {}),
+    }
+    if (!explicitNodeBin) runtimeEnv.ELECTRON_RUN_AS_NODE = '1'
+    return {
+      command,
+      args: [path.join(apiDir, 'server.cjs')],
+      cwd: apiDir,
+      env: runtimeEnv,
+    }
+  }
+
+  return {
+    command: explicitNodeBin || 'node',
+    args: [path.join(paths.rootDir, 'node_modules', 'tsx', 'dist', 'cli.mjs'), 'src/server.ts'],
+    cwd: path.join(paths.rootDir, 'apps', 'api'),
+    env: baseEnv,
+  }
+}
+
+export function startLocalApi(
+  config: DesktopShellConfig,
+  env: NodeJS.ProcessEnv = process.env,
+  paths: DesktopRuntimePaths = createDesktopRuntimePaths(),
+): DesktopApiProcess {
+  const launch = createLocalApiLaunchCommand(config, env, paths)
+  const child = spawn(launch.command, launch.args, {
+    cwd: launch.cwd,
+    env: launch.env,
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   })
@@ -91,22 +159,28 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
 
   const electron = await import('electron')
 
-  // In a packaged build the API cannot be started via tsx; require an external instance.
   if (electron.app.isPackaged) {
-    config = { ...config, autoStartApi: false }
+    config = {
+      ...config,
+      mode: 'production',
+      autoStartApi: process.env.MEDIATOOLBOX_DESKTOP_START_API !== 'false',
+    }
   }
 
-  let apiProcess: DesktopApiProcess | null = config.autoStartApi ? startLocalApi(config) : null
-
   electron.app.setName('MediaToolbox')
+  await electron.app.whenReady()
+
+  const runtimePaths = createDesktopRuntimePaths(electron)
+  const runtimeEnv = createLocalApiLaunchCommand(config, process.env, runtimePaths).env
+  let apiProcess: DesktopApiProcess | null = config.autoStartApi ? startLocalApi(config, runtimeEnv, runtimePaths) : null
+
   electron.app.on('before-quit', () => {
     void stopLocalApi(apiProcess)
     apiProcess = null
   })
 
-  await electron.app.whenReady()
   const mainWindow = createMainWindow(electron, config)
-  registerIpcHandlers(electron, config, () => apiProcess, mainWindow)
+  registerIpcHandlers(electron, config, () => apiProcess, mainWindow, runtimeEnv, runtimePaths)
   createTray(electron)
 
   electron.app.on('activate', () => {
@@ -123,7 +197,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
     : path.join(rootDir, 'apps', 'desktop', 'src', 'preload.cjs')
 
   const rendererUrl = electron.app.isPackaged
-    ? `file://${path.join(process.resourcesPath, 'renderer', 'index.html')}`
+    ? pathToFileURL(path.join(process.resourcesPath, 'renderer', 'index.html')).toString()
     : config.webUrl
 
   const win = new electron.BrowserWindow({
@@ -156,6 +230,8 @@ function registerIpcHandlers(
   config: DesktopShellConfig,
   getApiProcess: () => DesktopApiProcess | null,
   mainWindow: import('electron').BrowserWindow,
+  runtimeEnv: NodeJS.ProcessEnv,
+  runtimePaths: DesktopRuntimePaths,
 ) {
   electron.ipcMain.handle('mediatoolbox:get-config', () => config)
   electron.ipcMain.handle('mediatoolbox:get-api-status', () => {
@@ -173,8 +249,8 @@ function registerIpcHandlers(
   })
   registerBrowserViewIpcHandlers(electron, mainWindow, {
     apiUrl: config.apiUrl,
-    rootDir,
-    env: process.env,
+    rootDir: runtimePaths.rootDir,
+    env: runtimeEnv,
   })
 }
 

@@ -2,6 +2,8 @@
   "name": "@mediatoolbox/desktop",
   "private": true,
   "version": "0.1.0",
+  "description": "MediaToolbox desktop shell",
+  "author": "MediaToolbox Contributors",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
@@ -9,6 +11,16 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json",
+    "build:runtime": "npm run build -w @mediatoolbox/web && npm run build -w @mediatoolbox/api && npm run build -w @mediatoolbox/desktop",
+    "rebuild:node-native": "npm rebuild better-sqlite3",
+    "prepackage": "npm run build:runtime",
+    "prepackage:win": "npm run build:runtime",
+    "prepackage:mac": "npm run build:runtime",
+    "prepackage:linux": "npm run build:runtime",
+    "postpackage": "npm run rebuild:node-native",
+    "postpackage:win": "npm run rebuild:node-native",
+    "postpackage:mac": "npm run rebuild:node-native",
+    "postpackage:linux": "npm run rebuild:node-native",
     "package": "electron-builder",
     "package:win": "electron-builder --win",
     "package:mac": "electron-builder --mac",
@@ -25,6 +37,10 @@
       {
         "from": "../../apps/web/dist",
         "to": "renderer"
+      },
+      {
+        "from": "../../apps/api/dist",
+        "to": "api"
       }
     ],
     "win": {
@@ -45,10 +61,11 @@
   },
   "dependencies": {
     "@mediatoolbox/contracts": "0.1.0",
-    "electron": "^43.0.0"
+    "better-sqlite3": "^12.11.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "electron": "43.0.0",
     "electron-builder": "^26.0.12",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
