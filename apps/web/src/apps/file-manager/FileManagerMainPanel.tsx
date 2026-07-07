@@ -40,6 +40,8 @@ type FileManagerToolbarProps = {
   onRestoreSelected: () => void
   onPurgeSelected: () => void
   onEmptyTrash: () => void
+  onUpload: (files: FileList) => void
+  onDownloadSelected: () => void
 }
 
 export function FileManagerToolbar({
@@ -61,6 +63,8 @@ export function FileManagerToolbar({
   onRestoreSelected,
   onPurgeSelected,
   onEmptyTrash,
+  onUpload,
+  onDownloadSelected,
 }: FileManagerToolbarProps) {
   return (
     <>
@@ -86,9 +90,19 @@ export function FileManagerToolbar({
           </>
         ) : (
           <>
-            <ActionButton icon={<UploadIcon />} label="上传文件" disabled />
+            <label className={`fm-upload-label${!currentPath ? ' fm-upload-label--disabled' : ''}`} title="上传文件">
+              <UploadIcon />
+              <span>上传文件</span>
+              <input
+                type="file"
+                multiple
+                disabled={!currentPath}
+                style={{ display: 'none' }}
+                onChange={(e) => { if (e.target.files?.length) { onUpload(e.target.files); e.target.value = '' } }}
+              />
+            </label>
             <ActionButton icon={<FolderPlusIcon />} label="新建文件夹" disabled={!currentPath} onClick={onCreateFolder} />
-            <ActionButton icon={<DownloadIcon />} label="下载" disabled={!selectedCount} />
+            <ActionButton icon={<DownloadIcon />} label="下载" disabled={!selectedCount} onClick={onDownloadSelected} />
             <ActionButton icon={<TrashIcon />} label="移入回收站" disabled={!selectedCount} onClick={onDeleteSelected} />
             <ActionButton icon={<MoreIcon />} label="更多" disabled />
           </>

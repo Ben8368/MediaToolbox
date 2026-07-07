@@ -78,6 +78,8 @@ export interface MediaToolboxApi {
   purgeFilebrowserTrash(id: string): Promise<OkResult>
   emptyFilebrowserTrash(): Promise<OkResult>
   setWorkspace(workspace: string): Promise<SetWorkspaceResponse>
+  uploadFilebrowserFile(directory: string, file: File): Promise<OkResult & { path?: string; name?: string }>
+  filebrowserFileDownloadUrl(virtualPath: string): string
 
   getSystemMetrics(): Promise<RuntimeMetrics>
   fetchSystemRuntimeMetrics(): Promise<RuntimeMetricsSlice>

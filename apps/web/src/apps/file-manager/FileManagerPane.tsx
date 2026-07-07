@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { createFilebrowserDirectory, deleteFilebrowserPath, fetchAssets } from '@/api'
+import { createFilebrowserDirectory, deleteFilebrowserPath, fetchAssets, filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
 import type { AssetRecord } from '@/api/types'
 import { FileManagerEntryTable, FileManagerToolbar } from '@/apps/file-manager/FileManagerMainPanel'
 import { FileManagerSidebar } from '@/apps/file-manager/FileManagerSidebar'
@@ -161,6 +161,38 @@ export function FileManagerPane() {
     }
   }
 
+  async function handleUpload(files: FileList) {
+    if (!currentPath || trash.isTrashView) return
+    const fileArray = Array.from(files)
+    if (!fileArray.length) return
+
+    try {
+      setError('')
+      await Promise.all(fileArray.map((file) => uploadFilebrowserFile(currentPath, file)))
+      await navigate(currentPath, false)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || '上传文件失败')
+    }
+  }
+
+  function downloadSelected() {
+    const paths = Array.from(selected).filter((path) => {
+      const entry = allEntries.find((e) => e.path === path)
+      return entry?.type === 'file'
+    })
+    if (!paths.length) return
+
+    paths.forEach((path) => {
+      const link = document.createElement('a')
+      link.href = filebrowserFileDownloadUrl(path)
+      link.download = ''
+      link.style.display = 'none'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    })
+  }
+
   return (
     <div className="fm-app">
       <FileManagerSidebar
@@ -197,6 +229,8 @@ export function FileManagerPane() {
           onRestoreSelected={() => void restoreSelected()}
           onPurgeSelected={() => void purgeSelected()}
           onEmptyTrash={() => void emptyTrash()}
+          onUpload={(files) => void handleUpload(files)}
+          onDownloadSelected={downloadSelected}
         />
 
         {!trash.isTrashView && assets.length > 0 && (

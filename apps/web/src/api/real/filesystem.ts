@@ -1,4 +1,4 @@
-import { apiRequest } from '@/api/http'
+import { apiRequest, apiUrl } from '@/api/http'
 import type {
   CreateDirectoryResponse,
   DirectoryListResponse,
@@ -65,4 +65,19 @@ export async function setWorkspace(workspace: string) {
     method: 'PUT',
     body: JSON.stringify({ workspace }),
   })
+}
+
+export async function uploadFilebrowserFile(directory: string, file: File) {
+  const form = new FormData()
+  form.append('directory', directory)
+  form.append('file', file)
+  return apiRequest<OkResult & { path?: string; name?: string }>('/api/filebrowser/upload', {
+    method: 'POST',
+    body: form,
+    timeoutMs: 120_000,
+  })
+}
+
+export function filebrowserFileDownloadUrl(virtualPath: string): string {
+  return apiUrl(`/api/filebrowser/file?path=${encodeURIComponent(virtualPath)}`)
 }

@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { pipeline } from 'node:stream/promises'
 import type { FastifyInstance } from 'fastify'
+import multipart from '@fastify/multipart'
 import type {
   CreateDirectoryResponse,
   DirectoryListResponse,
@@ -19,8 +21,10 @@ import { toPhysicalWorkspacePath, toVirtualWorkspacePath } from '../workspace-fi
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
 const TRASH_DIR = '.trash'
+const UPLOAD_SIZE_LIMIT = 500 * 1024 * 1024 // 500 MB
 
 export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState) {
+  void app.register(multipart, { limits: { fileSize: UPLOAD_SIZE_LIMIT } })
   app.get<{ Reply: WorkspaceResponse }>('/api/filebrowser/workspace', async () => ({
     ok: true,
     project_root: state.workspaceRoot,
@@ -146,6 +150,48 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     await fs.rm(path.join(state.physicalWorkspaceRoot, TRASH_DIR), { force: true, recursive: true })
     state.trash.splice(0, state.trash.length)
     return { ok: true }
+  })
+
+  app.post<{ Reply: OkResult & { path?: string; name?: string } }>('/api/filebrowser/upload', async (request, reply) => {
+    const parts = request.parts()
+    let directory = state.workspaceRoot
+    let saved: { virtualPath: string; name: string } | undefined
+
+    for await (const part of parts) {
+      if (part.type === 'field' && part.fieldname === 'directory' && typeof part.value === 'string') {
+        directory = normalizeWorkspacePath(part.value, state.workspaceRoot)
+      } else if (part.type === 'file') {
+        const safeName = path.basename(part.filename).replace(/[^\w.\-]/g, '_') || 'upload'
+        const physicalDir = toPhysicalWorkspacePath(state, directory)
+        await fs.mkdir(physicalDir, { recursive: true })
+        const physicalTarget = path.join(physicalDir, safeName)
+        const out = await fs.open(physicalTarget, 'w')
+        try {
+          await pipeline(part.file, out.createWriteStream())
+        } finally {
+          await out.close()
+        }
+        const virtualPath = toVirtualWorkspacePath(state, physicalTarget)
+        addLog(state.db, 'INFO', 'file-manager', `上传文件：${virtualPath}`)
+        saved = { virtualPath, name: safeName }
+      }
+    }
+
+    if (!saved) return reply.status(400).send({ ok: false, message: '未收到文件。' })
+    return { ok: true, path: saved.virtualPath, name: saved.name }
+  })
+
+  app.get<{ Querystring: { path?: string } }>('/api/filebrowser/file', async (request, reply) => {
+    const virtualPath = normalizeWorkspacePath(request.query.path, state.workspaceRoot)
+    const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
+    const stat = await fs.stat(physicalPath).catch(() => undefined)
+    if (!stat?.isFile()) return reply.status(404).send({ ok: false, message: '文件不存在。' })
+
+    const filename = path.basename(physicalPath)
+    void reply.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+    void reply.header('Content-Type', 'application/octet-stream')
+    void reply.header('Content-Length', String(stat.size))
+    return reply.send(await fs.readFile(physicalPath))
   })
 }
 
