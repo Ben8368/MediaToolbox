@@ -2,13 +2,12 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 4.5 浏览器错误页、生产资源路径与多标签页前端 UI 已接入，Phase 5 PSD 工作台核心能力（渲染 API、manifest 编辑、批量渲染、manifest 持久化）已接入
+> **当前阶段：** Phase 4.5/5 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-07
+> - Phase 6A-C PathGrant 已接入：`packages/contracts` 新增 PathGrant 类型族；`packages/db` schema V3 新增 `path_grants` 表及 `pathGrants` DB 命名空间；`POST/GET/DELETE /api/path-grants` 三条路由已注册（仅桌面端可签发，TTL file.read=1h / file.write=30min / dir.read=2h）；`workspace-path.ts` 新增 `resolveGrantPath()`；Electron 新增三个 IPC handler（`mediatoolbox:path-grant:request-read/write/dir-read`）及对应 dialog 流程；前端 `apps/web/src/api/real/pathGrants.ts` 适配层已实现（含纯 Web 模式降级）。
 > - 文件管理器上传与下载能力落地：`POST /api/filebrowser/upload`（multipart，500 MB 上限，文件名净化，工作区边界）和 `GET /api/filebrowser/file`（流式下载，Content-Disposition attachment）已接入真实 API；前端工具栏上传按钮和下载按钮均已接通。
-> - 治理文档已同步当前阶段：`main` / `master` 默认只自动提交不自动推送，`UI_COMPAT.md` 与 `API_VALIDATION.md` 已补齐系统指标、浏览器多标签页和 PSD 渲染/manifest 验收项。
-> - 应用 ID 契约已对齐到前端 registry；PSD manifest/slot/render input 类型已收敛到 `packages/contracts`，当前仅支持文字 slot，非文字输入会返回可读错误。
 > - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
-> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包。
+> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包；PathGrant 与 transcode/PSD 路由的 inputGrantId/outputGrantId 集成。
 
 ## 项目定位
 
