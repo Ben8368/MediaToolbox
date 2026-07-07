@@ -1,7 +1,7 @@
 ﻿import { create } from 'zustand'
 
 import { getAppMetadata } from '@/appRegistry'
-import { getWindowPreset } from '@/appPresentation'
+import { DEFAULT_WINDOW_PRESET } from '@/appPresentation'
 
 export interface DesktopWindowState {
   id: string
@@ -49,7 +49,7 @@ export const useWindowStore = create<WindowStore>()((set, get) => ({
     const id = `w-${++counter}`
     const newZ = get().maxZ + 1
     const offset = (count % 5) * 30
-    const preset = getWindowPreset(appType)
+    const preset = DEFAULT_WINDOW_PRESET
     const appTitle = title || getAppMetadata(appType)?.title || appType
     set((s) => ({
       windows: [...s.windows, {

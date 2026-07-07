@@ -59,6 +59,40 @@
 - 🟡 优化项中可跨任务跟进的内容，可写入 `CONTEXT.md` 的「剩余黄灯」
 - 总体评价为 🔴 时，不得将相关客观项标为完成；须先修复或明确降级方案
 
+### 绿灯自动提交与推送
+
+当且仅当**同时满足**下列条件时，AI 须在完成本轮改动后**自动** `git commit` 并 `git push` 到远端，无需用户再次口头确认：
+
+1. `🚦 Audit Report` 的**总体评价为 🟢 完美**
+2. 客观验证已通过（默认 `npm run verify`）
+3. 工作区存在可提交的实质改动（代码或治理文档）
+4. 用户未在本轮明确禁止提交或推送
+
+**执行顺序：**
+
+```text
+编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → git push
+```
+
+**提交规范（与 `AGENTS.md` 一致）：**
+
+- commit message 标题与正文使用中文；Conventional Commit 类型前缀与 Git trailer 键名保留英文
+- 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` / `Co-Authored-By` trailer，前方保留一个空行
+- 不得提交 `.env`、凭据或其他敏感文件；若误纳入暂存区须先移除
+
+**不得自动提交的情形：**
+
+- 总体评价为 🔴 或 🟡
+- 客观验证未通过或尚未执行
+- 本轮仅为答疑、评审、方案讨论，无实质文件改动
+- 用户明确要求「先不要提交」「不要推送」或仅要求本地 commit
+- 无待提交变更，或 pre-commit hook 拒绝后尚未修复
+
+**推送约束：**
+
+- 默认推送到当前分支的 upstream；无 upstream 时使用 `git push -u origin HEAD`
+- 禁止 `git push --force` 到 `main` / `master`，除非用户明确要求
+
 ### 代码规模触发项
 
 - 单个源码文件超过 **350** 行：红绿灯审查必须说明是否仍保持单一职责
@@ -68,7 +102,7 @@
 ## 2. 审查与验证顺序
 
 ```text
-思考（LESSONS.md）→ 编码 → 🚦 Audit Report → npm run verify → 同步 CONTEXT / docs
+思考（LESSONS.md）→ 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → （🟢 则 git commit & push）
 ```
 
 - 未跑客观验证，不得把客观项标为完成
