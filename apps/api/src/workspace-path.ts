@@ -41,3 +41,16 @@ export function parentWorkspacePath(path: string, workspaceRoot = WORKSPACE_ROOT
   const index = normalized.lastIndexOf('/')
   return index <= 0 ? '/' : normalized.slice(0, index)
 }
+
+export async function resolveGrantPath(
+  grantId: string,
+  db: { pathGrants: { findActiveById(id: string): Promise<{ physicalPath: string; kind: string } | undefined> } },
+  expectedKind?: string,
+): Promise<string> {
+  const grant = await db.pathGrants.findActiveById(grantId)
+  if (!grant) throw new WorkspacePathError('路径授权不存在或已过期。')
+  if (expectedKind && grant.kind !== expectedKind) {
+    throw new WorkspacePathError(`路径授权类型不匹配：期望 ${expectedKind}，实际 ${grant.kind}。`)
+  }
+  return grant.physicalPath
+}
