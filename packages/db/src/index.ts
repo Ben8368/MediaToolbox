@@ -1,4 +1,4 @@
-import type { AssetRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
+import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord } from '@mediatoolbox/contracts'
 
 export type MediaToolboxDatabase = {
   jobs: {
@@ -21,6 +21,14 @@ export type MediaToolboxDatabase = {
   settings: {
     get(key: string): Promise<string | undefined>
     set(key: string, value: string): Promise<void>
+  }
+  pathGrants: {
+    create(grant: PathGrantRecord): Promise<void>
+    findById(id: string): Promise<PathGrantRecord | undefined>
+    findActiveById(id: string): Promise<PathGrantRecord | undefined>
+    update(grant: Pick<PathGrantRecord, 'id' | 'status' | 'updatedAt'>): Promise<void>
+    listActive(): Promise<PathGrantRecord[]>
+    deleteExpired(): Promise<number>
   }
   close(): void
 }

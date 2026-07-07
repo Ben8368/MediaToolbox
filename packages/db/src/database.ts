@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
-import type { AssetRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
-import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS } from './schema.js'
+import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord } from '@mediatoolbox/contracts'
+import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS } from './schema.js'
 import type { MediaToolboxDatabase } from './index.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
@@ -26,6 +26,11 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       this.db.exec(SCHEMA_V2_SETTINGS)
       this.recordSchemaVersion(2)
     }
+
+      if (currentVersion < 3) {
+        this.db.exec(SCHEMA_V3_PATH_GRANTS)
+        this.recordSchemaVersion(3)
+      }
   }
 
   private recordSchemaVersion(version: number): void {
@@ -203,6 +208,70 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     },
   }
 
+  readonly pathGrants: MediaToolboxDatabase['pathGrants'] = {
+    create: async (grant) => {
+      this.db
+        .prepare(
+          `INSERT INTO path_grants (id, kind, status, physical_path, display_name, expires_at, created_at, updated_at, job_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          grant.id,
+          grant.kind,
+          grant.status,
+          grant.physicalPath,
+          grant.displayName,
+          grant.expiresAt,
+          grant.createdAt,
+          grant.updatedAt,
+          grant.jobId ?? null,
+        )
+    },
+
+    findById: async (id) => {
+      const row = this.db
+        .prepare('SELECT * FROM path_grants WHERE id = ?')
+        .get(id) as DbPathGrantRow | undefined
+      return row ? this.mapDbGrantToRecord(row) : undefined
+    },
+
+    findActiveById: async (id) => {
+      const row = this.db
+        .prepare('SELECT * FROM path_grants WHERE id = ?')
+        .get(id) as DbPathGrantRow | undefined
+      if (!row) return undefined
+      if (row.status !== 'active') return undefined
+      if (row.expires_at <= Date.now()) {
+        this.db
+          .prepare(`UPDATE path_grants SET status = 'expired', updated_at = ? WHERE id = ?`)
+          .run(Date.now(), id)
+        return undefined
+      }
+      return this.mapDbGrantToRecord(row)
+    },
+
+    update: async ({ id, status, updatedAt }) => {
+      this.db
+        .prepare('UPDATE path_grants SET status = ?, updated_at = ? WHERE id = ?')
+        .run(status, updatedAt, id)
+    },
+
+    listActive: async () => {
+      const rows = this.db
+        .prepare(`SELECT * FROM path_grants WHERE status = 'active' ORDER BY created_at DESC`)
+        .all() as DbPathGrantRow[]
+      return rows.map((r) => this.mapDbGrantToRecord(r))
+    },
+
+    deleteExpired: async () => {
+      const cutoff = Date.now() - 86_400_000
+      const result = this.db
+        .prepare(`DELETE FROM path_grants WHERE expires_at < ? AND status != 'active'`)
+        .run(cutoff)
+      return result.changes
+    },
+  }
+
   private mapDbLogToEntry(row: DbLogRow): LogEntry {
     return {
       level: row.level,
@@ -212,6 +281,21 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       event: row.event,
       message: row.message,
     }
+  }
+
+  private mapDbGrantToRecord(row: DbPathGrantRow): PathGrantRecord {
+    const record: PathGrantRecord = {
+      id: row.id,
+      kind: row.kind as PathGrantRecord['kind'],
+      status: row.status as PathGrantRecord['status'],
+      physicalPath: row.physical_path,
+      displayName: row.display_name,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+    if (row.job_id !== null) record.jobId = row.job_id
+    return record
   }
 }
 
@@ -245,4 +329,16 @@ type DbLogRow = {
   user: string
   event: string
   message: string
+}
+
+type DbPathGrantRow = {
+  id: string
+  kind: string
+  status: string
+  physical_path: string
+  display_name: string
+  expires_at: number
+  created_at: number
+  updated_at: number
+  job_id: string | null
 }
