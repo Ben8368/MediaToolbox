@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import path from 'node:path'
 
 import {
   buildFilebrowserDisks,
@@ -52,6 +53,36 @@ describe('disk sampler', () => {
       free: 512,
       used: 1536,
     })
+  })
+
+  it('marks the workspace hosting disk as browsable and keeps other devices visible', async () => {
+    const hostRoot = path.parse(path.resolve(process.cwd())).root
+    const otherRoot = process.platform === 'win32' ? 'Z:\\' : '/Volumes/External'
+    const disks = await buildFilebrowserDisks({
+      workspaceVirtualPath: '/Workspace',
+      physicalWorkspaceRoot: process.cwd(),
+      systemDisks: [
+        { name: '系统磁盘', root: hostRoot, total: 1024, free: 512, used: 512 },
+        { name: '本地磁盘 (External)', root: otherRoot, total: 2048, free: 1024, used: 1024 },
+      ],
+    })
+
+    expect(disks).toEqual([
+      { name: '系统磁盘', root: hostRoot, total: 1024, free: 512, used: 512, path: '/Workspace', browsable: true },
+      { name: '本地磁盘 (External)', root: otherRoot, total: 2048, free: 1024, used: 1024, path: otherRoot, browsable: false },
+    ])
+  })
+
+  it('falls back to the workspace host volume when system disk discovery is empty', async () => {
+    const disks = await buildFilebrowserDisks({
+      workspaceVirtualPath: '/Workspace',
+      physicalWorkspaceRoot: process.cwd(),
+      systemDisks: [],
+    })
+
+    expect(disks.length).toBeGreaterThan(0)
+    expect(disks[0]).toMatchObject({ path: '/Workspace', browsable: true })
+    expect(disks[0]?.total).toBeGreaterThan(0)
   })
 
   it.skipIf(process.platform !== 'win32')('builds filebrowser disks for all system volumes', async () => {
