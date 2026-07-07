@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DesktopBrowserDownloadEvent } from '@/desktopBrowser'
+import type { DesktopBrowserDownloadEvent, DesktopBrowserPermissionEvent, DesktopBrowserUploadSelection } from '@/desktopBrowser'
 
 import {
   closeTab,
   createTab,
   downloadStatusText,
+  filterDownloadsByView,
+  filterPermissionsByView,
+  filterUploadsByView,
   formatBytes,
   normalizeBrowserAddress,
   patchTab,
@@ -29,6 +32,29 @@ function download(overrides: Partial<DesktopBrowserDownloadEvent>): DesktopBrows
     status: 'running',
     receivedBytes: 0,
     totalBytes: 0,
+    ...overrides,
+  }
+}
+
+function permission(overrides: Partial<DesktopBrowserPermissionEvent>): DesktopBrowserPermissionEvent {
+  return {
+    view_id: 'v-1',
+    session_id: 's-1',
+    origin: 'https://example.com',
+    permission: 'notifications',
+    decision: 'denied',
+    ...overrides,
+  }
+}
+
+function upload(overrides: Partial<DesktopBrowserUploadSelection>): DesktopBrowserUploadSelection {
+  return {
+    view_id: 'v-1',
+    session_id: 's-1',
+    filename: 'file.png',
+    path: '/Workspace/file.png',
+    size: 128,
+    confirmed: true,
     ...overrides,
   }
 }
@@ -64,6 +90,29 @@ describe('downloadStatusText', () => {
   it('reports progress by percent when total is known, else by bytes', () => {
     expect(downloadStatusText(download({ receivedBytes: 512, totalBytes: 1024 }))).toBe('下载中 50%')
     expect(downloadStatusText(download({ receivedBytes: 2048, totalBytes: 0 }))).toBe('下载中 2 KB')
+  })
+})
+
+describe('browser network event filters', () => {
+  it('keeps downloads scoped to the active view', () => {
+    const items = [
+      download({ id: 'd-1', viewId: 'v-1' }),
+      download({ id: 'd-2', viewId: 'v-2' }),
+    ]
+
+    expect(filterDownloadsByView(items, 'v-1').map((item) => item.id)).toEqual(['d-1'])
+  })
+
+  it('keeps permission and upload side events scoped to the active view', () => {
+    expect(filterPermissionsByView([
+      permission({ view_id: 'v-1', permission: 'clipboard' }),
+      permission({ view_id: 'v-2', permission: 'notifications' }),
+    ], 'v-2').map((item) => item.permission)).toEqual(['notifications'])
+
+    expect(filterUploadsByView([
+      upload({ view_id: 'v-1', filename: 'a.png' }),
+      upload({ view_id: 'v-2', filename: 'b.png' }),
+    ], 'v-1').map((item) => item.filename)).toEqual(['a.png'])
   })
 })
 

@@ -1,4 +1,9 @@
-import type { DesktopBrowserDownloadEvent, DesktopBrowserState } from '@/desktopBrowser'
+import type {
+  DesktopBrowserDownloadEvent,
+  DesktopBrowserPermissionEvent,
+  DesktopBrowserState,
+  DesktopBrowserUploadSelection,
+} from '@/desktopBrowser'
 
 export const HOME_URL = 'about:blank'
 
@@ -78,6 +83,18 @@ export function downloadStatusText(download: DesktopBrowserDownloadEvent): strin
   if (download.totalBytes <= 0) return `下载中 ${formatBytes(download.receivedBytes)}`
   const percent = Math.round((download.receivedBytes / download.totalBytes) * 100)
   return `下载中 ${percent}%`
+}
+
+export function filterDownloadsByView(downloads: DesktopBrowserDownloadEvent[], viewId: string): DesktopBrowserDownloadEvent[] {
+  return downloads.filter((download) => download.viewId === viewId)
+}
+
+export function filterPermissionsByView(permissions: DesktopBrowserPermissionEvent[], viewId: string): DesktopBrowserPermissionEvent[] {
+  return permissions.filter((permission) => permission.view_id === viewId)
+}
+
+export function filterUploadsByView(uploads: DesktopBrowserUploadSelection[], viewId: string): DesktopBrowserUploadSelection[] {
+  return uploads.filter((upload) => upload.view_id === viewId)
 }
 
 export function formatBytes(value: number): string {

@@ -16,6 +16,9 @@ import {
   closeTab as closeTabReducer,
   createTab,
   downloadStatusText,
+  filterDownloadsByView,
+  filterPermissionsByView,
+  filterUploadsByView,
   normalizeBrowserAddress,
   patchTab,
   type BrowserStatusTone,
@@ -74,6 +77,9 @@ export function useBrowserTabs(browserWindow: DesktopWindowState | undefined, is
   const prevActiveRef = useRef(activeId)
 
   const activeTab = tabs.find((tab) => tab.viewId === activeId)
+  const activeDownloads = useMemo(() => filterDownloadsByView(downloads, activeId).slice(0, MAX_DOWNLOADS), [activeId, downloads])
+  const activePermissions = useMemo(() => filterPermissionsByView(permissions, activeId).slice(0, MAX_SIDE_EVENTS), [activeId, permissions])
+  const activeUploads = useMemo(() => filterUploadsByView(uploads, activeId).slice(0, MAX_SIDE_EVENTS), [activeId, uploads])
 
   const handleResult = useCallback(<T,>(result: DesktopBrowserResult<T>): T | undefined => {
     if (result.ok) return result.data
@@ -124,23 +130,30 @@ export function useBrowserTabs(browserWindow: DesktopWindowState | undefined, is
 
     if (event.type === 'download') {
       if (!owns(event.download.viewId)) return
-      setDownloads((items) => [event.download, ...items.filter((item) => item.id !== event.download.id)].slice(0, MAX_DOWNLOADS))
-      setStatus({ tone: event.download.status === 'failed' ? 'error' : 'online', text: downloadStatusText(event.download) })
+      const maxDownloads = MAX_DOWNLOADS * Math.max(tabsRef.current.length, 1)
+      setDownloads((items) => [event.download, ...items.filter((item) => item.id !== event.download.id)].slice(0, maxDownloads))
+      if (event.download.viewId === activeIdRef.current) {
+        setStatus({ tone: event.download.status === 'failed' ? 'error' : 'online', text: downloadStatusText(event.download) })
+      }
       return
     }
 
     if (event.type === 'permission') {
       if (!owns(event.permission.view_id)) return
-      setPermissions((items) => [event.permission, ...items].slice(0, MAX_SIDE_EVENTS))
+      const maxEvents = MAX_SIDE_EVENTS * Math.max(tabsRef.current.length, 1)
+      setPermissions((items) => [event.permission, ...items].slice(0, maxEvents))
       return
     }
 
     if (event.type === 'upload-selection') {
       if (!owns(event.selection.view_id)) return
-      setUploads((items) => [event.selection, ...items].slice(0, MAX_SIDE_EVENTS))
-      setStatus(event.selection.confirmed
-        ? { tone: 'online', text: '已确认工作区上传文件' }
-        : { tone: 'pending', text: '上传选择已取消' })
+      const maxEvents = MAX_SIDE_EVENTS * Math.max(tabsRef.current.length, 1)
+      setUploads((items) => [event.selection, ...items].slice(0, maxEvents))
+      if (event.selection.view_id === activeIdRef.current) {
+        setStatus(event.selection.confirmed
+          ? { tone: 'online', text: '已确认工作区上传文件' }
+          : { tone: 'pending', text: '上传选择已取消' })
+      }
     }
   }, [patchTabState])
 
@@ -269,7 +282,7 @@ export function useBrowserTabs(browserWindow: DesktopWindowState | undefined, is
 
   const cancelDownload = useCallback((downloadId: string) => {
     if (!bridge) return
-    void bridge.cancelDownload(downloadId).then(handleResult)
+    void bridge.cancelDownload(activeIdRef.current, downloadId).then(handleResult)
   }, [bridge, handleResult])
 
   const selectUploadFile = useCallback(() => {
@@ -290,9 +303,9 @@ export function useBrowserTabs(browserWindow: DesktopWindowState | undefined, is
     activeId,
     activeTab,
     status,
-    downloads,
-    permissions,
-    uploads,
+    downloads: activeDownloads,
+    permissions: activePermissions,
+    uploads: activeUploads,
     hasBridge: Boolean(bridge),
     showOverlay,
     openTab,

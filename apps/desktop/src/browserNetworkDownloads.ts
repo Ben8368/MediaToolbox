@@ -15,12 +15,17 @@ import {
 type BrowserSession = import('electron').Session
 type DownloadItem = import('electron').DownloadItem
 
-const downloadItems = new Map<string, DownloadItem>()
+type TrackedDownloadItem = {
+  item: DownloadItem
+  viewId: string
+}
 
-export function cancelBrowserNetworkDownload(id: string): boolean {
-  const item = downloadItems.get(id)
-  if (!item || item.getState() !== 'progressing') return false
-  item.cancel()
+const downloadItems = new Map<string, TrackedDownloadItem>()
+
+export function cancelBrowserNetworkDownload(id: string, viewId?: string): boolean {
+  const tracked = downloadItems.get(id)
+  if (!tracked || (viewId && tracked.viewId !== viewId) || tracked.item.getState() !== 'progressing') return false
+  tracked.item.cancel()
   return true
 }
 
@@ -35,7 +40,7 @@ export function configureDownloads(session: BrowserSession, options: BrowserNetw
     const mimeType = item.getMimeType()
 
     item.setSavePath(target.physicalPath)
-    downloadItems.set(id, item)
+    downloadItems.set(id, { item, viewId: options.viewId })
 
     const started = {
       id,

@@ -214,9 +214,11 @@ export function registerBrowserViewIpcHandlers(
 
   electron.ipcMain.handle('mediatoolbox:browser:cancel-download', (event, payload: unknown): IpcResult<{ id: string; canceled: boolean }> => {
     assertBrowserSender(event, hostWindow)
+    const viewId = getStringField(payload, 'viewId')
     const id = getStringField(payload, 'downloadId')
+    if (!viewId) return fail('Missing browser view id')
     if (!id) return fail('Missing browser download id')
-    return ok({ id, canceled: cancelBrowserNetworkDownload(id) })
+    return ok({ id, canceled: cancelBrowserNetworkDownload(id, viewId) })
   })
 
   electron.ipcMain.handle('mediatoolbox:browser:select-upload-file', async (event, payload: unknown) => {

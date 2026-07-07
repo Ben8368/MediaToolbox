@@ -113,7 +113,7 @@ export type DesktopBrowserBridge = {
   focus: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   downloadUrl: (id: string, url?: string) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   request: (id: string, draft: DesktopBrowserRequestDraft) => Promise<DesktopBrowserResult<DesktopBrowserRequestResult>>
-  cancelDownload: (downloadId: string) => Promise<DesktopBrowserResult<{ id: string; canceled: boolean }>>
+  cancelDownload: (id: string, downloadId: string) => Promise<DesktopBrowserResult<{ id: string; canceled: boolean }>>
   selectUploadFile: (id: string) => Promise<DesktopBrowserResult<DesktopBrowserUploadSelection | null>>
   onEvent: (listener: (event: DesktopBrowserEvent) => void) => () => void
 }

@@ -9,6 +9,7 @@
 > - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
 > - PathGrant 已全面集成：transcode/PSD 路由支持 inputGrantId（外部输入）；前端转码工作台新增「从外部导入」按钮，调用 requestReadGrant() 获取授权并自动填充输入。
 > - Phase 6B outputGrantId 已落地：transcode/PSD render 支持 outputGrantId 工作区外写授权；PSD 工作台加「导出到外部」按钮（requestWriteGrant）；全部已推送至远端。
+> - 浏览器多标签网络事件继续推进：下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消校验发起标签归属，避免后台标签事件干扰当前标签。
 > - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包。
 
 ## 项目定位
