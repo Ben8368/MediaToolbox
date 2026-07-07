@@ -55,9 +55,9 @@
 #### TD-019: Electron 发布 polish
 - **位置：** `apps/desktop/` + `.github/workflows/release.yml`
 - **来源：** TD-014 偿还后的剩余发布项
-- **问题：** Electron 目录包、preload 路径和本地 API 生产 runtime 已通过 macOS arm64 `--dir` 与包内 `/api/health` 烟测；但应用图标、macOS/Windows 签名、公证和完整安装包发布仍待验收
-- **影响：** 当前可生成可运行目录包，但正式分发体验仍不完整
-- **建议方案：** 配置正式图标、签名证书、公证和 release tag 流程，分别验收 `.dmg` / `.exe` / `.AppImage`
+- **问题：** Electron 目录包、preload 路径和本地 API 生产 runtime 已通过 macOS arm64 `--dir` 与包内 `/api/health` 烟测；桌面窗口/托盘图标入口、artifact 命名和 release preflight 已接入；但 macOS/Windows 签名、公证和完整安装包发布仍待验收
+- **影响：** 当前可生成可运行目录包，且发布前置检查更明确；正式分发体验仍取决于签名、公证和跨平台安装包验收
+- **建议方案：** 准备签名证书、公证凭据和 release tag 流程，运行 `npm run release:preflight` 后分别验收 `.dmg` / `.exe` / `.AppImage`
 - **估算工作量：** 发布配置与证书准备为主
 
 #### TD-015: PSD 真实 Photoshop 联调
@@ -75,13 +75,13 @@
 #### TD-016: macOS GPU 指标采集
 - **位置：** `apps/api/src/system-sampler.ts`
 - **来源：** CONTEXT.md 剩余黄灯
-- **问题：** GPU 指标已接入 Windows/Linux NVIDIA 与 Windows 性能计数器回退，但 macOS GPU 仍待补齐
-- **影响：** macOS 用户无法查看 GPU 利用率
+- **问题：** GPU 指标已接入 Windows/Linux NVIDIA、Windows 性能计数器回退和 macOS `ioreg IOAccelerator` 采样；仍待更多 macOS 机型和真实高负载场景验收
+- **影响：** 当前 macOS 基础 GPU 利用率可显示，但跨机型输出格式差异可能导致降级
 - **建议方案：** 
-  1. 调研 macOS GPU 采集方式（`ioreg`、`powermetrics` 或 Metal API）
-  2. 实现 `readMacOsGpuUtilization()` 函数
-  3. 在 `readGpuUtilization()` 中添加 macOS 分支
-- **估算工作量：** 15-30 行实现 + macOS 真机验证
+  1. 使用 Apple Silicon 与 Intel macOS 机器分别验收 `ioreg IOAccelerator`
+  2. 如遇输出缺失，再评估 `powermetrics` 或 Metal API
+  3. 记录不可用机型的降级文案
+- **估算工作量：** 跨机型真机验证为主
 
 ---
 

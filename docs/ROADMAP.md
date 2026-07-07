@@ -64,7 +64,7 @@
 - [x] `apps/web` Vite 构建加入 `base: './'`，修复生产打包 `file://` 协议资源路径。
 - [x] 前端多标签页 UI 接入：`useBrowserTabs` 管理多 `viewId`、独立地址/状态、活动标签独占原生 view、切换时隐藏旧 view；下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消也校验 `viewId` 归属（待桌面端真机验收 view 生命周期）。
 - [x] Electron 生产打包基础链路：electron-builder 目录包、preload 生产路径、Web renderer 资源、本地 API 生产 runtime 与包内 `/api/health` 烟测已通过（macOS arm64 `--dir`）。
-- [ ] Electron 发布 polish：应用图标、macOS/Windows 签名、公证与完整安装包发布验收。
+- [ ] Electron 发布 polish：图标资源入口和 release preflight 已接入；macOS/Windows 签名、公证与完整安装包发布仍待验收。
 
 ## Phase 5：PS / PSD 工作台
 

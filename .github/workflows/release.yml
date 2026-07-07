@@ -50,6 +50,9 @@ jobs:
       - name: Build desktop main process
         run: npm run build -w @mediatoolbox/desktop
 
+      - name: Release preflight
+        run: npm run release:preflight
+
       - name: Package Electron app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

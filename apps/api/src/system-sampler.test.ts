@@ -3,6 +3,7 @@ import { formatBytesPerSecond } from '@mediatoolbox/shared'
 
 import {
   parseDataRateText,
+  parseMacOsIoregGpuOutput,
   parseWindowsGpuCounterOutput,
   resetCpuSamplerForTests,
   sampleCpuPercent,
@@ -27,6 +28,19 @@ describe('system sampler', () => {
     expect(parseWindowsGpuCounterOutput('12.4')).toBe(12.4)
   })
 
+  it('parses macOS IOAccelerator GPU utilization output', () => {
+    expect(parseMacOsIoregGpuOutput(`
+      "PerformanceStatistics" = {"Renderer Utilization %"=59,"Device Utilization %"=41,"Tiler Utilization %"=17}
+      "model" = "Apple M5"
+    `)).toEqual({ percent: 41, detail: 'Apple M5（ioreg IOAccelerator）' })
+
+    expect(parseMacOsIoregGpuOutput('"PerformanceStatistics" = {"Renderer Utilization %"=59}')).toEqual({
+      percent: 59,
+      detail: 'macOS IOAccelerator',
+    })
+    expect(parseMacOsIoregGpuOutput('no gpu counters')).toBeUndefined()
+  })
+
   it('samples CPU usage from consecutive deltas', () => {
     resetCpuSamplerForTests()
     expect(sampleCpuPercent()).toBe(0)
@@ -43,17 +57,20 @@ describe('system sampler', () => {
       browserDownloads: [{ received_bytes: 2048 } as never],
       browserRequests: [{ response_bytes: 1024, request_bytes: 512 } as never],
       fetchTasks: [{ status: 'running', state: { download_bytes_per_sec: 4096 } } as never],
+      filebrowserUploadedBytes: 256,
       networkSample: {
         at: now.getTime() - 1000,
         browserReceivedBytes: 1024,
         browserResponseBytes: 0,
         browserRequestBytes: 0,
+        filebrowserUploadedBytes: 0,
       },
     })
     vi.useRealTimers()
 
-    expect(rates.uploadBytesPerSec).toBe(512)
+    expect(rates.uploadBytesPerSec).toBe(512 + 256)
     expect(rates.downloadBytesPerSec).toBe(1024 + 1024 + 4096)
+    expect(rates.nextSample.filebrowserUploadedBytes).toBe(256)
     expect(formatBytesPerSecond(rates.downloadBytesPerSec)).toContain('/s')
     expect(formatBytesPerSecond(2 * 1024 * 1024 * 1024)).toBe('2 GB/s')
   })

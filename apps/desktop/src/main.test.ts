@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { createDesktopShellConfig, createLocalApiLaunchCommand, type DesktopRuntimePaths } from './main.js'
+import { createDesktopShellConfig, createLocalApiLaunchCommand, resolveAppIconPath, type DesktopRuntimePaths } from './main.js'
 
 const runtimePaths: DesktopRuntimePaths = {
   rootDir: path.resolve('/repo/MediaToolbox'),
@@ -43,5 +43,14 @@ describe('desktop local API launch command', () => {
 
     expect(launch.command).toBe('/opt/node/bin/node')
     expect(launch.env.ELECTRON_RUN_AS_NODE).toBeUndefined()
+  })
+
+  it('resolves app icons from renderer resources in development and packaged modes', () => {
+    expect(resolveAppIconPath(false, runtimePaths.resourcesPath, runtimePaths.rootDir)).toBe(
+      path.join(runtimePaths.rootDir, 'apps', 'web', 'public', 'static', 'app', 'icons', 'default', 'setting.png'),
+    )
+    expect(resolveAppIconPath(true, runtimePaths.resourcesPath, runtimePaths.rootDir)).toBe(
+      path.join(runtimePaths.resourcesPath, 'renderer', 'static', 'app', 'icons', 'default', 'setting.png'),
+    )
   })
 })

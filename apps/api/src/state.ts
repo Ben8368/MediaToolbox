@@ -35,6 +35,7 @@ export type ApiState = {
   fetchTasks: FetchTaskRecord[]
   browserDownloads: BrowserNetworkDownloadRecord[]
   browserRequests: BrowserNetworkRequestRecord[]
+  filebrowserUploadedBytes: number
   networkSample: ProjectNetworkSample
   db: MediaToolboxDatabase
   notificationsReadAt: string | null
@@ -69,7 +70,8 @@ export function createApiState(): ApiState {
     fetchTasks: [],
     browserDownloads: [],
     browserRequests: [],
-    networkSample: { at: Date.now(), browserReceivedBytes: 0, browserResponseBytes: 0, browserRequestBytes: 0 },
+    filebrowserUploadedBytes: 0,
+    networkSample: { at: Date.now(), browserReceivedBytes: 0, browserResponseBytes: 0, browserRequestBytes: 0, filebrowserUploadedBytes: 0 },
     db,
     notificationsReadAt: null,
     folders: new Set(['/Workspace', '/Workspace/Downloads', '/Workspace/Exports', '/Workspace/PSD', '/Workspace/Transcodes']),

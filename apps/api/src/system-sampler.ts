@@ -19,6 +19,7 @@ export type ProjectNetworkSample = {
   browserReceivedBytes: number
   browserResponseBytes: number
   browserRequestBytes: number
+  filebrowserUploadedBytes: number
 }
 
 export type ProjectNetworkRates = {
@@ -102,6 +103,12 @@ async function readGpuUtilization(): Promise<GpuSnapshot> {
     return { percent: 0, available: false, detail: '未检测到可用 GPU 利用率计数器。' }
   }
 
+  if (process.platform === 'darwin') {
+    const macos = await readMacOsGpuUtilization()
+    if (macos) return macos
+    return { percent: 0, available: false, detail: '未检测到可用 macOS GPU 利用率计数器。' }
+  }
+
   return { percent: 0, available: false, detail: '当前平台仅支持 NVIDIA GPU（nvidia-smi）采样。' }
 }
 
@@ -160,6 +167,36 @@ export function parseWindowsGpuCounterOutput(stdout: string): number | undefined
   return Number.isFinite(percent) ? percent : undefined
 }
 
+async function readMacOsGpuUtilization(): Promise<GpuSnapshot | undefined> {
+  try {
+    const { stdout } = await execFileAsync('ioreg', ['-r', '-c', 'IOAccelerator', '-d', '1'], { timeout: 1500 })
+    const parsed = parseMacOsIoregGpuOutput(stdout)
+    if (!parsed) return undefined
+    return {
+      percent: parsed.percent,
+      available: true,
+      detail: parsed.detail,
+    }
+  } catch {
+    return undefined
+  }
+}
+
+export function parseMacOsIoregGpuOutput(stdout: string): { percent: number; detail: string } | undefined {
+  const device = Number(stdout.match(/"Device Utilization %"\s*=\s*(\d+(?:\.\d+)?)/)?.[1])
+  const renderer = Number(stdout.match(/"Renderer Utilization %"\s*=\s*(\d+(?:\.\d+)?)/)?.[1])
+  const tiler = Number(stdout.match(/"Tiler Utilization %"\s*=\s*(\d+(?:\.\d+)?)/)?.[1])
+  const candidates = [device, renderer, tiler].filter(Number.isFinite)
+  if (candidates.length === 0) return undefined
+
+  const rawPercent = Number.isFinite(device) ? device : Math.max(...candidates)
+  const model = stdout.match(/"model"\s*=\s*"([^"]+)"/)?.[1]?.trim()
+  return {
+    percent: Math.max(0, Math.min(100, Math.round(rawPercent))),
+    detail: model ? `${model}（ioreg IOAccelerator）` : 'macOS IOAccelerator',
+  }
+}
+
 export function parseDataRateText(text: string | undefined): number | null {
   if (!text) return null
   const match = text.trim().match(/^~?([\d.]+)\s*(B|[KMGT]i?B)\/s$/i)
@@ -188,6 +225,7 @@ export function sampleProjectNetworkRates(input: {
   browserDownloads: BrowserNetworkDownloadRecord[]
   browserRequests: BrowserNetworkRequestRecord[]
   fetchTasks: FetchTaskRecord[]
+  filebrowserUploadedBytes: number
   networkSample: ProjectNetworkSample
 }): ProjectNetworkRates {
   const now = Date.now()
@@ -201,24 +239,28 @@ export function sampleProjectNetworkRates(input: {
   )
   const browserResponseBytes = browserRequestTotals.responseBytes
   const browserRequestBytes = browserRequestTotals.requestBytes
+  const filebrowserUploadedBytes = Math.max(0, Math.floor(input.filebrowserUploadedBytes))
   const elapsedSeconds = Math.max((now - input.networkSample.at) / 1000, 0.001)
 
   const receivedDelta = browserReceivedBytes - input.networkSample.browserReceivedBytes
   const responseDelta = browserResponseBytes - input.networkSample.browserResponseBytes
   const requestDelta = browserRequestBytes - input.networkSample.browserRequestBytes
+  const filebrowserUploadDelta = filebrowserUploadedBytes - input.networkSample.filebrowserUploadedBytes
   const browserDownloadBps = Math.max(0, Math.round(receivedDelta / elapsedSeconds))
   const browserResponseBps = Math.max(0, Math.round(responseDelta / elapsedSeconds))
   const browserUploadBps = Math.max(0, Math.round(requestDelta / elapsedSeconds))
+  const filebrowserUploadBps = Math.max(0, Math.round(filebrowserUploadDelta / elapsedSeconds))
   const ytdlpDownloadBps = sumYtdlpDownloadBytesPerSec(input.fetchTasks)
 
   return {
-    uploadBytesPerSec: browserUploadBps,
+    uploadBytesPerSec: browserUploadBps + filebrowserUploadBps,
     downloadBytesPerSec: browserDownloadBps + browserResponseBps + ytdlpDownloadBps,
     nextSample: {
       at: now,
       browserReceivedBytes,
       browserResponseBytes,
       browserRequestBytes,
+      filebrowserUploadedBytes,
     },
   }
 }
