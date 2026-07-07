@@ -13,11 +13,7 @@ export function isoOffset(minutesAgo: number) {
 }
 
 /** 网络速率格式化 */
-export function formatSpeed(bytes: number) {
-  if (bytes > 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB/s`
-  if (bytes > 1024) return `${Math.round(bytes / 1024)} KB/s`
-  return `${Math.round(bytes)} B/s`
-}
+export { formatBytesPerSecond as formatSpeed } from '@mediatoolbox/shared'
 
 /** 路径归一化（反斜杠→正斜杠、合并连续斜杠、去尾斜杠） */
 export function normalizePath(path: string) {

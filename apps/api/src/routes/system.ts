@@ -3,9 +3,9 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult, RuntimeMetrics, RuntimeMetricsSlice } from '@mediatoolbox/contracts'
+import { formatBytesPerSecond } from '@mediatoolbox/shared'
 
 import {
-  formatBytesPerSecond,
   sampleCpuPercent,
   sampleGpu,
   sampleProjectNetworkRates,

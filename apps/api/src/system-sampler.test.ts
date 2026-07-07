@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { formatBytesPerSecond } from '@mediatoolbox/shared'
 
 import {
-  formatBytesPerSecond,
   parseDataRateText,
   parseWindowsGpuCounterOutput,
   resetCpuSamplerForTests,

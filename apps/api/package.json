@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mediatoolbox/contracts": "0.1.0",
+    "@mediatoolbox/shared": "0.1.0",
     "@mediatoolbox/db": "0.1.0",
     "@mediatoolbox/downloader": "0.1.0",
     "@mediatoolbox/download-worker": "0.1.0",

@@ -27,7 +27,6 @@ export type ProjectNetworkRates = {
   nextSample: ProjectNetworkSample
 }
 
-let cpuPrevious: CpuTotals | null = null
 let gpuCache: { at: number; snapshot: GpuSnapshot } | null = null
 let gpuInflight: Promise<GpuSnapshot> | null = null
 
@@ -44,22 +43,35 @@ function readCpuTotals(): CpuTotals {
   )
 }
 
-export function sampleCpuPercent(): number {
-  const current = readCpuTotals()
-  if (!cpuPrevious) {
-    cpuPrevious = current
-    return 0
+function createCpuSampler() {
+  let previous: CpuTotals | null = null
+  return {
+    sample(): number {
+      const current = readCpuTotals()
+      if (!previous) {
+        previous = current
+        return 0
+      }
+      const idleDelta = current.idle - previous.idle
+      const totalDelta = current.total - previous.total
+      previous = current
+      if (totalDelta <= 0) return 0
+      return Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)))
+    },
+    reset() {
+      previous = null
+    },
   }
+}
 
-  const idleDelta = current.idle - cpuPrevious.idle
-  const totalDelta = current.total - cpuPrevious.total
-  cpuPrevious = current
-  if (totalDelta <= 0) return 0
-  return Math.max(0, Math.min(100, Math.round((1 - idleDelta / totalDelta) * 100)))
+const cpuSampler = createCpuSampler()
+
+export function sampleCpuPercent(): number {
+  return cpuSampler.sample()
 }
 
 export function resetCpuSamplerForTests(): void {
-  cpuPrevious = null
+  cpuSampler.reset()
   gpuCache = null
   gpuInflight = null
 }
@@ -209,11 +221,4 @@ export function sampleProjectNetworkRates(input: {
       browserRequestBytes,
     },
   }
-}
-
-export function formatBytesPerSecond(value: number): string {
-  if (value < 1024) return `${value} B/s`
-  if (value < 1024 * 1024) return `${Math.round(value / 102.4) / 10} KB/s`
-  if (value < 1024 * 1024 * 1024) return `${Math.round(value / 1024 / 102.4) / 10} MB/s`
-  return `${Math.round(value / 1024 / 1024 / 102.4) / 10} GB/s`
 }
