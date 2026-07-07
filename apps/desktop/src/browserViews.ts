@@ -26,6 +26,7 @@ import {
   type ElectronModule,
   type IpcResult,
 } from './browserViewState.js'
+import { requestDirReadGrant, requestFileReadGrant, requestFileWriteGrant } from './pathGrants.js'
 
 export function registerBrowserViewIpcHandlers(
   electron: ElectronModule,
@@ -231,6 +232,33 @@ export function registerBrowserViewIpcHandlers(
       env: record.networkOptions.env,
     }, record.sessionId)
     return ok(selection ?? null)
+  })
+
+  electron.ipcMain.handle('mediatoolbox:path-grant:request-read', async (event) => {
+    assertBrowserSender(event, hostWindow)
+    const grant = await requestFileReadGrant({ electron, hostWindow, apiUrl: options.apiUrl })
+    return ok(grant ?? null)
+  })
+
+  electron.ipcMain.handle('mediatoolbox:path-grant:request-write', async (event, payload: unknown) => {
+    assertBrowserSender(event, hostWindow)
+    const defaultPath =
+      typeof payload === 'object' && payload !== null
+        ? (payload as Record<string, unknown>).defaultPath as string | undefined
+        : undefined
+    const grant = await requestFileWriteGrant({
+      electron,
+      hostWindow,
+      apiUrl: options.apiUrl,
+      ...(defaultPath !== undefined ? { defaultPath } : {}),
+    })
+    return ok(grant ?? null)
+  })
+
+  electron.ipcMain.handle('mediatoolbox:path-grant:request-dir-read', async (event) => {
+    assertBrowserSender(event, hostWindow)
+    const grant = await requestDirReadGrant({ electron, hostWindow, apiUrl: options.apiUrl })
+    return ok(grant ?? null)
   })
 
   hostWindow.on('closed', () => {
