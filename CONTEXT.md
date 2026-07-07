@@ -3,7 +3,11 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5 浏览器错误页、生产资源路径与多标签页前端 UI 已接入，Phase 5 PSD 工作台核心能力（渲染 API、manifest 编辑、批量渲染、manifest 持久化）已接入
-> **最近更新：** 2026-07-07，应用 ID 契约已对齐：`packages/contracts` 与 `/api/apps` 统一使用前端 registry 的 `browser`、`fetcher` 等 ID；PSD manifest/slot/render input 类型收敛到 `packages/contracts`，且当前渲染仅支持文字 slot，非文字必填或输入会返回可读错误，避免静默忽略。此前 `codex/fix-powershell-utf8-guidance` 已 fast-forward 合并进 `main`，本地非 main 分支已删除，远端 `main` 已对齐；同时修复 Browser Network 显式下载目录逃逸风险、系统采样 TD-001~TD-009、PSD 路径 helper 重复和 API 契约文档漂移。此前右侧状态面板运行状态仪表（CPU / 内存 / GPU）已完成客观验收：`GET /api/system/metrics` 经 `realApi` 1Hz 轮询，`GaugeSvg` 展示值与 `os.cpus()` 差分采样、物理内存占用及本机 `nvidia-smi`（RTX 4060）一致；重启 dev 后端口占用需先清理再验。此前 2026-07-06 浏览器 app 接入多标签页前端 UI：新增 `apps/web/src/apps/browser/`（`helpers.ts` 纯函数 + reducer、`useBrowserTabs.ts` 多 `viewId` 生命周期与事件路由 hook、`BrowserTabBar.tsx` 标签栏），`BrowserApp.tsx` 由 360 行瘦身到 162 行；每个标签独立地址/状态，活动标签独占原生 WebContentsView，切换时隐藏旧 view，关闭销毁 view 且拒绝关最后一个标签，下载/权限/上传事件按窗口聚合到侧栏。桌面端 IPC/session 层（`browserViews.ts` 按 `id` 键 Map）本就支持多 view，无需改动。此前已完成：浏览器错误态 overlay 错误文案与重试按钮；`apps/web` Vite `base: './'` 修复 `file://` 资源路径；PSD 渲染 API `POST /api/psd/render`、manifest 编辑/批量渲染标签页、manifest JSON sidecar 持久化，且渲染输出路径经工作区收口。真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包仍待后续。
+> **最近更新：** 2026-07-07
+> - 治理文档已同步当前阶段：`main` / `master` 默认只自动提交不自动推送，`UI_COMPAT.md` 与 `API_VALIDATION.md` 已补齐系统指标、浏览器多标签页和 PSD 渲染/manifest 验收项。
+> - 应用 ID 契约已对齐到前端 registry；PSD manifest/slot/render input 类型已收敛到 `packages/contracts`，当前仅支持文字 slot，非文字输入会返回可读错误。
+> - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
+> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包。
 
 ## 项目定位
 
@@ -27,8 +31,9 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 > **技术债追踪：** 系统性优化项已迁移至 `docs/TECH_DEBT.md`，本节仅保留阶段相关的待验收项。
 
-- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 前端已接入（`useBrowserTabs` 管理多 viewId、独立地址/状态、活动标签独占原生 view）。
-- 网络速率已接入项目任务流量采样（浏览器下载/请求、yt-dlp 下载）；GPU 指标已接入 Windows/Linux NVIDIA 与 Windows 性能计数器回退（Windows + NVIDIA 本机验收已通过）。
+- Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
+- PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
+- macOS GPU 指标与更完整的项目上传流量采集仍待补齐。
 
 **已迁移至技术债追踪：**
 - TD-012: 浏览器 app 纯 Web 模式降级体验

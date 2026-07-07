@@ -40,6 +40,7 @@
 - G-003：`.agents/` 和 `.codex/` 是本地工具目录，默认不提交。
 - G-004：AI 工具参与实质改动并提交时，优先保留工具自身机制；若未自动记录来源，则按 `AGENTS.md` 追加确认过的 Git trailer。
 - G-005：commit message 标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
+- G-006：绿灯自动提交后，`main` / `master` 默认不自动推送；只有用户明确允许本轮推送保护分支时才可执行。
 
 ## Windows / PowerShell
 

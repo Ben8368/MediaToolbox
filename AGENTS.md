@@ -24,7 +24,7 @@
 - 代码改动后按 `docs/AI_RULES.md` 输出 `🚦 Audit Report`，再跑客观验证。
 - 客观验证由 AI 执行；用户只负责主观体验和业务判断。
 - 客观验证默认：`npm run verify`。
-- Audit Report 为 🟢 且验证通过时，按 `docs/AI_RULES.md` 自动提交并推送到远端（用户明确禁止时除外）。
+- Audit Report 为 🟢 且验证通过时，按 `docs/AI_RULES.md` 自动提交；是否自动推送取决于当前分支保护规则（用户明确禁止时除外）。
 - 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 `CONTEXT.md` 或相关 `docs/`。
 
 ## PowerShell 编码
@@ -69,7 +69,7 @@
 
 ## 提交与署名
 
-- Audit Report 为 🟢 且客观验证通过时，自动 `git commit` 并 `git push`；细则见 `docs/AI_RULES.md`「绿灯自动提交与推送」。用户明确禁止提交/推送时除外。
+- Audit Report 为 🟢 且客观验证通过时，自动 `git commit`；非 `main` / `master` 分支可自动 `git push`，保护分支需用户明确允许。细则见 `docs/AI_RULES.md`「绿灯自动提交与推送」。用户明确禁止提交时不提交；明确禁止推送时仅影响推送。
 - commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
 - AI 工具参与实质改动且工具未自动记录来源时，在 commit message 末尾追加对应 Git trailer，前方保留一个空行。
 - 已确认 trailer：

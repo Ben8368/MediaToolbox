@@ -1,6 +1,6 @@
 # MediaToolbox
 
-MediaToolbox 是一个 NAS 风格桌面 Web 前端加本地媒体工作流引擎。项目优先使用 TypeScript，采用前后端分离、模块化、任务驱动和 adapter 解耦设计。
+MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。项目优先使用 TypeScript，采用前后端分离、模块化、任务驱动和 adapter 解耦设计。
 
 ## 当前骨架
 
