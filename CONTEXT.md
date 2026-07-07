@@ -7,7 +7,8 @@
 > - Phase 6A-C PathGrant 已接入：`packages/contracts` 新增 PathGrant 类型族；`packages/db` schema V3 新增 `path_grants` 表及 `pathGrants` DB 命名空间；`POST/GET/DELETE /api/path-grants` 三条路由已注册（仅桌面端可签发，TTL file.read=1h / file.write=30min / dir.read=2h）；`workspace-path.ts` 新增 `resolveGrantPath()`；Electron 新增三个 IPC handler（`mediatoolbox:path-grant:request-read/write/dir-read`）及对应 dialog 流程；前端 `apps/web/src/api/real/pathGrants.ts` 适配层已实现（含纯 Web 模式降级）。
 > - 文件管理器上传与下载能力落地：`POST /api/filebrowser/upload`（multipart，500 MB 上限，文件名净化，工作区边界）和 `GET /api/filebrowser/file`（流式下载，Content-Disposition attachment）已接入真实 API；前端工具栏上传按钮和下载按钮均已接通。
 > - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
-> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包；PathGrant 与 transcode/PSD 路由的 inputGrantId/outputGrantId 集成。
+> - PathGrant 已全面集成：transcode/PSD 路由支持 inputGrantId（外部输入）；前端转码工作台新增「从外部导入」按钮，调用 requestReadGrant() 获取授权并自动填充输入。
+> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收与 Electron 生产打包；PSD 工作台的外部导入按钮；outputGrantId 工作区外导出（Phase 6B）。
 
 ## 项目定位
 
