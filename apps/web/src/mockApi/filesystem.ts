@@ -115,8 +115,8 @@ export async function fetchFilebrowserDisks() {
   return {
     ok: true,
     disks: [
-      { name: 'Workspace', path: '/Workspace', total: 512_000_000_000, used: 128_000_000_000, free: 384_000_000_000 },
-      { name: 'Downloads', path: '/Workspace/Downloads', total: 256_000_000_000, used: 72_000_000_000, free: 184_000_000_000 },
+      { name: '本地磁盘 (C:)', path: '/Workspace', root: 'C:\\', browsable: true, total: 953_600_000_000, used: 429_100_000_000, free: 524_400_000_000 },
+      { name: '本地磁盘 (D:)', path: 'D:\\', root: 'D:\\', browsable: false, total: 1_863_000_000_000, used: 194_400_000_000, free: 1_668_600_000_000 },
     ],
   }
 }

@@ -50,3 +50,28 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - `PsdTemplateManifest`：PSD 模版、图层 slot、画布和导出约束。
 
 共享类型位于 `packages/contracts`，任务状态机位于 `packages/job-core`。
+
+## 工作区外路径授权（规划中）
+
+当前文件浏览默认将虚拟 `/Workspace` 映射到受控本地目录，`apps/api` 通过 `normalizeWorkspacePath()` 拒绝盘符、UNC 和 `..` 逃逸。该默认沙箱保持不变。
+
+后续 Phase 6 将引入 **PathGrant** 作为越界访问的唯一入口，与浏览器网络的「用户确认 + 权限审计」模式一致：
+
+```text
+用户选路（桌面原生 dialog）
+  → apps/api 签发 grant（read 或 write）
+  → 前端/任务只传 grantId
+  → worker 经 grant 解析物理路径
+  → job 结束或 TTL 到期后吊销
+```
+
+边界约定：
+
+- `apps/web` 不持有、不拼接工作区外物理路径；只展示 grant 的 `displayName` 与授权状态。
+- `apps/desktop` 负责 open/save dialog 与用户确认，向 API 提交规范化后的物理路径申请 grant。
+- `apps/api` 负责签发、校验、绑定 job、吊销 grant，并写入审计日志；禁止信任客户端裸路径。
+- worker 只消费 job 附带的 grant，不自行扩展搜索范围。
+- 读授权与写授权分离；写入工作区外必须二次确认，且权限窄于读取。
+- 第一版优先单文件 read grant；目录级与整盘浏览后置到 Phase 6C。
+
+详细分期与端点规划见 `docs/ROADMAP.md` Phase 6 与 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节。

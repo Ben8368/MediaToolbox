@@ -120,10 +120,11 @@ export function DirectoryPickerDriveBar({
       <div className="fm-picker__drives-disks">
         {disks.map((disk) => (
           <button
-            key={disk.path}
+            key={disk.root || disk.path}
             type="button"
-            className={`fm-picker__drive fm-picker__drive--disk ${activeDiskPath === disk.path || isPathOnDisk(currentPath, disk.path) ? 'fm-picker__drive--active' : ''}`}
+            className={`fm-picker__drive fm-picker__drive--disk ${disk.browsable === false ? 'fm-picker__drive--readonly' : ''} ${activeDiskPath === disk.path || isPathOnDisk(currentPath, disk.path) ? 'fm-picker__drive--active' : ''}`}
             onClick={() => onSelectDisk(disk.path)}
+            title={disk.browsable === false ? '仅展示容量，当前工作区未映射到此磁盘' : undefined}
           >
             <span className="fm-picker__drive-icon" aria-hidden>
               <DriveIcon />
