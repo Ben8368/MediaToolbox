@@ -22,28 +22,15 @@
 
 ---
 
-### 🟡 P1 — 性能与可维护性（1 项）
+### 🟡 P1 — 性能与可维护性（0 项）
 
-#### TD-010: formatBytesPerSecond 与 formatSpeed 重复实现
-- **位置：** `apps/api/src/system-sampler.ts:188` + `apps/web/src/mockApi/shared.ts:16`
-- **发现时间：** 2026-07-07
-- **问题：** API 和 Web 两处格式化逻辑重复且舍入策略不一致（一个用 `/ 102.4 / 10`，一个用 `toFixed(1)`）
-- **影响：** 需同步修改两处，容易遗漏导致前后端展示不一致
-- **建议方案：** 提取为 `packages/shared/utils/formatBytesPerSecond.ts` 统一实现
-- **估算工作量：** 10 行重构 + 路径调整
+暂无。
 
 ---
 
-### 🟢 P2 — 设计层次问题（1 项）
+### 🟢 P2 — 设计层次问题（0 项）
 
-#### TD-011: cpuPrevious 模块级全局状态
-- **位置：** `apps/api/src/system-sampler.ts:30`
-- **发现时间：** 2026-07-07
-- **问题：** `sampleCpuPercent()` 依赖模块级可变状态，测试需手动调用 `resetCpuSamplerForTests()` 重置
-- **影响：** 测试隔离成本，未来多实例采样或多租户场景扩展性受限
-- **建议方案：** 重构为类或闭包封装状态，或使用 Context 模式将状态传入
-- **估算工作量：** 20-30 行重构 + 测试调整
-- **备注：** 当前单进程部署下影响有限，可推迟至多实例需求明确时处理
+暂无。
 
 ---
 
@@ -116,6 +103,8 @@
 - TD-009: `task.state` 对象频繁展开。已改为速率变化时才写入，解析失败时清理速率字段。
 - TD-017: 前后端应用 ID 契约漂移。已将 `packages/contracts` 与 `/api/apps` 对齐到前端 registry（`browser`、`fetcher` 等），并补充 API 测试。
 - TD-018: PSD manifest 类型重复且非文字 slot 会被隐式忽略。已将 PSD manifest/slot/render input 类型收敛到 `packages/contracts`，并在 API/worker/UI 明确当前仅支持文字 slot。
+- TD-010: `formatBytesPerSecond` 与 `formatSpeed` 重复实现。已提取为 `packages/shared/utils/formatBytesPerSecond.ts` 统一实现，API 和 Web 端均改为引用共享包。
+- TD-011: `cpuPrevious` 模块级全局状态。已将 CPU 采样状态封装为 `createCpuSampler()` 闭包，`sampleCpuPercent` 和 `resetCpuSamplerForTests` 保持原有公共 API 不变。
 
 ---
 
