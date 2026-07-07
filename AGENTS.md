@@ -26,6 +26,13 @@
 - 客观验证默认：`npm run verify`。
 - 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 `CONTEXT.md` 或相关 `docs/`。
 
+## PowerShell 编码
+
+- Windows PowerShell 中读取中文文件或运行可能输出中文的命令前，默认先初始化 UTF-8 控制台编码。
+- 可在同一 PowerShell 会话中执行 `. .\scripts\dev\init-utf8-console.ps1`，或等价设置 `chcp 65001`、`[Console]::InputEncoding`、`[Console]::OutputEncoding`、`$OutputEncoding` 与 `PYTHONIOENCODING=utf-8`。
+- 只看到中文乱码时，优先按终端编码问题处理，不要反复向用户报告“再用 UTF-8 确认”。
+- 显式 UTF-8 读取后仍异常，才判断可能是文件本身编码或内容损坏。
+
 ## 架构边界
 
 - 本仓库是 TypeScript monorepo：桌面壳、Web 前端、本地 API、共享包和 worker 同仓管理。

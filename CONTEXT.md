@@ -56,6 +56,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 | `npm run typecheck` | workspace 类型检查 |
 | `npm run test` | workspace 测试 |
 | `npm run verify` | 客观验证 |
+| `. .\scripts\dev\init-utf8-console.ps1` | 初始化当前 PowerShell 会话的 UTF-8 输入输出 |
 
 ## 常用文档
 

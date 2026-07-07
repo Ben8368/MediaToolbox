@@ -40,3 +40,7 @@
 - G-003：`.agents/` 和 `.codex/` 是本地工具目录，默认不提交。
 - G-004：AI 工具参与实质改动并提交时，优先保留工具自身机制；若未自动记录来源，则按 `AGENTS.md` 追加确认过的 Git trailer。
 - G-005：commit message 标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
+
+## Windows / PowerShell
+
+- W-001：PowerShell 中出现中文乱码时，先按终端编码处理：初始化 UTF-8 或用显式 UTF-8 读取；不要反复向用户报告“再确认是否编码问题”。
