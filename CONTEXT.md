@@ -11,6 +11,8 @@
 > - PathGrant 已全面集成：transcode/PSD 路由支持 inputGrantId（外部输入）；前端转码工作台新增「从外部导入」按钮，调用 requestReadGrant() 获取授权并自动填充输入。
 > - Phase 6B outputGrantId 已落地：transcode/PSD render 支持 outputGrantId 工作区外写授权；PSD 工作台加「导出到外部」按钮（requestWriteGrant）；全部已推送至远端。
 > - 浏览器多标签网络事件继续推进：下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消校验发起标签归属，避免后台标签事件干扰当前标签。
+> - Electron 发布 polish 继续推进：桌面窗口/托盘统一使用 renderer app 图标资源；新增 `npm run release:preflight` 检查 runtime bundle、renderer/API 打包资源、artifact 命名和签名/公证环境提示，并接入 release workflow。
+> - 系统指标继续补齐：macOS GPU 利用率新增 `ioreg IOAccelerator` 采样路径；项目上传速率新增文件管理器 multipart 上传字节统计，不再只依赖浏览器网络请求体。
 > - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收、完整安装包签名/图标与跨平台 release 验收。
 
 ## 项目定位
@@ -37,8 +39,8 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 - Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
-- Electron 发布 polish 待补齐：应用图标、macOS/Windows 签名与完整安装包发布验收。
-- macOS GPU 指标与更完整的项目上传流量采集仍待补齐。
+- Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
+- macOS GPU 指标与文件管理器上传速率已接入基础采样，仍待跨机型与真实大文件上传体验验收。
 
 **已迁移至技术债追踪：**
 - TD-012: 浏览器 app 纯 Web 模式降级体验
@@ -53,7 +55,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
-5. 后续补齐 macOS GPU 指标与更完整的项目上传流量采集（非浏览器请求体场景）。
+5. 继续验收 macOS GPU 指标跨机型兼容性与真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
 6. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 
 ## 常用命令

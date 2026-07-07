@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { FastifyInstance } from 'fastify'
 import multipart from '@fastify/multipart'
@@ -170,8 +171,14 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
         await fs.mkdir(physicalDir, { recursive: true })
         const physicalTarget = path.join(physicalDir, safeName)
         const out = await fs.open(physicalTarget, 'w')
+        const meter = new Transform({
+          transform(chunk, _encoding, callback) {
+            state.filebrowserUploadedBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(chunk)
+            callback(null, chunk)
+          },
+        })
         try {
-          await pipeline(part.file, out.createWriteStream())
+          await pipeline(part.file, meter, out.createWriteStream())
         } finally {
           await out.close()
         }

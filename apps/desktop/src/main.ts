@@ -38,6 +38,7 @@ export type DesktopApiLaunchCommand = {
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 let trayRef: import('electron').Tray | null = null
+const DEFAULT_APP_ICON = path.join('static', 'app', 'icons', 'default', 'setting.png')
 
 export function createDesktopShellConfig(env: NodeJS.ProcessEnv): DesktopShellConfig {
   const mode = env.NODE_ENV === 'production' ? 'production' : 'development'
@@ -110,6 +111,16 @@ export function createLocalApiLaunchCommand(
     cwd: path.join(paths.rootDir, 'apps', 'api'),
     env: baseEnv,
   }
+}
+
+export function resolveRendererResourcePath(relativePath: string, packaged: boolean, resourcesPath = process.resourcesPath, workspaceRoot = rootDir): string {
+  return packaged
+    ? path.join(resourcesPath, 'renderer', relativePath)
+    : path.join(workspaceRoot, 'apps', 'web', 'public', relativePath)
+}
+
+export function resolveAppIconPath(packaged: boolean, resourcesPath = process.resourcesPath, workspaceRoot = rootDir): string {
+  return resolveRendererResourcePath(DEFAULT_APP_ICON, packaged, resourcesPath, workspaceRoot)
 }
 
 export function startLocalApi(
@@ -206,6 +217,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
     minWidth: 1100,
     minHeight: 720,
     title: 'MediaToolbox',
+    icon: resolveAppIconPath(electron.app.isPackaged),
     show: false,
     backgroundColor: '#101317',
     webPreferences: {
@@ -255,9 +267,7 @@ function registerIpcHandlers(
 }
 
 function createTray(electron: ElectronModule) {
-  const iconPath = electron.app.isPackaged
-    ? path.join(process.resourcesPath, 'renderer', 'static', 'app', 'icons', 'default', 'setting.png')
-    : path.join(rootDir, 'apps', 'web', 'public', 'static', 'app', 'icons', 'default', 'setting.png')
+  const iconPath = resolveAppIconPath(electron.app.isPackaged)
   const image = electron.nativeImage.createFromPath(iconPath)
   if (image.isEmpty()) return
 

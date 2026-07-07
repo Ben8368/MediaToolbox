@@ -24,11 +24,13 @@
     "package": "electron-builder",
     "package:win": "electron-builder --win",
     "package:mac": "electron-builder --mac",
-    "package:linux": "electron-builder --linux"
+    "package:linux": "electron-builder --linux",
+    "release:preflight": "tsx ../../scripts/release-preflight.ts"
   },
   "build": {
     "appId": "com.mediatoolbox.desktop",
     "productName": "MediaToolbox",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "dist/**/*",
       "src/preload.cjs"
