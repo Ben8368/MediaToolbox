@@ -24,3 +24,15 @@ npm run verify
 ```
 
 治理入口见 `AGENTS.md`，当前阶段见 `CONTEXT.md`，架构说明见 `docs/ARCHITECTURE.md`。
+
+## 协作与治理
+
+- AI 协作规则：`AGENTS.md`
+- 贡献流程：`CONTRIBUTING.md`
+- 安全政策：`SECURITY.md`
+- 行为准则：`CODE_OF_CONDUCT.md`
+- 发布流程：`docs/RELEASE.md`
+- 维护职责：`docs/MAINTAINERS.md`
+- 架构决策记录：`docs/ADR/`
+
+当前暂未选择开源许可证；正式开放外部使用或分发前，应先补充 `LICENSE`。

@@ -14,6 +14,8 @@
    - API 边界：`docs/FRONTEND_API_CONTRACT.md`
    - UI 兼容：`docs/UI_COMPAT.md`
    - 阶段路线：`docs/ROADMAP.md`
+   - 贡献与发布：`CONTRIBUTING.md`、`SECURITY.md`、`docs/RELEASE.md`
+   - 架构决策：`docs/ADR/`
    - 长历史：`docs/archive/`
 
 原则：入口文件保持短小；细节、历史和长复盘下沉到 `docs/`。
@@ -26,6 +28,7 @@
 - 客观验证默认：`npm run verify`。
 - Audit Report 为 🟢 且验证通过时，按 `docs/AI_RULES.md` 自动提交；是否自动推送取决于当前分支保护规则（用户明确禁止时除外）。
 - 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 `CONTEXT.md` 或相关 `docs/`。
+- 面向开放协作的流程、安全、发布和维护职责分别见 `CONTRIBUTING.md`、`SECURITY.md`、`docs/RELEASE.md` 与 `docs/MAINTAINERS.md`。
 
 ## PowerShell 编码
 
