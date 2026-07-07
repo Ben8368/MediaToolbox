@@ -257,6 +257,8 @@ export type DiskInfo = {
   total: number
   used: number
   free: number
+  root?: string
+  browsable?: boolean
 }
 
 export type DiskListResponse = OkResult & {

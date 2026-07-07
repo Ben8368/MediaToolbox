@@ -50,6 +50,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并补齐 Electron 生产打包工具链（electron-builder/forge、preload 与 API 运行时打包）。
 5. 后续补齐 macOS GPU 指标与更完整的项目上传流量采集（非浏览器请求体场景）。
+6. Phase 6（规划中）：工作区外路径单次读授权与写入二次授权（Path Grant）；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 
 ## 常用命令
 
@@ -74,4 +75,4 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - API 契约：`docs/FRONTEND_API_CONTRACT.md`
 - API 联调：`docs/API_VALIDATION.md`
 - UI 兼容：`docs/UI_COMPAT.md`
-- 路线图：`docs/ROADMAP.md`
+- 路线图：`docs/ROADMAP.md`（含 Phase 6 工作区外路径授权规划）

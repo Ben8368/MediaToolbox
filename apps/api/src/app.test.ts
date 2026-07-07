@@ -51,9 +51,23 @@ describe('api skeleton contract', () => {
     const app = await buildApiServer()
 
     const directory = await app.inject({ method: 'POST', url: '/api/filebrowser/list', payload: { directory: '/Workspace' } })
+    const disks = await app.inject({ method: 'GET', url: '/api/filebrowser/disks' })
     const metrics = await app.inject({ method: 'GET', url: '/api/system/metrics' })
 
     expect(directory.json()).toMatchObject({ ok: true, path: '/Workspace' })
+    expect(disks.json()).toMatchObject({
+      ok: true,
+      disks: expect.arrayContaining([
+        expect.objectContaining({
+          path: '/Workspace',
+          name: expect.stringMatching(/^本地磁盘 \(.+\)$/),
+          browsable: true,
+          total: expect.any(Number),
+          used: expect.any(Number),
+          free: expect.any(Number),
+        }),
+      ]),
+    })
     const metricsBody = metrics.json()
     expect(metricsBody).toMatchObject({
       runtime: expect.any(Object),

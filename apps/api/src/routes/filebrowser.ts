@@ -14,6 +14,7 @@ import type {
   WorkspaceResponse,
 } from '@mediatoolbox/contracts'
 
+import { buildFilebrowserDisks } from '../disk-sampler.js'
 import { filebrowserDeleteSchema, filebrowserListSchema, filebrowserMkdirSchema, setWorkspaceSchema } from '../schemas.js'
 import { ensureDefaultPhysicalWorkspace, physicalWorkspaceForVirtualRoot, WORKSPACE_ROOT, type ApiState } from '../state.js'
 import { addLog, entryName, formatLogTime, nowSeconds } from '../utils.js'
@@ -44,10 +45,13 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
   })
 
   app.get<{ Reply: DiskListResponse }>('/api/filebrowser/disks', async () => {
-    const usage = await readWorkspaceUsage(state.physicalWorkspaceRoot)
+    const disks = await buildFilebrowserDisks({
+      workspaceVirtualPath: state.workspaceRoot,
+      physicalWorkspaceRoot: state.physicalWorkspaceRoot,
+    })
     return {
       ok: true,
-      disks: [{ name: 'Workspace', path: state.workspaceRoot, ...usage }],
+      disks,
     }
   })
 
@@ -203,13 +207,6 @@ async function hasVisibleChildren(physicalPath: string): Promise<boolean> {
 async function removePhysicalPath(physicalPath: string, isDirectory: boolean): Promise<void> {
   if (isDirectory) await fs.rmdir(physicalPath)
   else await fs.unlink(physicalPath)
-}
-
-async function readWorkspaceUsage(root: string): Promise<{ total: number; used: number; free: number }> {
-  const statfs = await fs.statfs(root).catch(() => undefined)
-  const total = statfs ? statfs.blocks * statfs.bsize : 512_000_000_000
-  const free = statfs ? statfs.bfree * statfs.bsize : 512_000_000_000
-  return { total, free, used: Math.max(0, total - free) }
 }
 
 async function exists(physicalPath: string): Promise<boolean> {

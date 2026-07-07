@@ -203,9 +203,14 @@ export function FileManagerPane() {
         currentPath={currentPath}
         onOpenLocal={openLocalFiles}
         onOpenTrash={trash.openTrash}
-        onSelectDisk={(path) => {
-          setActiveDiskPath(path)
-          void navigate(path)
+        onSelectDisk={(diskPath) => {
+          const disk = disks.find((item) => item.path === diskPath)
+          if (disk?.browsable === false) {
+            setError('当前工作区未映射到此磁盘，仅展示容量信息。')
+            return
+          }
+          setActiveDiskPath(diskPath)
+          void navigate(diskPath)
         }}
       />
 

@@ -44,10 +44,11 @@ export function FileManagerSidebar({
           <div className="fm-disk-list">
             {disks.map((disk) => (
               <button
-                key={disk.path}
+                key={disk.root || disk.path}
                 type="button"
-                className={`fm-disk ${activeDiskPath === disk.path || isPathOnDisk(currentPath, disk.path) ? 'fm-disk--active' : ''}`}
+                className={`fm-disk ${disk.browsable === false ? 'fm-disk--readonly' : ''} ${activeDiskPath === disk.path || isPathOnDisk(currentPath, disk.path) ? 'fm-disk--active' : ''}`}
                 onClick={() => onSelectDisk(disk.path)}
+                title={disk.browsable === false ? '仅展示容量，当前工作区未映射到此磁盘' : undefined}
               >
                 <DriveIcon />
                 <span className="fm-disk-main">{displayDiskName(disk.name)}</span>

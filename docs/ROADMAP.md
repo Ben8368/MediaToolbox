@@ -80,6 +80,37 @@
 - [ ] 复杂 PSD 接 Photoshop 本机联调；优先 DOM，复杂命令再 batchPlay。
 - [ ] image / smart-object slot 渲染实现（当前渲染脚本仅处理 text slot）。
 
+## Phase 6：工作区外路径授权（规划中）
+
+状态：**未开始；方案已纳入治理文档，暂不实现**。
+
+目标：在保持默认工作区沙箱的前提下，允许用户通过**单次授权**临时读取工作区外文件；若需写入工作区外路径，则要求**二次授权**。避免直接开放盘符浏览或永久扩大 `normalizeWorkspacePath` 边界。
+
+设计原则：
+
+- 默认路径仍走 `normalizeWorkspacePath()`；越界访问必须携带 API 签发的 `PathGrant`，前端不得提交裸盘符/UNC 路径。
+- **读授权**：桌面原生 open dialog / 受控 picker 选文件后，由 `apps/api` 签发短期 read grant；任务/worker 通过 `grantId` 解析物理路径，grant 绑定 job 生命周期。
+- **写授权**：单独确认（建议桌面 `showSaveDialog`）；scope 更窄、TTL 更短，默认 one-shot。
+- **读入工作区不算越界写**：例如从 `D:` 读取并写入 `/Workspace/Exports` 仅需 read grant。
+- 授权事件写入审计日志，模式参考 `browser-network/permission-events`。
+- 纯 Web 模式可降级为不可用或只读提示，与 TD-012 衔接。
+
+分期：
+
+| 子阶段 | 范围 | 典型场景 |
+| --- | --- | --- |
+| 6A | 单文件 read grant | 转码/PSD 外部输入、文件导入 |
+| 6B | 单路径 write grant | 导出到工作区外 |
+| 6C | 目录级 read/write grant | 侧边栏磁盘点击后授权浏览（仍按目录粒度，非整盘永久挂载） |
+
+规划端点（待实现，详见 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节）：
+
+- `POST /api/path-grants` — 桌面端选路后签发 grant
+- `GET /api/path-grants/{id}` — 校验与展示
+- 任务 payload 扩展 `inputGrantId` / `outputGrantId`
+
+与现状关系：文件管理器 `GET /api/filebrowser/disks` 已展示真实磁盘容量；未映射磁盘当前 `browsable: false`，Phase 6C 后再接入授权浏览。
+
 ## Feature 索引
 
 | Feature | 主题 | 状态 |
@@ -99,3 +130,4 @@
 | 013 | 真浏览器 app | 多标签页 UI 已接入（前端），拖拽、缩放和错误页重试已主观验收，标签切换/生命周期待真机验收 |
 | 014 | Browser Network adapter | 非验收类能力已接入：隔离 session、下载事件、受控上传选择、权限审计、API/jobs 契约 |
 | 015 | PSD 渐进式渲染工作台 | manifest 编辑、批量渲染表单、manifest sidecar 持久化已接入，待真实 Photoshop 联调 |
+| 016 | 工作区外路径授权（Path Grant） | 规划中：单次读授权、写入二次授权；见 Phase 6 |

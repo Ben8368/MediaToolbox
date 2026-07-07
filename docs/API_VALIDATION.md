@@ -64,6 +64,16 @@
 2. Windows/Linux NVIDIA 或 Windows 性能计数器回退路径可用时，GPU 仪表不显示假成功。
 3. macOS GPU 尚未接入时，应显示可读降级状态，并保留技术债记录。
 
+## 工作区外路径授权路径（Phase 6，规划中，未验收）
+
+> 实现前不得标为完成。方案见 `docs/ROADMAP.md` Phase 6。
+
+1. 未携带 grant 时，裸盘符/UNC 路径仍被 API 拒绝。
+2. 桌面 open dialog 选外部文件后签发 read grant，转码/PSD 任务可通过 `inputGrantId` 读取该文件。
+3. 写入 `/Workspace/Exports` 不需要 write grant；写入工作区外路径必须二次确认并签发 write grant。
+4. grant 过期或 job 完成后不可再次使用；审计日志可追溯授权事件。
+5. 纯 Web 模式有明确降级提示。
+
 ## 验收记录
 
 联调完成后，在 `CONTEXT.md` 中记录本地 API 地址、验收日期、阻断项和剩余黄灯。

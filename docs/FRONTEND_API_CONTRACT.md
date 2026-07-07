@@ -123,6 +123,34 @@ Workers / adapters 负责：
 - PSD manifest、slot 与渲染输入类型收敛到 `packages/contracts`；`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**。
 - 服务端会剥离客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；非文字 slot 当前会明确拒绝，避免静默忽略。
 
+### 规划中的路径授权（Phase 6，未实现）
+
+在默认工作区沙箱之上，后续将通过 **PathGrant** 支持受控越界访问，原则如下：
+
+| 授权类型 | 触发方式 | 允许操作 | 约束 |
+| --- | --- | --- | --- |
+| read grant | 单次用户选路（桌面 open dialog） | 读取已授权文件；可作为任务输入 | 单文件优先；绑定 job；短 TTL；审计日志 |
+| write grant | 二次用户确认（桌面 save dialog） | 写入已授权路径 | 比 read 更短 TTL；默认 one-shot；明确提示「写入工作区外」 |
+
+规划端点（当前均未实现，状态：**待设计**）：
+
+| 端点 | 用途 |
+| --- | --- |
+| `POST /api/path-grants` | 桌面端提交规范化物理路径，签发 read/write grant |
+| `GET /api/path-grants/{id}` | 查询 grant 状态与展示名 |
+| `DELETE /api/path-grants/{id}` | 主动吊销 grant |
+
+任务契约扩展（规划）：
+
+- 转码、PSD 渲染、文件导入等执行入口可接受 `inputGrantId` 代替工作区内 `sourcePath`。
+- 工作区外导出可接受 `outputGrantId`；写入 `/Workspace/Exports` 仍只需工作区路径，无需 write grant。
+- worker 仅通过 grant 解析物理路径，不得接受裸盘符或 UNC。
+
+与现有端点关系：
+
+- `GET /api/filebrowser/disks` 可继续展示全机磁盘容量；`browsable: false` 的磁盘在 Phase 6C 前仅信息展示。
+- 现有 `normalizeWorkspacePath()` 端点行为不变；未携带有效 grant 的请求仍拒绝越界路径。
+
 后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
 
 文件浏览端点会更新当前虚拟工作区到本地目录的映射，并通过 `.trash` 子目录实现回收站；非空目录删除会被拒绝，避免误删整棵目录。
