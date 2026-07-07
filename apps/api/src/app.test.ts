@@ -6,7 +6,7 @@ import { buildDownloadJob } from './download-executor.js'
 
 describe('api skeleton contract', () => {
   it('serves health and app metadata', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const health = await app.inject({ method: 'GET', url: '/api/health' })
     const apps = await app.inject({ method: 'GET', url: '/api/apps' })
@@ -17,7 +17,7 @@ describe('api skeleton contract', () => {
   })
 
   it('creates, lists, and cancels fetch task skeletons', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({
       method: 'POST',
@@ -43,7 +43,7 @@ describe('api skeleton contract', () => {
   })
 
   it('serves file browser and metrics skeletons', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const directory = await app.inject({ method: 'POST', url: '/api/filebrowser/list', payload: { directory: '/Workspace' } })
     const metrics = await app.inject({ method: 'GET', url: '/api/system/metrics' })
@@ -71,7 +71,7 @@ describe('api skeleton contract', () => {
   })
 
   it('rejects invalid fetch submissions with a readable error payload', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const response = await app.inject({
       method: 'POST',
@@ -85,7 +85,7 @@ describe('api skeleton contract', () => {
   })
 
   it('rejects workspace path escapes before real filesystem access is added', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const traversal = await app.inject({
       method: 'POST',
@@ -106,7 +106,7 @@ describe('api skeleton contract', () => {
   })
 
   it('fetch task creation and cancellation are reflected in the job list', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({
       method: 'POST',
@@ -127,7 +127,7 @@ describe('api skeleton contract', () => {
   })
 
   it('deleting a fetch task also removes the corresponding job', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({
       method: 'POST',
@@ -166,7 +166,7 @@ describe('api skeleton contract', () => {
   })
 
   it('clearing fetch task records also removes corresponding jobs', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({
       method: 'POST',
@@ -186,7 +186,7 @@ describe('api skeleton contract', () => {
   })
 
   it('creates one fetch task and job per submitted URL', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({
       method: 'POST',
@@ -204,7 +204,7 @@ describe('api skeleton contract', () => {
   })
 
   it('rejects unsafe transcode paths before invoking ffmpeg', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const drivePath = await app.inject({
       method: 'POST',
@@ -223,7 +223,7 @@ describe('api skeleton contract', () => {
   })
 
   it('updates workspace state instead of returning a fake success', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const updated = await app.inject({
       method: 'PUT',
@@ -244,7 +244,7 @@ describe('api skeleton contract', () => {
   })
 
   it('restores file browser trash entries and rejects non-empty directory deletes', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     await app.inject({ method: 'DELETE', url: '/api/filebrowser/path', payload: { path: '/Workspace/README.txt', to_trash: true } })
     const trash = await app.inject({ method: 'GET', url: '/api/filebrowser/trash' })
@@ -261,7 +261,7 @@ describe('api skeleton contract', () => {
   })
 
   it('cancels queued jobs through the unified jobs endpoint', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({ method: 'POST', url: '/api/jobs', payload: { title: 'Manual job' } })
     const jobId = created.json<{ id: string }>().id
@@ -274,7 +274,7 @@ describe('api skeleton contract', () => {
   })
 
   it('clears logs and marks derived notifications as read', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const created = await app.inject({ method: 'POST', url: '/api/jobs', payload: { title: 'Notification job' } })
     const jobId = created.json<{ id: string }>().id
@@ -293,7 +293,7 @@ describe('api skeleton contract', () => {
   })
 
   it('requires an explicit local shutdown marker', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const response = await app.inject({ method: 'POST', url: '/api/system/shutdown' })
 
@@ -303,7 +303,7 @@ describe('api skeleton contract', () => {
   })
 
   it('returns a readable PSD adapter error when Photoshop is not configured', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const response = await app.inject({
       method: 'POST',

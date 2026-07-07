@@ -4,7 +4,7 @@ import { buildApiServer } from '../app.js'
 
 describe('browser network API contract', () => {
   it('records browser network downloads as jobs and workspace assets', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
     const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
 
     const created = await app.inject({
@@ -55,7 +55,7 @@ describe('browser network API contract', () => {
   })
 
   it('analyzes download routing with yt-dlp preferred and browser fallback', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
 
     const media = await app.inject({
       method: 'POST',
@@ -91,7 +91,7 @@ describe('browser network API contract', () => {
   })
 
   it('records browser network requests as unified jobs', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
     const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
 
     const created = await app.inject({
@@ -136,7 +136,7 @@ describe('browser network API contract', () => {
   })
 
   it('protects browser network write endpoints and target paths', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
     const payload = {
       source_url: 'https://example.com/file.zip',
       filename: 'file.zip',
@@ -164,7 +164,7 @@ describe('browser network API contract', () => {
   })
 
   it('rejects duplicate browser network ids before job creation', async () => {
-    const app = buildApiServer()
+    const app = await buildApiServer()
     const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
     const payload = {
       id: 'desktop-generated-download-duplicate',

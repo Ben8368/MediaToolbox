@@ -48,9 +48,10 @@ Workers / adapters 负责：
 | `GET /api/logs` | 日志列表 | SQLite |
 | `GET /api/logs/metadata` | 日志筛选元数据 | SQLite |
 | `DELETE /api/logs` | 清理日志 | SQLite |
-| `GET /api/notifications/unread-count` | 未读通知数量 | 本地状态 |
-| `DELETE /api/notifications` | 清理通知 | 本地状态 |
-| `POST /api/notifications/read-all` | 全部通知标为已读 | 本地状态 |
+| `GET /api/notifications` | 通知列表（WARNING/ERROR/CRITICAL） | SQLite |
+| `GET /api/notifications/unread-count` | 未读通知数量 | SQLite + settings |
+| `DELETE /api/notifications` | 清理通知 | SQLite settings |
+| `POST /api/notifications/read-all` | 全部通知标为已读 | SQLite settings |
 | `POST /api/jobs` | 创建统一任务 | SQLite |
 | `GET /api/jobs` | 任务列表 | SQLite |
 | `GET /api/jobs/{id}` | 任务详情 | SQLite |

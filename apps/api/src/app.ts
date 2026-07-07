@@ -6,7 +6,7 @@ import { registerAssetRoutes } from './routes/assets.js'
 import { registerFetchRoutes } from './routes/fetch.js'
 import { registerFilebrowserRoutes } from './routes/filebrowser.js'
 import { registerJobRoutes } from './routes/jobs.js'
-import { registerLogRoutes } from './routes/logs.js'
+import { registerLogRoutes, hydrateNotificationState } from './routes/logs.js'
 import { registerPsdRoutes } from './routes/psd.js'
 import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
@@ -35,9 +35,10 @@ function messageFromError(error: ApiErrorLike, statusCode: number) {
   return error.message || '请求失败。'
 }
 
-export function buildApiServer() {
+export async function buildApiServer() {
   const app = Fastify({ logger: true })
   const state = createApiState()
+  await hydrateNotificationState(state)
 
   app.setErrorHandler((error, _request, reply) => {
     const apiError = asApiErrorLike(error)

@@ -27,9 +27,9 @@
 }
 
 .lv-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   min-width: 0;
   padding: 16px 20px 14px;
@@ -47,6 +47,34 @@
   margin: 0;
   color: rgba(255,255,255,.52);
   font-size: 12px;
+}
+
+.lv-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  background: rgba(255,255,255,.03);
+}
+
+.lv-tab {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,.68);
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lv-tab--active {
+  background: rgba(9,124,255,.22);
+  color: #fff;
 }
 
 .lv-filters {

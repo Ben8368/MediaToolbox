@@ -113,6 +113,20 @@ const makeLog = (overrides?: Partial<LogEntry>): LogEntry => ({
   ...overrides,
 })
 
+describe('settings', () => {
+  it('stores and retrieves settings by key', async () => {
+    await db.settings.set('notifications_read_at', '2026-07-07 10:00:00')
+    await expect(db.settings.get('notifications_read_at')).resolves.toBe('2026-07-07 10:00:00')
+    await expect(db.settings.get('missing')).resolves.toBeUndefined()
+  })
+
+  it('updates existing settings', async () => {
+    await db.settings.set('notifications_read_at', '2026-07-07 10:00:00')
+    await db.settings.set('notifications_read_at', '2026-07-07 11:00:00')
+    await expect(db.settings.get('notifications_read_at')).resolves.toBe('2026-07-07 11:00:00')
+  })
+})
+
 describe('logs', () => {
   it('creates and lists log entries', async () => {
     await db.logs.create(makeLog())

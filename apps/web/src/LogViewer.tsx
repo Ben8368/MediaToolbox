@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getApiRuntimePresentation } from '@/api/runtime'
-import { clearLogs, clearNotifications, fetchLogMetadata, fetchLogs, getSystemMetrics, markAllNotificationsAsRead } from '@/api'
+import {
+  clearLogs,
+  clearNotifications,
+  fetchLogMetadata,
+  fetchLogs,
+  fetchNotifications,
+  getSystemMetrics,
+  markAllNotificationsAsRead,
+} from '@/api'
+import { useLogViewerStore } from '@/logViewerStore'
 import { useNotificationUnreadStore } from '@/notificationUnreadStore'
 import { getErrorMessage } from '@/utils'
 
@@ -34,9 +43,12 @@ const LEVEL_LABELS: Record<string, string> = {
 
 const PRODUCTION_LEVELS = ['NOTICE', 'WARNING', 'ERROR', 'CRITICAL']
 const DEVELOPMENT_LEVELS = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL']
+const NOTIFICATION_LEVELS = ['WARNING', 'ERROR', 'CRITICAL']
 
 export function LogViewer() {
   const runtime = getApiRuntimePresentation()
+  const activePanel = useLogViewerStore((s) => s.activePanel)
+  const setActivePanel = useLogViewerStore((s) => s.setActivePanel)
   const [logs, setLogs] = useState<LogResponse>({ total: 0, items: [], page: 1, page_size: 50 })
   const [level, setLevel] = useState('NOTICE')
   const [module, setModule] = useState('')
@@ -51,7 +63,10 @@ export function LogViewer() {
   const setUnreadNotificationCount = useNotificationUnreadStore((s) => s.setUnreadNotificationCount)
   const setClearCooldown = useNotificationUnreadStore((s) => s.setClearCooldown)
 
-  const availableLevels = logMode === 'development' ? DEVELOPMENT_LEVELS : PRODUCTION_LEVELS
+  const isNotificationPanel = activePanel === 'notifications'
+  const availableLevels = isNotificationPanel
+    ? NOTIFICATION_LEVELS
+    : (logMode === 'development' ? DEVELOPMENT_LEVELS : PRODUCTION_LEVELS)
 
   const totalPages = Math.max(Math.ceil((logs.total || 0) / pageSize), 1)
 
@@ -59,7 +74,9 @@ export function LogViewer() {
     setLoading(true)
     setError('')
     try {
-      const data = await fetchLogs({ level, module, page, page_size: pageSize }) as LogResponse
+      const data = isNotificationPanel
+        ? await fetchNotifications({ level, page, page_size: pageSize }) as LogResponse
+        : await fetchLogs({ level, module, page, page_size: pageSize }) as LogResponse
       setLogs({
         ...data,
         total: data.total ?? 0,
@@ -68,11 +85,11 @@ export function LogViewer() {
         page_size: data.page_size ?? pageSize,
       })
     } catch (err: unknown) {
-      setError(getErrorMessage(err) || '日志加载失败')
+      setError(getErrorMessage(err) || (isNotificationPanel ? '通知加载失败' : '日志加载失败'))
     } finally {
       setLoading(false)
     }
-  }, [level, module, page, pageSize])
+  }, [isNotificationPanel, level, module, page, pageSize])
 
   const loadMetadata = useCallback(async () => {
     try {
@@ -89,8 +106,7 @@ export function LogViewer() {
         const metrics = await getSystemMetrics()
         const mode = metrics?.log_mode === 'development' ? 'development' : 'production'
         setLogMode(mode)
-        // 根据模式设置默认等级
-        if (mode === 'production') {
+        if (mode === 'production' && activePanel === 'logs') {
           setLevel('NOTICE')
         }
       } catch {
@@ -98,11 +114,21 @@ export function LogViewer() {
       }
     }
     void loadMetricsAndLogs()
-  }, [])
+  }, [activePanel])
 
   useEffect(() => {
     void pullUnreadNotificationCount()
   }, [pullUnreadNotificationCount])
+
+  useEffect(() => {
+    if (isNotificationPanel) {
+      setLevel('WARNING')
+      setModule('')
+      setPage(1)
+      return
+    }
+    setLevel(logMode === 'development' ? 'DEBUG' : 'NOTICE')
+  }, [isNotificationPanel, logMode])
 
   useEffect(() => {
     void loadLogs()
@@ -117,14 +143,21 @@ export function LogViewer() {
 
   async function handleClear() {
     try {
-      await markAllNotificationsAsRead()
-      await clearNotifications()
-      await clearLogs()
-      setUnreadNotificationCount(0)
-      setClearCooldown()
-      setPage(1)
+      if (isNotificationPanel) {
+        await markAllNotificationsAsRead()
+        await clearNotifications()
+        setUnreadNotificationCount(0)
+        setClearCooldown()
+      } else {
+        await markAllNotificationsAsRead()
+        await clearNotifications()
+        await clearLogs()
+        setUnreadNotificationCount(0)
+        setClearCooldown()
+        setPage(1)
+        await loadMetadata()
+      }
       await loadLogs()
-      await loadMetadata()
     } finally {
       await pullUnreadNotificationCount()
     }
@@ -140,6 +173,12 @@ export function LogViewer() {
     setPage(1)
   }
 
+  function switchPanel(panel: 'notifications' | 'logs') {
+    setActivePanel(panel)
+    setPage(1)
+    setError('')
+  }
+
   function commitJump() {
     const next = Number(jumpPage)
     if (!Number.isFinite(next)) return
@@ -152,8 +191,24 @@ export function LogViewer() {
       <section className="lv-panel">
         <div className="lv-toolbar">
           <div>
-            <h2>日志</h2>
-            <p>{runtime.logsDescription}</p>
+            <h2>{isNotificationPanel ? '通知中心' : '日志'}</h2>
+            <p>{isNotificationPanel ? '查看警告、错误和严重事件。打开后新通知会显示在左侧角标。' : runtime.logsDescription}</p>
+          </div>
+          <div className="lv-tabs">
+            <button
+              type="button"
+              className={`lv-tab ${isNotificationPanel ? 'lv-tab--active' : ''}`}
+              onClick={() => switchPanel('notifications')}
+            >
+              通知
+            </button>
+            <button
+              type="button"
+              className={`lv-tab ${!isNotificationPanel ? 'lv-tab--active' : ''}`}
+              onClick={() => switchPanel('logs')}
+            >
+              日志
+            </button>
           </div>
           <button className="lv-refresh" title="刷新" onClick={() => void loadLogs()}><RefreshIcon /></button>
         </div>
@@ -165,15 +220,20 @@ export function LogViewer() {
               {availableLevels.map((item) => <option key={item} value={item}>{LEVEL_LABELS[item]}</option>)}
             </select>
           </label>
-          <label className="lv-filter">
-            <span>模块</span>
-            <select value={module} onChange={(event) => changeModule(event.target.value)}>
-              <option value="">全部</option>
-              {modules.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
+          {!isNotificationPanel && (
+            <label className="lv-filter">
+              <span>模块</span>
+              <select value={module} onChange={(event) => changeModule(event.target.value)}>
+                <option value="">全部</option>
+                {modules.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+          )}
           <span className="lv-spacer" />
-          <button className="lv-action" onClick={handleClear}><ClearIcon />清空</button>
+          <button className="lv-action" onClick={() => void handleClear()}>
+            <ClearIcon />
+            {isNotificationPanel ? '全部标为已读' : '清空'}
+          </button>
           <button className="lv-action"><MoreIcon />更多</button>
         </div>
 
@@ -196,9 +256,11 @@ export function LogViewer() {
                 <p>{log.event || log.message}</p>
               </div>
             ))}
-            {loading && <div className="lv-empty">正在刷新日志...</div>}
+            {loading && <div className="lv-empty">正在刷新{isNotificationPanel ? '通知' : '日志'}...</div>}
             {!loading && error && <div className="lv-empty lv-empty--error">{error}</div>}
-            {!loading && !error && logs.items.length === 0 && <div className="lv-empty">暂无日志</div>}
+            {!loading && !error && logs.items.length === 0 && (
+              <div className="lv-empty">{isNotificationPanel ? '暂无通知' : '暂无日志'}</div>
+            )}
           </div>
         </div>
 

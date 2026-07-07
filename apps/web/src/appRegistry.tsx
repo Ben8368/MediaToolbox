@@ -20,10 +20,10 @@ export type RegisteredApp = {
 }
 
 export const appRegistry: RegisteredApp[] = [
-  { id: 'browser', label: '浏览器', title: '浏览器', icon: APP_ICON_PATHS.browser, component: BrowserApp, status: 'beta' },
+  { id: 'browser', label: 'Scry浏览器', title: 'Scry浏览器', icon: APP_ICON_PATHS.browser, component: BrowserApp, status: 'beta' },
   { id: 'file-manager', label: '文件管理', title: '文件管理', icon: APP_ICON_PATHS.fileManager, component: FileManagerApp, status: 'stable' },
   { id: 'fetcher', label: '下载', title: '下载', icon: APP_ICON_PATHS.fetcher, component: DownloaderApp, status: 'stable' },
-  { id: 'transcode', label: '转码', title: '转码', icon: APP_ICON_PATHS.transcode, component: TranscodeApp, status: 'beta' },
+  { id: 'transcode', label: '转码', title: '转码', icon: APP_ICON_PATHS.transcode, component: TranscodeApp, status: 'hidden', launcherVisible: false },
   { id: 'ps', label: 'PS', title: 'PS', icon: APP_ICON_PATHS.ps, component: PsdApp, status: 'beta' },
   { id: 'settings', label: '设置', title: '设置', icon: APP_ICON_PATHS.settings, component: SettingsApp, status: 'beta', launcherVisible: false },
   { id: 'logs', label: '日志', title: '日志', icon: APP_ICON_PATHS.logs, component: LogViewer, status: 'hidden', launcherVisible: false },
