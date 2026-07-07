@@ -25,11 +25,17 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 剩余黄灯
 
-- 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示。
-- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 前端已接入（`useBrowserTabs` 管理多 viewId、独立地址/状态、活动标签独占原生 view），但标签切换隐藏旧 view、view 生命周期与多标签下载体验仍待桌面端真机验收；网络事件目前按窗口聚合而非按标签隔离。
-- desktop 已有主进程能力；`apps/web` 构建已加 `base: './'` 支持 `file://` 加载，但 Electron 打包工具链（electron-builder/forge）、preload 生产路径和本地 API 生产运行时（当前依赖 `tsx` + 源码）仍待后续阶段验收。
-- PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内（服务端受控生成、剥离客户端 `__` 保留键）；真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调。
-- 网络速率已接入项目任务流量采样（浏览器下载/请求、yt-dlp 下载）；GPU 指标已接入 Windows/Linux NVIDIA 与 Windows 性能计数器回退（Windows + NVIDIA 本机验收已通过；macOS GPU 仍待补齐）。
+> **技术债追踪：** 系统性优化项已迁移至 `docs/TECH_DEBT.md`，本节仅保留阶段相关的待验收项。
+
+- Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 前端已接入（`useBrowserTabs` 管理多 viewId、独立地址/状态、活动标签独占原生 view）。
+- 网络速率已接入项目任务流量采样（浏览器下载/请求、yt-dlp 下载）；GPU 指标已接入 Windows/Linux NVIDIA 与 Windows 性能计数器回退（Windows + NVIDIA 本机验收已通过）。
+
+**已迁移至技术债追踪：**
+- TD-012: 浏览器 app 纯 Web 模式降级体验
+- TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
+- TD-014: Electron 生产打包工具链（electron-builder/forge、preload 路径、API 运行时）
+- TD-015: PSD 真实 Photoshop 联调（本机命令路径、复杂 batchPlay、image/smart-object slot）
+- TD-016: macOS GPU 指标采集
 
 ## 下一步
 
@@ -57,6 +63,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - 架构说明：`docs/ARCHITECTURE.md`
 - 错题索引：`LESSONS.md`
 - 审查规格：`docs/AI_RULES.md`
+- 技术债追踪：`docs/TECH_DEBT.md`
 - API 契约：`docs/FRONTEND_API_CONTRACT.md`
 - API 联调：`docs/API_VALIDATION.md`
 - UI 兼容：`docs/UI_COMPAT.md`
