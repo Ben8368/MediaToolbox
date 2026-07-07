@@ -28,14 +28,19 @@
 - 右侧状态面板
 - 下载器 UI
 - 文件管理器 UI
+- 转码工作台
+- PSD 工作台核心闭环（检查入口、manifest 编辑、文字 slot 渲染提交、批量渲染结果展示、manifest 保存/加载）
+- 浏览器 app 多标签页前端 UI
+- 右侧状态面板真实系统指标展示（CPU / 内存 / GPU，macOS GPU 待补齐）
 - 设置入口
 - 日志入口
 
-暂缓：
-- 真实文件系统读写（需本地 API 和权限边界）
-- 真实系统指标（需本地 API）
-- Electron/Tauri 桌面打包
-- Photoshop / AE / PSD 编辑器
+仍待验收或补齐：
+- 浏览器 app 桌面端多标签页真机体验（view 生命周期、隐藏旧 view、下载归属和权限提示）
+- Electron 生产打包工具链（electron-builder/forge、preload 路径、本地 API 生产运行时）
+- PSD 真实 Photoshop 本机联调、image / smart-object slot 渲染和复杂 batchPlay
+- macOS GPU 指标采集
+- 更完整的项目上传流量采集（非浏览器请求体场景）
 
 ## 4. 验收标准
 

@@ -61,17 +61,25 @@
 
 ### 绿灯自动提交与推送
 
-当且仅当**同时满足**下列条件时，AI 须在完成本轮改动后**自动** `git commit` 并 `git push` 到远端，无需用户再次口头确认：
+当且仅当**同时满足**下列条件时，AI 须在完成本轮改动后**自动** `git commit`，无需用户再次口头确认：
 
 1. `🚦 Audit Report` 的**总体评价为 🟢 完美**
 2. 客观验证已通过（默认 `npm run verify`）
 3. 工作区存在可提交的实质改动（代码或治理文档）
-4. 用户未在本轮明确禁止提交或推送
+4. 用户未在本轮明确禁止提交
+
+自动 `git push` 额外要求：
+
+1. 当前分支不是 `main` / `master`
+2. 当前分支已有 upstream，或允许使用 `git push -u origin HEAD`
+3. 用户未在本轮明确禁止推送
+
+若当前分支是 `main` / `master`，默认只自动提交，不自动推送；只有用户明确允许本轮推送保护分支时才可执行。
 
 **执行顺序：**
 
 ```text
-编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → git push
+编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → 按分支规则决定是否 git push
 ```
 
 **提交规范（与 `AGENTS.md` 一致）：**
@@ -85,12 +93,13 @@
 - 总体评价为 🔴 或 🟡
 - 客观验证未通过或尚未执行
 - 本轮仅为答疑、评审、方案讨论，无实质文件改动
-- 用户明确要求「先不要提交」「不要推送」或仅要求本地 commit
+- 用户明确要求「先不要提交」或「不要提交」
 - 无待提交变更，或 pre-commit hook 拒绝后尚未修复
 
 **推送约束：**
 
 - 默认推送到当前分支的 upstream；无 upstream 时使用 `git push -u origin HEAD`
+- `main` / `master` 默认不自动推送，除非用户明确允许本轮推送
 - 禁止 `git push --force` 到 `main` / `master`，除非用户明确要求
 
 ### 代码规模触发项
@@ -102,7 +111,7 @@
 ## 2. 审查与验证顺序
 
 ```text
-思考（LESSONS.md）→ 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → （🟢 则 git commit & push）
+思考（LESSONS.md）→ 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → （🟢 则 git commit，按分支规则决定是否 push）
 ```
 
 - 未跑客观验证，不得把客观项标为完成

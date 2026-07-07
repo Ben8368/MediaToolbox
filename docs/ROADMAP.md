@@ -33,7 +33,7 @@
 - [x] 接入 `ffprobe` 媒体探测。
 - [x] 接入 `ffmpeg` 转码预设。
 - [x] 下载多 URL 提交拆分为多任务和多 jobs。
-- [ ] 前端下载工作台对接本地 API（需 Phase 4 持久化完成后再验收）。
+- [x] 前端下载工作台接入本地 API 与 yt-dlp / Browser Network 双通道策略。
 
 ## Phase 4：文件库与任务中心
 

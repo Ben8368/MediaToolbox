@@ -35,14 +35,34 @@
 ## 浏览器网络路径
 
 1. 浏览器资源下载入口创建 Browser Network 下载任务，并写入 `/Workspace/Downloads`。
-2. 工作区上传选择只允许工作区内文件，并在桌面端确认。
-3. 权限允许、拒绝和取消均写入日志审计。
+2. Electron `will-download` 登记的下载 ID 能稳定回写进度、完成、失败和取消状态。
+3. 下载失败、取消或被安全边界拒绝时，浏览器 app、下载 app 或任务中心显示可读提示。
+4. 工作区上传选择只允许工作区内文件，并在桌面端确认。
+5. 权限允许、拒绝和取消均写入日志审计。
+6. 浏览器错误页 overlay 显示错误文案，重试按钮能重新触发加载。
+
+## 浏览器多标签页路径
+
+1. 新建标签页会创建独立 `viewId`，地址、加载状态和错误状态互不覆盖。
+2. 切换标签页时，活动标签独占原生 `WebContentsView`，旧 view 被隐藏而非继续覆盖窗口。
+3. 关闭标签页会销毁对应 view，并拒绝关闭最后一个标签。
+4. 下载、权限、上传和错误事件在侧栏中可读；若当前仍按窗口聚合，需在 `CONTEXT.md` 或 `docs/TECH_DEBT.md` 标记剩余黄灯。
 
 ## PSD 路径
 
 1. 未配置 Photoshop 命令 runner 时，PSD 模板检查返回可读错误。
 2. 配置 runner 后检查工作区内 PSD，确认 slot 列表、画布尺寸和 sourcePath 可读。
 3. 路径越界或 PSD 不存在时，前端显示可读提示。
+4. `POST /api/psd/render` 使用工作区内 PSD 和文字 slot 输入时，输出 PNG 回写到 `/Workspace/Exports`。
+5. 非文字必填 slot 或非文字 slot 输入返回 400 可读错误，不得静默忽略。
+6. 客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键不会影响服务端输出路径。
+7. `POST /api/psd/manifests/save` 和 `GET /api/psd/manifests/load` 能完成 manifest sidecar 保存/加载往返。
+
+## 系统状态路径
+
+1. `GET /api/system/metrics` 的 CPU / 内存 / GPU 值能在右侧状态面板刷新。
+2. Windows/Linux NVIDIA 或 Windows 性能计数器回退路径可用时，GPU 仪表不显示假成功。
+3. macOS GPU 尚未接入时，应显示可读降级状态，并保留技术债记录。
 
 ## 验收记录
 
