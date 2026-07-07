@@ -42,7 +42,6 @@ export type TranscodeJobDraft = {
   outputPath: string
   preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
   title?: string
-  inputGrantId?: string
 }
 
 export type PsdInspectResponse = OkResult & {
@@ -64,8 +63,8 @@ export interface MediaToolboxApi {
   fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
-  inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
-  renderPsdTemplate(template: PsdTemplateManifest, input: PsdRenderInput): Promise<OkResult & { outputPath?: string }>
+  inspectPsdTemplate(psdPath: string, inputGrantId?: string): Promise<PsdInspectResponse>
+  renderPsdTemplate(template: PsdTemplateManifest, input: PsdRenderInput, outputGrantId?: string): Promise<OkResult & { outputPath?: string }>
   savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult>
   loadPsdManifest(psdPath: string): Promise<PsdInspectResponse>
 
