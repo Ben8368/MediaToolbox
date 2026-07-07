@@ -32,11 +32,7 @@ export async function fetchLogs(query: { level?: string; module?: string; page?:
   const moduleName = String(query.module || '')
   const page = Math.max(1, Number(query.page || 1))
   const pageSize = Math.max(1, Number(query.page_size || 50))
-  const baseLogs = logs.length ? logs : [
-    { level: 'NOTICE', module: 'system', time: formatLogTime(), user: 'demo', event: 'Frontend Lite Demo 已启动', message: 'Frontend Lite Demo 已启动' },
-    { level: 'INFO', module: 'file-manager', time: formatLogTime(), user: 'demo', event: '模拟工作区已挂载：/Workspace', message: '模拟工作区已挂载：/Workspace' },
-  ]
-  const filtered = baseLogs
+  const filtered = logs
     .filter((item) => !level || item.level === level)
     .filter((item) => !moduleName || item.module === moduleName)
   const start = (page - 1) * pageSize
@@ -60,12 +56,27 @@ export async function clearLogs() {
 }
 
 export async function getUnreadNotificationCount() {
-  const unread_count = logs.filter((item) => item.level === 'WARNING' || item.level === 'ERROR').length
+  const unread_count = logs.filter((item) => item.level === 'WARNING' || item.level === 'ERROR' || item.level === 'CRITICAL').length
   return { ok: true, unread_count }
 }
 
-export async function fetchNotifications() {
-  return { ok: true, total: 0, items: [] }
+export async function fetchNotifications(query: { level?: string; page?: number; page_size?: number } = {}) {
+  await delay(120)
+  const level = String(query.level || '')
+  const page = Math.max(1, Number(query.page || 1))
+  const pageSize = Math.max(1, Number(query.page_size || 50))
+  const filtered = logs
+    .filter((item) => item.level === 'WARNING' || item.level === 'ERROR' || item.level === 'CRITICAL')
+    .filter((item) => !level || item.level === level)
+  const start = (page - 1) * pageSize
+  return {
+    ok: true,
+    total: filtered.length,
+    items: filtered.slice(start, start + pageSize),
+    page,
+    page_size: pageSize,
+    levels: ['WARNING', 'ERROR', 'CRITICAL'],
+  }
 }
 
 export async function markNotificationAsRead() {

@@ -102,6 +102,7 @@ export interface MediaToolboxApi {
   fetchLogMetadata(): Promise<LogMetadataResponse>
   clearLogs(): Promise<OkResult>
   getUnreadNotificationCount(): Promise<UnreadNotificationResponse>
+  fetchNotifications(query?: { level?: string; page?: number; page_size?: number; unread_only?: boolean }): Promise<LogListResponse>
   clearNotifications(): Promise<OkResult>
   markAllNotificationsAsRead(): Promise<OkResult>
 }

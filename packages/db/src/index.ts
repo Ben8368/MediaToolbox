@@ -18,6 +18,10 @@ export type MediaToolboxDatabase = {
     list(options?: { limit?: number; offset?: number }): Promise<LogEntry[]>
     clear(): Promise<void>
   }
+  settings: {
+    get(key: string): Promise<string | undefined>
+    set(key: string, value: string): Promise<void>
+  }
   close(): void
 }
 

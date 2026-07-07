@@ -33,3 +33,12 @@ export async function clearNotifications() {
 export async function markAllNotificationsAsRead() {
   return apiRequest<{ ok: boolean }>('/api/notifications/read-all', { method: 'POST' })
 }
+
+export async function fetchNotifications(query: { level?: string; page?: number; page_size?: number; unread_only?: boolean } = {}) {
+  return apiRequest<LogListResponse>(`/api/notifications${buildQuery({
+    level: query.level,
+    page: query.page,
+    page_size: query.page_size,
+    unread_only: query.unread_only ? 'true' : undefined,
+  })}`)
+}

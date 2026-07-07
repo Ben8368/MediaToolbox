@@ -1,5 +1,6 @@
 ﻿import { getApiRuntimePresentation, shutdownSystem } from '@/api'
 import { ApiRequestError } from '@/api/http'
+import { markAllNotificationsAsRead } from '@/api'
 import { getAppIcon } from '@/icon-library'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import {
@@ -12,6 +13,7 @@ import {
   IconUser,
 } from '@/LeftNavbarIcons'
 import { useNotificationUnreadStore } from '@/notificationUnreadStore'
+import { useLogViewerStore } from '@/logViewerStore'
 import { useSystemStore } from '@/store'
 import { getErrorMessage } from '@/utils'
 import { useWindowStore } from '@/windowStore'
@@ -32,6 +34,8 @@ export function LeftNavbar() {
   const focusWindow = useWindowStore((state) => state.focusWindow)
   const unreadNotificationCount = useNotificationUnreadStore((s) => s.unreadNotificationCount)
   const pullUnreadNotificationCount = useNotificationUnreadStore((s) => s.pullUnreadNotificationCount)
+  const setUnreadNotificationCount = useNotificationUnreadStore((s) => s.setUnreadNotificationCount)
+  const openNotifications = useLogViewerStore((s) => s.openNotifications)
   const [showPowerMenu, setShowPowerMenu] = useState(false)
   const [isShuttingDown, setIsShuttingDown] = useState(false)
   const [powerComplete, setPowerComplete] = useState<'shutdown' | null>(null)
@@ -135,8 +139,16 @@ export function LeftNavbar() {
             tooltip="日志"
             active={windows.some((item) => item.appType === 'logs' && !item.isMinimized)}
             onClick={() => {
-              void pullUnreadNotificationCount()
-              openWindow('logs')
+              openNotifications()
+              void (async () => {
+                try {
+                  await markAllNotificationsAsRead()
+                  setUnreadNotificationCount(0)
+                } catch {
+                  await pullUnreadNotificationCount()
+                }
+                openWindow('logs')
+              })()
             }}
           />
           {unreadNotificationCount > 0 && (

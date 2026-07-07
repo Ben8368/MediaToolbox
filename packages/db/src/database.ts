@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import type { AssetRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
-import { CURRENT_SCHEMA_VERSION, SCHEMA_V1 } from './schema.js'
+import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS } from './schema.js'
 import type { MediaToolboxDatabase } from './index.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
@@ -14,15 +14,25 @@ export class SqliteDatabase implements MediaToolboxDatabase {
   }
 
   private initializeSchema(): void {
-    const currentVersion = this.getCurrentSchemaVersion()
+    let currentVersion = this.getCurrentSchemaVersion()
 
     if (currentVersion === 0) {
       this.db.exec(SCHEMA_V1)
-      this.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(
-        CURRENT_SCHEMA_VERSION,
-        new Date().toISOString()
-      )
+      this.recordSchemaVersion(1)
+      currentVersion = 1
     }
+
+    if (currentVersion < 2) {
+      this.db.exec(SCHEMA_V2_SETTINGS)
+      this.recordSchemaVersion(2)
+    }
+  }
+
+  private recordSchemaVersion(version: number): void {
+    this.db.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(
+      version,
+      new Date().toISOString(),
+    )
   }
 
   private getCurrentSchemaVersion(): number {
@@ -171,6 +181,25 @@ export class SqliteDatabase implements MediaToolboxDatabase {
 
     clear: async (): Promise<void> => {
       this.db.prepare('DELETE FROM logs').run()
+    },
+  }
+
+  settings = {
+    get: async (key: string): Promise<string | undefined> => {
+      const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+        | { value: string }
+        | undefined
+      return row?.value
+    },
+
+    set: async (key: string, value: string): Promise<void> => {
+      this.db.prepare(`
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+          value = excluded.value,
+          updated_at = excluded.updated_at
+      `).run(key, value, new Date().toISOString())
     },
   }
 

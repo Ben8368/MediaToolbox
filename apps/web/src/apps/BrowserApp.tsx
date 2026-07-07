@@ -46,7 +46,7 @@ export function BrowserApp() {
         <div className="browser-type-list">
           <button className="browser-type browser-type--active" type="button" style={{ '--browser-accent': '#7cc4ff' } as CSSProperties}>
             <span className="browser-type__icon">WWW</span>
-            <span className="browser-type__text"><strong>浏览器</strong></span>
+            <span className="browser-type__text"><strong>Scry浏览器</strong></span>
           </button>
         </div>
         <div className="browser-sidebar-card">
