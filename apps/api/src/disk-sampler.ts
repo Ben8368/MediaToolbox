@@ -76,16 +76,20 @@ export async function listLocalDiskCandidates(): Promise<LocalDiskCandidate[]> {
   }
 
   if (process.platform === 'darwin') {
+    const candidates: LocalDiskCandidate[] = [{ name: '系统磁盘', root: '/' }]
     const entries = await fs.readdir('/Volumes', { withFileTypes: true }).catch(() => [])
-    return entries
-      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
-      .map((entry) => {
-        const root = `/Volumes/${entry.name}`
-        return { name: formatVolumeDiskName(entry.name), root }
-      })
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || (!entry.isDirectory() && !entry.isSymbolicLink())) continue
+
+      const root = `/Volumes/${entry.name}`
+      const realRoot = await fs.realpath(root).catch(() => root)
+      if (realRoot === '/') continue
+      candidates.push({ name: formatVolumeDiskName(entry.name), root })
+    }
+    return candidates
   }
 
-  return []
+  return [{ name: '系统磁盘', root: path.parse(process.cwd()).root || '/' }]
 }
 
 export function findHostingDiskRoot(physicalPath: string, candidates: LocalDiskCandidate[]): string {
@@ -121,8 +125,22 @@ export function formatFallbackDiskName(root: string): string {
 export async function buildFilebrowserDisks(input: {
   workspaceVirtualPath: string
   physicalWorkspaceRoot: string
+  systemDisks?: SystemDiskInfo[]
 }): Promise<FilebrowserDiskInfo[]> {
-  const disks = await listSystemDisks()
+  const disks = input.systemDisks ?? await listSystemDisks()
+  if (disks.length === 0) {
+    const fallbackRoot = path.parse(path.resolve(input.physicalWorkspaceRoot)).root || path.parse(process.cwd()).root || '/'
+    const usage = await readDiskUsage(fallbackRoot)
+    if (usage) {
+      return [{
+        name: formatFallbackDiskName(fallbackRoot),
+        root: fallbackRoot,
+        ...usage,
+        path: input.workspaceVirtualPath,
+        browsable: true,
+      }]
+    }
+  }
   if (disks.length === 0) return []
 
   const hostRoot = findHostingDiskRoot(
