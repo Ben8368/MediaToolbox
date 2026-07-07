@@ -51,11 +51,11 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 
 共享类型位于 `packages/contracts`，任务状态机位于 `packages/job-core`。
 
-## 工作区外路径授权（规划中）
+## 工作区外路径授权
 
 当前文件浏览默认将虚拟 `/Workspace` 映射到受控本地目录，`apps/api` 通过 `normalizeWorkspacePath()` 拒绝盘符、UNC 和 `..` 逃逸。该默认沙箱保持不变。
 
-后续 Phase 6 将引入 **PathGrant** 作为越界访问的唯一入口，与浏览器网络的「用户确认 + 权限审计」模式一致：
+Phase 6 已引入 **PathGrant** 作为越界访问的唯一入口，与浏览器网络的「用户确认 + 权限审计」模式一致：
 
 ```text
 用户选路（桌面原生 dialog）
@@ -72,6 +72,6 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - `apps/api` 负责签发、校验、绑定 job、吊销 grant，并写入审计日志；禁止信任客户端裸路径。
 - worker 只消费 job 附带的 grant，不自行扩展搜索范围。
 - 读授权与写授权分离；写入工作区外必须二次确认，且权限窄于读取。
-- 第一版优先单文件 read grant；目录级与整盘浏览后置到 Phase 6C。
+- 当前已接入单文件读授权、单路径写授权和目录级读授权管道；桌面端真实体验仍按 `docs/API_VALIDATION.md` 跟进验收。
 
-详细分期与端点规划见 `docs/ROADMAP.md` Phase 6 与 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节。
+详细分期与端点状态见 `docs/ROADMAP.md` Phase 6 与 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节。关键决策记录见 `docs/ADR/0002-workspace-sandbox-and-pathgrant.md`。

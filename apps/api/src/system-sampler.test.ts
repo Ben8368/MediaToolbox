@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { formatBytesPerSecond } from '@mediatoolbox/shared'
 
 import {
@@ -35,18 +35,22 @@ describe('system sampler', () => {
   })
 
   it('aggregates project network rates from browser and yt-dlp activity', () => {
-    const now = Date.now()
+    const now = new Date('2026-01-01T00:00:00.000Z')
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+
     const rates = sampleProjectNetworkRates({
       browserDownloads: [{ received_bytes: 2048 } as never],
       browserRequests: [{ response_bytes: 1024, request_bytes: 512 } as never],
       fetchTasks: [{ status: 'running', state: { download_bytes_per_sec: 4096 } } as never],
       networkSample: {
-        at: now - 1000,
+        at: now.getTime() - 1000,
         browserReceivedBytes: 1024,
         browserResponseBytes: 0,
         browserRequestBytes: 0,
       },
     })
+    vi.useRealTimers()
 
     expect(rates.uploadBytesPerSec).toBe(512)
     expect(rates.downloadBytesPerSec).toBe(1024 + 1024 + 4096)
