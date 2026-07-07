@@ -98,7 +98,7 @@ Workers / adapters 负责：
 - 共享契约：`packages/contracts`
 - 历史测试夹具：`apps/web/src/mockApi/`
 
-说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。系统指标当前采样 uptime、CPU 负载近似值和内存占用；网络速率和 GPU 仍保留为未接入采集器的 0 值。
+说明：状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。系统指标当前采样 uptime、CPU、内存、项目任务网络速率和 GPU；网络速率统计 MediaToolbox 浏览器下载、浏览器请求与 yt-dlp 任务流量，GPU 采样覆盖 Windows/Linux NVIDIA、Windows GPU 计数器回退，macOS GPU 仍待补齐。
 
 当前 `POST /api/fetch/tasks`、`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`、`POST /api/fetch/tasks/clear`、`GET /api/fetch/tasks/{id}/file`、`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect` 和浏览器网络写入端点已加入基础 Fastify schema。`POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 在兼容 `urls` 数组时，会按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`；`GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID；受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**，并剥离客户端传入的 `__outputPath`/`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；越界的物理路径不会回泄给前端。`POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态；`GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。后续接入真实执行器时，应继续补齐更细的业务字段校验和错误码约定。
 
@@ -112,7 +112,7 @@ Workers / adapters 负责：
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
 
-说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、权限审计、日志清理、通知已读、统一任务取消和基础系统采样已接入，但不表示网络/GPU 指标、受控上传确认流、PSD 工作台 UI 和 Photoshop 本机联调已经完整完成。
+说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU 与 Windows GPU 计数器回退已接入，但不表示 macOS GPU 指标、Electron 生产打包、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
 
 ## 5. 迁移规则
 

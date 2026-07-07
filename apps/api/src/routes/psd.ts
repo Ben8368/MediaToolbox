@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises'
-import path from 'node:path'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult } from '@mediatoolbox/contracts'
 import { PsdWorkerEngineNotConfiguredError, runPsdWorkerJob } from '@mediatoolbox/psd-worker'
@@ -8,6 +7,7 @@ import type { PsdRenderInput, PsdTemplateManifest } from '@mediatoolbox/psd-core
 import { psdInspectSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog } from '../utils.js'
+import { toPhysicalWorkspacePath, toVirtualWorkspacePath } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
 type PsdInspectResponse = OkResult & {
@@ -20,7 +20,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     { schema: psdInspectSchema },
     async (request, reply) => {
       const virtualPath = normalizeWorkspacePath(request.body.psdPath, state.workspaceRoot)
-      const physicalPath = toPhysicalPath(state, virtualPath)
+      const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
       try {
         const result = await runPsdWorkerJob({ type: 'inspect', psdPath: physicalPath })
         if (result.type !== 'inspect') return { ok: false, message: 'PSD worker 返回了非检查结果。' }
@@ -68,7 +68,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       }
 
       // 输出路径由服务端在工作区内生成，回写虚拟路径供前端展示。
-      const virtualOutput = toVirtualWorkspacePath(state, result.outputPath) ?? payload.virtualOutput
+      const virtualOutput = safeVirtualWorkspacePath(state, result.outputPath) ?? payload.virtualOutput
 
       addLog(state.db, 'INFO', 'psd', `PSD 模板渲染完成：${template.name}`)
       return { ok: true, outputPath: virtualOutput }
@@ -92,7 +92,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         return { ok: false, message: 'Missing manifest.sourcePath in request body' }
       }
       const virtualPath = normalizeWorkspacePath(manifest.sourcePath, state.workspaceRoot)
-      const physicalPsdPath = toPhysicalPath(state, virtualPath)
+      const physicalPsdPath = toPhysicalWorkspacePath(state, virtualPath)
       const sidecarPath = `${physicalPsdPath}.manifest.json`
       try {
         const persisted: PsdTemplateManifest = { ...manifest, sourcePath: virtualPath }
@@ -111,7 +111,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     '/api/psd/manifests/load',
     async (request, reply) => {
       const virtualPath = normalizeWorkspacePath(request.query.psdPath, state.workspaceRoot)
-      const physicalPsdPath = toPhysicalPath(state, virtualPath)
+      const physicalPsdPath = toPhysicalWorkspacePath(state, virtualPath)
       const sidecarPath = `${physicalPsdPath}.manifest.json`
       try {
         const raw = await fs.readFile(sidecarPath, 'utf-8')
@@ -147,7 +147,7 @@ export function resolveRenderPayload(
     throw new Error('Missing template.sourcePath in request body')
   }
   const virtualSource = normalizeWorkspacePath(template.sourcePath, state.workspaceRoot)
-  const physicalSource = toPhysicalPath(state, virtualSource)
+  const physicalSource = toPhysicalWorkspacePath(state, virtualSource)
 
   const safeInput: PsdRenderInput = {}
   for (const [key, value] of Object.entries(input)) {
@@ -156,7 +156,7 @@ export function resolveRenderPayload(
   }
 
   const virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
-  const physicalOutput = toPhysicalPath(state, virtualOutput)
+  const physicalOutput = toPhysicalWorkspacePath(state, virtualOutput)
   safeInput.__outputPath = physicalOutput
 
   return {
@@ -171,20 +171,10 @@ function safeFileStem(id: string): string {
   return stem || 'render'
 }
 
-function toVirtualWorkspacePath(state: ApiState, physicalPath: string): string | null {
-  const root = path.resolve(state.physicalWorkspaceRoot)
-  const resolved = path.resolve(physicalPath)
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) return null
-  const relative = resolved.slice(root.length).replace(/\\/g, '/')
-  return relative ? `${state.workspaceRoot}${relative}` : state.workspaceRoot
-}
-
-function toPhysicalPath(state: ApiState, virtualPath: string): string {
-  const relative = virtualPath === state.workspaceRoot ? '' : virtualPath.slice(state.workspaceRoot.length + 1)
-  const resolved = path.resolve(state.physicalWorkspaceRoot, ...relative.split('/').filter(Boolean))
-  const root = path.resolve(state.physicalWorkspaceRoot)
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error('Physical PSD path escaped workspace root.')
+function safeVirtualWorkspacePath(state: ApiState, physicalPath: string): string | null {
+  try {
+    return toVirtualWorkspacePath(state, physicalPath)
+  } catch {
+    return null
   }
-  return resolved
 }
