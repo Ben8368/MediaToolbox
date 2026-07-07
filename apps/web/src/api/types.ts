@@ -42,6 +42,7 @@ export type TranscodeJobDraft = {
   outputPath: string
   preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
   title?: string
+  inputGrantId?: string
 }
 
 export type PsdInspectResponse = OkResult & {

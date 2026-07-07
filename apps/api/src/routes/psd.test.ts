@@ -18,9 +18,9 @@ function baseTemplate(overrides: Partial<PsdTemplateManifest> = {}): PsdTemplate
 }
 
 describe('resolveRenderPayload', () => {
-  it('converts source to physical path and emits a server-controlled output inside the workspace', () => {
+  it('converts source to physical path and emits a server-controlled output inside the workspace', async () => {
     const state = createApiState()
-    const payload = resolveRenderPayload(state, baseTemplate(), { title: 'Sale' })
+    const payload = await resolveRenderPayload(state, baseTemplate(), { title: 'Sale' })
 
     const root = path.resolve(state.physicalWorkspaceRoot)
     expect(payload.template.sourcePath?.startsWith(root)).toBe(true)
@@ -29,9 +29,9 @@ describe('resolveRenderPayload', () => {
     expect(payload.input.title).toBe('Sale')
   })
 
-  it('strips client-provided __outputPath so it cannot escape the workspace', () => {
+  it('strips client-provided __outputPath so it cannot escape the workspace', async () => {
     const state = createApiState()
-    const payload = resolveRenderPayload(state, baseTemplate(), {
+    const payload = await resolveRenderPayload(state, baseTemplate(), {
       title: 'Sale',
       __outputPath: 'C:/Windows/evil.png',
     })
@@ -41,9 +41,9 @@ describe('resolveRenderPayload', () => {
     expect(payload.input.__outputPath).not.toBe('C:/Windows/evil.png')
   })
 
-  it('strips client-provided __psdPath so it cannot override the workspace source', () => {
+  it('strips client-provided __psdPath so it cannot override the workspace source', async () => {
     const state = createApiState()
-    const payload = resolveRenderPayload(state, baseTemplate(), {
+    const payload = await resolveRenderPayload(state, baseTemplate(), {
       title: 'Sale',
       __psdPath: 'C:/secrets/other.psd',
     })
@@ -51,36 +51,36 @@ describe('resolveRenderPayload', () => {
     expect(payload.input.__psdPath).toBeUndefined()
   })
 
-  it('rejects a source path that escapes the workspace root', () => {
+  it('rejects a source path that escapes the workspace root', async () => {
     const state = createApiState()
-    expect(() =>
+    await expect(
       resolveRenderPayload(state, baseTemplate({ sourcePath: '/Workspace/../../etc/passwd.psd' }), { title: 'x' }),
-    ).toThrow()
+    ).rejects.toThrow()
   })
 
-  it('rejects a source path using a drive letter', () => {
+  it('rejects a source path using a drive letter', async () => {
     const state = createApiState()
-    expect(() =>
+    await expect(
       resolveRenderPayload(state, baseTemplate({ sourcePath: 'C:/Windows/win.psd' }), { title: 'x' }),
-    ).toThrow()
+    ).rejects.toThrow()
   })
 
-  it('requires template.sourcePath', () => {
+  it('requires template.sourcePath', async () => {
     const state = createApiState()
     const template = baseTemplate()
     delete template.sourcePath
-    expect(() => resolveRenderPayload(state, template, { title: 'x' })).toThrow(/sourcePath/)
+    await expect(resolveRenderPayload(state, template, { title: 'x' })).rejects.toThrow(/sourcePath/)
   })
 
-  it('rejects required non-text slots before invoking the worker engine', () => {
+  it('rejects required non-text slots before invoking the worker engine', async () => {
     const state = createApiState()
-    expect(() =>
+    await expect(
       resolveRenderPayload(state, baseTemplate({
         slots: [
           { id: 'title', kind: 'text', label: 'Title', layerPath: ['title'], required: false },
           { id: 'hero', kind: 'smart-object', label: 'Hero', layerPath: ['hero'], required: true },
         ],
       }), { title: 'x' }),
-    ).toThrow(/text slots only/)
+    ).rejects.toThrow(/text slots only/)
   })
 })
