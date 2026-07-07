@@ -14,6 +14,6 @@
 
 ## 只记三件事
 
-- 代码改动后按 `docs/AI_RULES.md` 输出 `🚦 Audit Report`，再跑 `npm run verify`。
+- 代码改动后按 `docs/AI_RULES.md` 输出 `🚦 Audit Report`，再跑 `npm run verify`；🟢 且验证通过时自动 commit 并 push（细则见 `docs/AI_RULES.md`）。
 - 本仓库是 TypeScript monorepo；UI 经本地 API、worker 和 adapter 使用生产能力。
 - 不确定时回到 `AGENTS.md`，不要在本摘要里新增规则。

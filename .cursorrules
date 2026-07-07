@@ -11,6 +11,7 @@
 ## 硬规则
 
 - 代码改动后输出 `🚦 Audit Report`，再跑客观验证。
+- Audit Report 为 🟢 且验证通过时，自动 commit 并 push 到远端（用户明确禁止时除外）；细则见 `docs/AI_RULES.md`。
 - 前端验证默认：`npm --prefix frontend run verify`。
 - 后端改动至少执行：`npm --prefix backend run typecheck`。
 - 组件只做展示和交互，不实现媒体处理、文件系统或外部工具逻辑。
