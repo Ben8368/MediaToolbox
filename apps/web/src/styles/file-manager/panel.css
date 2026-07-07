@@ -91,6 +91,35 @@
   color: rgba(255,255,255,.28);
 }
 
+.fm-upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 90px;
+  min-height: 29px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.82);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0 11px;
+  font-size: 11px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.fm-upload-label:hover {
+  background: rgba(255,255,255,.09);
+  color: #fff;
+}
+
+.fm-upload-label--disabled {
+  cursor: not-allowed;
+  color: rgba(255,255,255,.28);
+  pointer-events: none;
+}
+
 .fm-table {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);

@@ -37,6 +37,8 @@ export const restoreFilebrowserTrash = forwardMethod('restoreFilebrowserTrash')
 export const purgeFilebrowserTrash = forwardMethod('purgeFilebrowserTrash')
 export const emptyFilebrowserTrash = forwardMethod('emptyFilebrowserTrash')
 export const setWorkspace = forwardMethod('setWorkspace')
+export const uploadFilebrowserFile = forwardMethod('uploadFilebrowserFile')
+export const filebrowserFileDownloadUrl = forwardMethod('filebrowserFileDownloadUrl')
 
 export const getSystemMetrics = forwardMethod('getSystemMetrics')
 export const fetchSystemRuntimeMetrics = forwardMethod('fetchSystemRuntimeMetrics')
