@@ -2,12 +2,15 @@ import { useCallback, useState, type FormEvent } from 'react'
 
 import { inspectPsdTemplate, loadPsdManifest, renderPsdTemplate, savePsdManifest } from '@/api'
 import { ApiRequestError } from '@/api/http'
+import { requestReadGrant, requestWriteGrant } from '@/api/real/pathGrants'
 import type { PsdTemplateManifest, TemplateSlotKind } from '@mediatoolbox/contracts'
 
 type ActiveTab = 'inspect' | 'editor' | 'batch'
 
 export function PsdApp() {
   const [psdPath, setPsdPath] = useState('/Workspace/PSD/template.psd')
+  const [inputGrantId, setInputGrantId] = useState<string | null>(null)
+  const [outputGrantId, setOutputGrantId] = useState<string | null>(null)
   const [manifest, setManifest] = useState<PsdTemplateManifest | null>(null)
   const [editableManifest, setEditableManifest] = useState<PsdTemplateManifest | null>(null)
   const [manifestDirty, setManifestDirty] = useState(false)
@@ -21,6 +24,19 @@ export function PsdApp() {
   const [batchInputs, setBatchInputs] = useState<Record<string, string>>({})
   const [rendering, setRendering] = useState(false)
   const [renderResult, setRenderResult] = useState<{ success: boolean; message: string; outputPath?: string } | null>(null)
+
+  const importExternal = useCallback(async () => {
+    const grant = await requestReadGrant()
+    if (!grant) return
+    setInputGrantId(grant.id)
+    setPsdPath(`[外部文件] ${grant.displayName}`)
+  }, [])
+
+  const selectExportPath = useCallback(async () => {
+    const grant = await requestWriteGrant()
+    if (!grant) return
+    setOutputGrantId(grant.id)
+  }, [])
 
   const inspect = useCallback(async (event: FormEvent) => {
     event.preventDefault()
@@ -40,7 +56,7 @@ export function PsdApp() {
         if (err instanceof ApiRequestError && err.status === 404) return null
         throw err
       })
-      const result = loaded?.manifest ? loaded : await inspectPsdTemplate(trimmedPath)
+      const result = loaded?.manifest ? loaded : await inspectPsdTemplate(trimmedPath, inputGrantId ?? undefined)
       if (!result.manifest) throw new Error(result.message || 'PSD 模板检查未返回 manifest')
       setManifest(result.manifest)
       setEditableManifest(JSON.parse(JSON.stringify(result.manifest)))
@@ -50,7 +66,7 @@ export function PsdApp() {
     } finally {
       setLoading(false)
     }
-  }, [loading, psdPath])
+  }, [loading, psdPath, inputGrantId])
 
   const saveManifest = useCallback(async () => {
     if (!editableManifest || saving) return
@@ -90,7 +106,7 @@ export function PsdApp() {
       setRendering(true)
       setRenderResult(null)
       try {
-        const result = await renderPsdTemplate(manifest, batchInputs)
+        const result = await renderPsdTemplate(manifest, batchInputs, outputGrantId ?? undefined)
         if (result.ok && result.outputPath) {
           setRenderResult({ success: true, message: '渲染成功', outputPath: result.outputPath })
         } else {
@@ -102,7 +118,7 @@ export function PsdApp() {
         setRendering(false)
       }
     },
-    [manifest, batchInputs, rendering],
+    [manifest, batchInputs, rendering, outputGrantId],
   )
 
   const textSlots = manifest?.slots.filter((s) => s.kind === 'text') ?? []
@@ -146,7 +162,36 @@ export function PsdApp() {
         <form className="psd-form" onSubmit={inspect}>
           <label className="mt-field">
             <span>PSD 路径</span>
-            <input value={psdPath} onChange={(event) => setPsdPath(event.target.value)} placeholder="/Workspace/PSD/template.psd" />
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <input
+                value={psdPath}
+                onChange={(event) => {
+                  setPsdPath(event.target.value)
+                  if (inputGrantId) setInputGrantId(null)
+                }}
+                placeholder="/Workspace/PSD/template.psd"
+                readOnly={!!inputGrantId}
+                style={{ flex: 1 }}
+              />
+              {inputGrantId && (
+                <button
+                  type="button"
+                  className="mt-btn"
+                  onClick={() => { setInputGrantId(null); setPsdPath('/Workspace/PSD/template.psd') }}
+                  title="清除外部文件授权"
+                >
+                  ✕
+                </button>
+              )}
+              <button
+                type="button"
+                className="mt-btn"
+                onClick={importExternal}
+                title="从外部导入 PSD（需要桌面版）"
+              >
+                从外部导入
+              </button>
+            </div>
           </label>
           <button className="mt-btn mt-btn--primary" type="submit" disabled={!psdPath.trim() || loading}>
             {loading ? '检查中' : '检查模板'}
@@ -266,9 +311,19 @@ export function PsdApp() {
                     />
                   </label>
                 ))}
-                <button className="mt-btn mt-btn--primary" type="submit" disabled={rendering || unsupportedRequiredSlots.length > 0}>
-                  {rendering ? '渲染中...' : '开始渲染'}
-                </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button type="button" className="mt-btn" onClick={selectExportPath}>
+                    {outputGrantId ? '✓ 已选择导出路径' : '导出到外部'}
+                  </button>
+                  {outputGrantId && (
+                    <button type="button" className="mt-btn" onClick={() => setOutputGrantId(null)} title="取消外部导出">
+                      ✕
+                    </button>
+                  )}
+                  <button className="mt-btn mt-btn--primary" type="submit" disabled={rendering || unsupportedRequiredSlots.length > 0} style={{ marginLeft: 'auto' }}>
+                    {rendering ? '渲染中...' : '开始渲染'}
+                  </button>
+                </div>
               </form>
             )}
             {renderResult && (

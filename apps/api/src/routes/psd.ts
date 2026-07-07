@@ -8,33 +8,18 @@ import { psdInspectSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog } from '../utils.js'
 import { toPhysicalWorkspacePath, toVirtualWorkspacePath } from '../workspace-files.js'
-import { resolveGrantPath, normalizeWorkspacePath } from '../workspace-path.js'
+import { normalizeWorkspacePath, resolveGrantPath } from '../workspace-path.js'
 
 type PsdInspectResponse = OkResult & {
   manifest?: PsdTemplateManifest
 }
 
 export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
-  app.post<{ Body: { psdPath?: string; inputGrantId?: string }; Reply: PsdInspectResponse }>(
+  app.post<{ Body: { psdPath?: string }; Reply: PsdInspectResponse }>(
     '/api/psd/templates/inspect',
     { schema: psdInspectSchema },
     async (request, reply) => {
-      const { psdPath, inputGrantId } = request.body
-      if (inputGrantId) {
-        // grant 模式：直接得到物理路径，跳过虚拟路径系统
-        const physicalPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
-        try {
-          const result = await runPsdWorkerJob({ type: 'inspect', psdPath: physicalPath })
-          if (result.type !== 'inspect') return { ok: false, message: 'PSD worker 返回了非检查结果。' }
-          addLog(state.db, 'INFO', 'psd', `PSD 模板检查完成（grant）：${inputGrantId}`)
-          return { ok: true, manifest: { ...result.manifest, sourcePath: `__grant:${inputGrantId}` } }
-        } catch (error) {
-          if (error instanceof PsdWorkerInputError) { reply.status(400); return { ok: false, message: error.message } }
-          if (error instanceof PsdWorkerEngineNotConfiguredError) { reply.status(503); return { ok: false, message: 'Photoshop 命令未配置，暂不能检查 PSD 模板。' } }
-          reply.status(400); return { ok: false, message: error instanceof Error ? error.message : String(error) }
-        }
-      }
-      const virtualPath = normalizeWorkspacePath(psdPath, state.workspaceRoot)
+      const virtualPath = normalizeWorkspacePath(request.body.psdPath, state.workspaceRoot)
       const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
       try {
         const result = await runPsdWorkerJob({ type: 'inspect', psdPath: physicalPath })
@@ -58,10 +43,10 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
   )
 
   app.post<{
-    Body: { template?: PsdTemplateManifest; input?: PsdRenderInput; inputGrantId?: string }
+    Body: { template?: PsdTemplateManifest; input?: PsdRenderInput; inputGrantId?: string; outputGrantId?: string }
     Reply: OkResult & { outputPath?: string }
   }>('/api/psd/render', async (request, reply) => {
-    const { template, input, inputGrantId } = request.body
+    const { template, input, inputGrantId, outputGrantId } = request.body
 
     if (!template) {
       reply.status(400)
@@ -74,7 +59,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
 
     let payload: ResolvedRenderPayload
     try {
-      payload = await resolveRenderPayload(state, template, input, inputGrantId)
+      payload = await resolveRenderPayload(state, template, input, inputGrantId, outputGrantId)
     } catch (error) {
       reply.status(400)
       return { ok: false, message: error instanceof Error ? error.message : String(error) }
@@ -162,18 +147,13 @@ export async function resolveRenderPayload(
   template: PsdTemplateManifest,
   input: PsdRenderInput,
   inputGrantId?: string,
+  outputGrantId?: string,
 ): Promise<ResolvedRenderPayload> {
-  if (!template.sourcePath && !inputGrantId) {
+  if (!template.sourcePath) {
     throw new Error('Missing template.sourcePath in request body')
   }
-  let physicalSource: string
-  if (inputGrantId) {
-    // grant 模式：直接获取物理路径，跳过虚拟路径系统
-    physicalSource = await resolveGrantPath(inputGrantId, state.db, 'file.read')
-  } else {
-    const virtualSource = normalizeWorkspacePath(template.sourcePath, state.workspaceRoot)
-    physicalSource = toPhysicalWorkspacePath(state, virtualSource)
-  }
+  const virtualSource = normalizeWorkspacePath(template.sourcePath, state.workspaceRoot)
+  const physicalSource = toPhysicalWorkspacePath(state, virtualSource)
 
   const safeInput: PsdRenderInput = {}
   for (const [key, value] of Object.entries(input)) {
@@ -182,8 +162,16 @@ export async function resolveRenderPayload(
   }
   validateRenderInput(template, safeInput)
 
-  const virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
-  const physicalOutput = toPhysicalWorkspacePath(state, virtualOutput)
+  let physicalOutput: string
+  let virtualOutput: string
+  if (outputGrantId) {
+    // grant 模式：直接用授权的物理路径
+    physicalOutput = await resolveGrantPath(outputGrantId, state.db, 'file.write')
+    virtualOutput = `__grant:${outputGrantId}`  // 前端展示用的占位符
+  } else {
+    virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
+    physicalOutput = toPhysicalWorkspacePath(state, virtualOutput)
+  }
   safeInput.__outputPath = physicalOutput
 
   return {

@@ -23,20 +23,21 @@ export function cancelJob(jobId: string): Promise<OkResult> {
   })
 }
 
-export function inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse> {
+export function inspectPsdTemplate(psdPath: string, inputGrantId?: string): Promise<PsdInspectResponse> {
   return apiRequest<PsdInspectResponse>('/api/psd/templates/inspect', {
     method: 'POST',
-    body: JSON.stringify({ psdPath }),
+    body: JSON.stringify({ psdPath, ...(inputGrantId ? { inputGrantId } : {}) }),
   })
 }
 
 export function renderPsdTemplate(
   template: PsdTemplateManifest,
   input: PsdRenderInput,
+  outputGrantId?: string,
 ): Promise<OkResult & { outputPath?: string }> {
   return apiRequest<OkResult & { outputPath?: string }>('/api/psd/render', {
     method: 'POST',
-    body: JSON.stringify({ template, input }),
+    body: JSON.stringify({ template, input, ...(outputGrantId ? { outputGrantId } : {}) }),
   })
 }
 
