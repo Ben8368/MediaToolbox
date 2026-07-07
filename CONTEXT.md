@@ -29,7 +29,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - Browser Network 第一版已覆盖隔离 session、下载事件、稳定 ID 回写、工作区上传文件选择确认、基础弹窗策略、权限审计和 API/jobs 契约；下载 app 已提供媒体解析/浏览器资源双通道入口；错误页 UI 已收口（overlay 显示错误文案与重试按钮）；多标签页 UI 前端已接入（`useBrowserTabs` 管理多 viewId、独立地址/状态、活动标签独占原生 view），但标签切换隐藏旧 view、view 生命周期与多标签下载体验仍待桌面端真机验收；网络事件目前按窗口聚合而非按标签隔离。
 - desktop 已有主进程能力；`apps/web` 构建已加 `base: './'` 支持 `file://` 加载，但 Electron 打包工具链（electron-builder/forge）、preload 生产路径和本地 API 生产运行时（当前依赖 `tsx` + 源码）仍待后续阶段验收。
 - PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内（服务端受控生成、剥离客户端 `__` 保留键）；真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调。
-- 网络速率已接入浏览器下载增量采样；GPU 指标仍未接入系统级采集器。
+- 网络速率已接入项目任务流量采样（浏览器下载/请求、yt-dlp 下载）；GPU 指标已接入 Windows/Linux NVIDIA 与 Windows 性能计数器回退。
 
 ## 下一步
 
@@ -37,7 +37,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并补齐 Electron 生产打包工具链（electron-builder/forge、preload 与 API 运行时打包）。
-5. 后续接入系统级 GPU 指标和更完整的网络上下行采集器。
+5. 后续补齐 macOS GPU 指标与更完整的项目上传流量采集（非浏览器请求体场景）。
 
 ## 常用命令
 

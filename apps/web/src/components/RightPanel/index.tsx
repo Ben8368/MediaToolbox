@@ -119,8 +119,11 @@ export function RightPanel() {
       </div>
 
       <div className="rp-card">
-        <div className="rp-card-title">网络</div>
-        <div className="rp-net">
+        <div className="rp-card-head rp-runtime-head">
+          <div className="rp-card-title">网络</div>
+          <span className="rp-card-meta">项目任务</span>
+        </div>
+        <div className="rp-net" title="仅统计 MediaToolbox 浏览器下载、浏览器请求与 yt-dlp 任务流量">
           <div className="rp-net-row">
             <span className="rp-net-up">↑ {network.upload?.text || '0 B/s'}</span>
             <span className="rp-net-down">↓ {network.download?.text || '0 B/s'}</span>

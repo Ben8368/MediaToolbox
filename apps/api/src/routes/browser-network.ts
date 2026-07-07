@@ -165,6 +165,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
         url: normalizeBrowserRequestUrl(request.body.url),
         status: 'running',
         request_headers: request.body.request_headers ?? {},
+        request_bytes: Math.max(0, Math.floor(request.body.request_bytes ?? 0)),
         response_bytes: 0,
         created_at: now,
         updated_at: now,

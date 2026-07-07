@@ -53,7 +53,9 @@ describe('api skeleton contract', () => {
     expect(metricsBody).toMatchObject({
       runtime: expect.any(Object),
       system: expect.objectContaining({
-        gpu_available: false,
+        cpu_percent: expect.any(Number),
+        gpu_available: expect.any(Boolean),
+        gpu_percent: expect.any(Number),
         memory_percent: expect.any(Number),
         memory_used_bytes: expect.any(Number),
         memory_total_bytes: expect.any(Number),
