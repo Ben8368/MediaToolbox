@@ -2,10 +2,9 @@ import { useCallback, useState, type FormEvent } from 'react'
 
 import { inspectPsdTemplate, loadPsdManifest, renderPsdTemplate, savePsdManifest } from '@/api'
 import { ApiRequestError } from '@/api/http'
-import type { PsdTemplateManifest } from '@/api/types'
+import type { PsdTemplateManifest, TemplateSlotKind } from '@mediatoolbox/contracts'
 
 type ActiveTab = 'inspect' | 'editor' | 'batch'
-type TemplateSlotKind = 'text' | 'image' | 'smart-object' | 'shape' | 'canvas'
 
 export function PsdApp() {
   const [psdPath, setPsdPath] = useState('/Workspace/PSD/template.psd')
@@ -107,6 +106,7 @@ export function PsdApp() {
   )
 
   const textSlots = manifest?.slots.filter((s) => s.kind === 'text') ?? []
+  const unsupportedRequiredSlots = manifest?.slots.filter((s) => s.kind !== 'text' && s.required) ?? []
 
   return (
     <div className="psd-app">
@@ -245,6 +245,12 @@ export function PsdApp() {
               <div className="psd-empty">当前模板无可编辑的文字 slot。</div>
             ) : (
               <form className="psd-batch-form" onSubmit={submitRender}>
+                {unsupportedRequiredSlots.length > 0 && (
+                  <div className="psd-message psd-message--error">
+                    当前渲染仅支持文字 slot；请先移除或改为非必填：
+                    {unsupportedRequiredSlots.map((slot) => ` ${slot.label}`).join('、')}
+                  </div>
+                )}
                 <h3 className="psd-batch-title">填写 Slot 值</h3>
                 {textSlots.map((slot) => (
                   <label className="mt-field" key={slot.id}>
@@ -260,7 +266,7 @@ export function PsdApp() {
                     />
                   </label>
                 ))}
-                <button className="mt-btn mt-btn--primary" type="submit" disabled={rendering}>
+                <button className="mt-btn mt-btn--primary" type="submit" disabled={rendering || unsupportedRequiredSlots.length > 0}>
                   {rendering ? '渲染中...' : '开始渲染'}
                 </button>
               </form>

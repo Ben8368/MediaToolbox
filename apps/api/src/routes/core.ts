@@ -10,8 +10,9 @@ export function registerCoreRoutes(app: FastifyInstance) {
 
   app.get<{ Reply: AppsResponse }>('/api/apps', async () => ({
     apps: [
+      { id: 'browser', title: 'Scry浏览器', kind: 'workbench' },
       { id: 'file-manager', title: '文件管理', kind: 'core' },
-      { id: 'download', title: '下载', kind: 'workbench' },
+      { id: 'fetcher', title: '下载', kind: 'workbench' },
       { id: 'transcode', title: '转码', kind: 'workbench' },
       { id: 'ps', title: 'PS', kind: 'workbench' },
       { id: 'settings', title: '设置', kind: 'system' },

@@ -1,27 +1,5 @@
-export type TemplateSlotKind = 'text' | 'image' | 'smart-object' | 'shape' | 'canvas'
-
-export type TemplateSlot = {
-  id: string
-  kind: TemplateSlotKind
-  label: string
-  layerPath: string[]
-  required: boolean
-}
-
-export type PsdTemplateManifest = {
-  id: string
-  name: string
-  version: number
-  sourcePath?: string
-  document: {
-    width: number
-    height: number
-    resolution?: number
-  }
-  slots: TemplateSlot[]
-}
-
-export type PsdRenderInput = Record<string, string | number | boolean>
+import type { PsdRenderInput, PsdTemplateManifest } from '@mediatoolbox/contracts'
+export type { PsdRenderInput, PsdTemplateManifest, TemplateSlot, TemplateSlotKind } from '@mediatoolbox/contracts'
 
 export type PsdEngine = {
   inspect(psdPath: string): Promise<PsdTemplateManifest>

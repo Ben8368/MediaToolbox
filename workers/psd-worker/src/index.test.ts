@@ -42,4 +42,26 @@ describe('validateRenderInput', () => {
   it('rejects missing required slots before calling Photoshop adapters', () => {
     expect(() => validateRenderInput(template, {})).toThrow(PsdWorkerInputError)
   })
+
+  it('rejects unsupported PSD slot kinds before rendering', () => {
+    expect(() =>
+      validateRenderInput({
+        ...template,
+        slots: [
+          ...template.slots,
+          { id: 'hero', kind: 'smart-object', label: 'Hero', layerPath: ['Hero'], required: true },
+        ],
+      }, { headline: 'Sale' }),
+    ).toThrow(/text slots only/)
+
+    expect(() =>
+      validateRenderInput({
+        ...template,
+        slots: [
+          ...template.slots,
+          { id: 'hero', kind: 'image', label: 'Hero', layerPath: ['Hero'], required: false },
+        ],
+      }, { headline: 'Sale', hero: '/Workspace/Images/hero.png' }),
+    ).toThrow(/Unsupported slot input/)
+  })
 })

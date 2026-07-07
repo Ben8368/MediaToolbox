@@ -79,7 +79,7 @@
 #### TD-015: PSD 真实 Photoshop 联调
 - **位置：** `packages/psd-core/` + `workers/psd-worker/`
 - **来源：** CONTEXT.md 剩余黄灯
-- **问题：** PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内；但真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调
+- **问题：** PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内，非文字 slot 现已显式拒绝避免静默忽略；但真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调
 - **影响：** PSD 工作台目前只能处理文字 slot，无法处理图片和智能对象
 - **建议方案：** 
   1. 配置真实 Photoshop 命令路径
@@ -114,6 +114,8 @@
 - TD-007: `sampleProjectNetworkRates` 两次遍历同一数组。已合并为单次 reduce。
 - TD-008: `formatBytesPerSecond` 缺少 GB/s 支持。已新增 GB/s 显示分支。
 - TD-009: `task.state` 对象频繁展开。已改为速率变化时才写入，解析失败时清理速率字段。
+- TD-017: 前后端应用 ID 契约漂移。已将 `packages/contracts` 与 `/api/apps` 对齐到前端 registry（`browser`、`fetcher` 等），并补充 API 测试。
+- TD-018: PSD manifest 类型重复且非文字 slot 会被隐式忽略。已将 PSD manifest/slot/render input 类型收敛到 `packages/contracts`，并在 API/worker/UI 明确当前仅支持文字 slot。
 
 ---
 

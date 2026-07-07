@@ -12,7 +12,12 @@ describe('api skeleton contract', () => {
     const apps = await app.inject({ method: 'GET', url: '/api/apps' })
 
     expect(health.json()).toMatchObject({ ok: true, service: 'mediatoolbox-api' })
-    expect(apps.json()).toMatchObject({ apps: expect.arrayContaining([expect.objectContaining({ id: 'download' })]) })
+    expect(apps.json()).toMatchObject({
+      apps: expect.arrayContaining([
+        expect.objectContaining({ id: 'browser' }),
+        expect.objectContaining({ id: 'fetcher' }),
+      ]),
+    })
     await app.close()
   })
 

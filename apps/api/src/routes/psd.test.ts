@@ -71,4 +71,16 @@ describe('resolveRenderPayload', () => {
     delete template.sourcePath
     expect(() => resolveRenderPayload(state, template, { title: 'x' })).toThrow(/sourcePath/)
   })
+
+  it('rejects required non-text slots before invoking the worker engine', () => {
+    const state = createApiState()
+    expect(() =>
+      resolveRenderPayload(state, baseTemplate({
+        slots: [
+          { id: 'title', kind: 'text', label: 'Title', layerPath: ['title'], required: false },
+          { id: 'hero', kind: 'smart-object', label: 'Hero', layerPath: ['hero'], required: true },
+        ],
+      }), { title: 'x' }),
+    ).toThrow(/text slots only/)
+  })
 })

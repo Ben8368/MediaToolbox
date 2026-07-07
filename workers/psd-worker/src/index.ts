@@ -75,6 +75,23 @@ export function createPsdEngineFromEnv(env: NodeJS.ProcessEnv = process.env): Ps
 }
 
 export function validateRenderInput(template: PsdTemplateManifest, input: PsdRenderInput): void {
+  const unsupportedRequired = template.slots
+    .filter((slot) => slot.kind !== 'text' && slot.required)
+    .map((slot) => `${slot.id}(${slot.kind})`)
+
+  if (unsupportedRequired.length) {
+    throw new PsdWorkerInputError(`PSD render currently supports text slots only. Unsupported required slots: ${unsupportedRequired.join(', ')}`)
+  }
+
+  const unsupportedProvided = template.slots
+    .filter((slot) => slot.kind !== 'text')
+    .filter((slot) => input[slot.id] !== undefined && input[slot.id] !== '')
+    .map((slot) => `${slot.id}(${slot.kind})`)
+
+  if (unsupportedProvided.length) {
+    throw new PsdWorkerInputError(`PSD render currently supports text slots only. Unsupported slot input: ${unsupportedProvided.join(', ')}`)
+  }
+
   const missing = template.slots
     .filter((slot) => slot.required)
     .filter((slot) => input[slot.id] === undefined || input[slot.id] === '')

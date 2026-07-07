@@ -1,4 +1,4 @@
-export type WorkbenchAppId = 'file-manager' | 'download' | 'transcode' | 'ps' | 'settings' | 'logs'
+export type WorkbenchAppId = 'browser' | 'file-manager' | 'fetcher' | 'transcode' | 'ps' | 'settings' | 'logs'
 
 export type OkResult = {
   ok: boolean
@@ -52,6 +52,31 @@ export type AssetRecord = {
 export type AssetListResponse = OkResult & {
   assets: AssetRecord[]
 }
+
+export type TemplateSlotKind = 'text' | 'image' | 'smart-object' | 'shape' | 'canvas'
+
+export type TemplateSlot = {
+  id: string
+  kind: TemplateSlotKind
+  label: string
+  layerPath: string[]
+  required: boolean
+}
+
+export type PsdTemplateManifest = {
+  id: string
+  name: string
+  version: number
+  sourcePath?: string
+  document: {
+    width: number
+    height: number
+    resolution?: number
+  }
+  slots: TemplateSlot[]
+}
+
+export type PsdRenderInput = Record<string, string | number | boolean>
 
 export type HealthResponse = {
   ok: boolean

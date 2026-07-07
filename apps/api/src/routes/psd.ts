@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import type { FastifyInstance } from 'fastify'
 import type { OkResult } from '@mediatoolbox/contracts'
-import { PsdWorkerEngineNotConfiguredError, runPsdWorkerJob } from '@mediatoolbox/psd-worker'
+import { PsdWorkerEngineNotConfiguredError, PsdWorkerInputError, runPsdWorkerJob, validateRenderInput } from '@mediatoolbox/psd-worker'
 import type { PsdRenderInput, PsdTemplateManifest } from '@mediatoolbox/psd-core'
 
 import { psdInspectSchema } from '../schemas.js'
@@ -27,6 +27,10 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         addLog(state.db, 'INFO', 'psd', `PSD 模板检查完成：${virtualPath}`)
         return { ok: true, manifest: { ...result.manifest, sourcePath: virtualPath } }
       } catch (error) {
+        if (error instanceof PsdWorkerInputError) {
+          reply.status(400)
+          return { ok: false, message: error.message }
+        }
         if (error instanceof PsdWorkerEngineNotConfiguredError) {
           reply.status(503)
           return { ok: false, message: 'Photoshop 命令未配置，暂不能检查 PSD 模板。' }
@@ -154,6 +158,7 @@ export function resolveRenderPayload(
     if (key.startsWith('__')) continue
     safeInput[key] = value
   }
+  validateRenderInput(template, safeInput)
 
   const virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
   const physicalOutput = toPhysicalWorkspacePath(state, virtualOutput)

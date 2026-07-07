@@ -1,5 +1,5 @@
 import { apiRequest } from '@/api/http'
-import type { AssetListResponse, OkResult } from '@mediatoolbox/contracts'
+import type { AssetListResponse, OkResult, PsdRenderInput } from '@mediatoolbox/contracts'
 import type { JobListResponse, JobRecord, PsdInspectResponse, PsdTemplateManifest, TranscodeJobDraft } from '@/api/types'
 
 export function listJobs(): Promise<JobListResponse> {
@@ -32,7 +32,7 @@ export function inspectPsdTemplate(psdPath: string): Promise<PsdInspectResponse>
 
 export function renderPsdTemplate(
   template: PsdTemplateManifest,
-  input: Record<string, string | number | boolean>,
+  input: PsdRenderInput,
 ): Promise<OkResult & { outputPath?: string }> {
   return apiRequest<OkResult & { outputPath?: string }>('/api/psd/render', {
     method: 'POST',
