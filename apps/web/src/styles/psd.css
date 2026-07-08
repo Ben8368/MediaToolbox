@@ -1,4 +1,8 @@
 .psd-app {
+  --mt-fill: rgba(255,255,255,.055);
+  --mt-border: rgba(255,255,255,.14);
+  --mt-text-0: rgba(248,250,252,.94);
+  --mt-text-1: rgba(226,232,240,.72);
   display: grid;
   grid-template-columns: 184px minmax(0, 1fr);
   height: 100%;
@@ -6,6 +10,17 @@
   overflow: hidden;
   background: rgba(10,12,18,.65);
   color: rgba(255,255,255,.88);
+}
+
+.psd-app .mt-field input::placeholder {
+  color: rgba(226,232,240,.38);
+}
+
+.psd-app .mt-field input:focus,
+.psd-app .mt-field select:focus,
+.psd-app .mt-field textarea:focus {
+  border-color: rgba(77,171,255,.5);
+  box-shadow: 0 0 0 2px rgba(77,171,255,.14);
 }
 
 .psd-sidebar {
