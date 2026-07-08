@@ -165,8 +165,9 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     const file = await readWorkspaceFileForDownload(state, virtualPath)
     return reply
       .header('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.filename)}`)
+      .header('content-length', String(file.size))
       .type('application/octet-stream')
-      .send(file.buffer)
+      .send(file.stream)
   })
 }
 

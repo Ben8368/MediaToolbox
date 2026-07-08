@@ -59,10 +59,10 @@ Workers / adapters 负责：
 | `GET /api/assets` | 文件库资产索引，汇总浏览器下载、转码和后续 PSD 产出 | SQLite |
 | `GET /api/browser-network/downloads` | 浏览器下载记录列表 | 本地状态 + jobs |
 | `GET /api/browser-network/downloads/{id}` | 浏览器下载记录详情 | 本地状态 + jobs |
-| `POST /api/browser-network/downloads` | 桌面端登记 Electron 浏览器下载，需 `x-mediatoolbox-browser-network: desktop`；桌面端传入的 `id` 会作为下载记录和 job 的稳定 ID | 执行入口 |
-| `PATCH /api/browser-network/downloads/{id}` | 桌面端更新浏览器下载进度、完成、失败或取消，需桌面标记 | 状态联动 |
-| `POST /api/browser-network/downloads/{id}/cancel` | 桌面端同步浏览器下载取消状态，需桌面标记 | 状态联动 |
-| `POST /api/browser-network/permission-events` | 桌面端写入浏览器权限审计，需桌面标记 | SQLite 日志 |
+| `POST /api/browser-network/downloads` | 桌面端登记 Electron 浏览器下载，需 `x-mediatoolbox-browser-network: desktop` 与 `x-mediatoolbox-desktop-token`；桌面端传入的 `id` 会作为下载记录和 job 的稳定 ID | 执行入口 |
+| `PATCH /api/browser-network/downloads/{id}` | 桌面端更新浏览器下载进度、完成、失败或取消，需桌面标记与 desktop token | 状态联动 |
+| `POST /api/browser-network/downloads/{id}/cancel` | 桌面端同步浏览器下载取消状态，需桌面标记与 desktop token | 状态联动 |
+| `POST /api/browser-network/permission-events` | 桌面端写入浏览器权限审计，需桌面标记与 desktop token | SQLite 日志 |
 | `POST /api/downloads/analyze` | 解析下载 URL 并给出 yt-dlp / Browser Network 双通道策略 | 策略分析 |
 | `POST /api/fetch/tasks` | 兼容迁回前端的下载任务提交；多 URL 会拆分为多任务并返回 `task_ids` | 执行入口 |
 | `GET /api/fetch/tasks` | 兼容迁回前端的活动任务列表 | 本地状态 |
@@ -81,7 +81,7 @@ Workers / adapters 负责：
 | `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash` | 清空回收站 | 本地映射 |
-| `POST /api/transcode/jobs` | 创建转码任务，输入必须在工作区内，输出必须在 `/Workspace/Exports` 内 | 执行入口 |
+| `POST /api/transcode/jobs` | 创建转码任务，输入可为工作区路径或 `inputGrantId`；输出可为 `/Workspace/Exports` 路径或 `outputGrantId` | 执行入口 |
 | `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot，需配置 Photoshop 命令 runner；未配置返回 503 可读错误 | 执行入口 |
 | `POST /api/psd/render` | 渲染 PSD 模版；`template.sourcePath` 必须在工作区内，输出由服务端固定生成到 `/Workspace/Exports`，回写虚拟路径。当前仅支持 `text` slot，非文字必填 slot 或非文字 slot 输入会返回 400 可读错误。**客户端传入的 `__` 保留键（`__outputPath`/`__psdPath` 等）一律被剥离**，前端不得依赖它们指定路径 | 执行入口 |
@@ -137,7 +137,7 @@ Workers / adapters 负责：
 
 | 端点 | 用途 |
 | --- | --- |
-| `POST /api/path-grants` | 桌面端提交规范化物理路径，签发 read/write grant |
+| `POST /api/path-grants` | 桌面端提交规范化物理路径，签发 read/write grant；需 `x-mediatoolbox-desktop: desktop` 与 `x-mediatoolbox-desktop-token` |
 | `GET /api/path-grants/{id}` | 查询 grant 状态与展示名 |
 | `DELETE /api/path-grants/{id}` | 主动吊销 grant |
 

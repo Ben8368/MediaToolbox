@@ -15,6 +15,7 @@ function options(env: NodeJS.ProcessEnv = {}): BrowserNetworkOptions {
     electron: {} as BrowserNetworkOptions['electron'],
     apiUrl: 'http://127.0.0.1:3701',
     rootDir: path.resolve('C:/MediaToolbox'),
+    desktopAuthToken: 'test-desktop-token',
     env,
   }
 }

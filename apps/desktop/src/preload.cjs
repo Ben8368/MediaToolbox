@@ -44,6 +44,19 @@ const browserApi = {
   },
 }
 
+const pathGrantsApi = {
+  requestRead() {
+    return ipcRenderer.invoke('mediatoolbox:path-grant:request-read')
+  },
+  requestWrite(defaultPath) {
+    return ipcRenderer.invoke('mediatoolbox:path-grant:request-write', { defaultPath })
+  },
+  requestDirRead() {
+    return ipcRenderer.invoke('mediatoolbox:path-grant:request-dir-read')
+  },
+}
+
 contextBridge.exposeInMainWorld('mediaToolboxDesktop', {
   browser: browserApi,
+  pathGrants: pathGrantsApi,
 })

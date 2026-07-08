@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -14,7 +15,10 @@ export type DesktopShellConfig = {
   host: string
   apiPort: number
   autoStartApi: boolean
+  desktopAuthToken: string
 }
+
+export type PublicDesktopShellConfig = Omit<DesktopShellConfig, 'desktopAuthToken'>
 
 export type DesktopApiProcess = {
   child: ChildProcess
@@ -42,7 +46,7 @@ const DEFAULT_APP_ICON = path.join('static', 'app', 'icons', 'default', 'setting
 
 export function createDesktopShellConfig(env: NodeJS.ProcessEnv): DesktopShellConfig {
   const mode = env.NODE_ENV === 'production' ? 'production' : 'development'
-  const host = env.HOST ?? '127.0.0.1'
+  const host = normalizeLoopbackHost(env.HOST)
   const apiPort = Number(env.PORT ?? env.API_PORT ?? 3701)
   const apiUrl = env.MEDIATOOLBOX_API_URL ?? `http://${host}:${apiPort}`
 
@@ -53,11 +57,30 @@ export function createDesktopShellConfig(env: NodeJS.ProcessEnv): DesktopShellCo
     apiUrl,
     webUrl: env.MEDIATOOLBOX_WEB_URL ?? 'http://127.0.0.1:5173',
     autoStartApi: env.MEDIATOOLBOX_DESKTOP_START_API === 'true' || (mode === 'production' && env.MEDIATOOLBOX_DESKTOP_START_API !== 'false'),
+    desktopAuthToken: env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN?.trim() || createDesktopAuthToken(),
   }
 }
 
 export function isElectronRuntime() {
   return Boolean(process.versions.electron)
+}
+
+export function toPublicDesktopShellConfig(config: DesktopShellConfig): PublicDesktopShellConfig {
+  const { desktopAuthToken: _desktopAuthToken, ...publicConfig } = config
+  return publicConfig
+}
+
+function createDesktopAuthToken(): string {
+  return randomBytes(32).toString('base64url')
+}
+
+function normalizeLoopbackHost(host: string | undefined): string {
+  const candidate = host?.trim() || '127.0.0.1'
+  return isLoopbackHost(candidate) ? candidate : '127.0.0.1'
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === '[::1]'
 }
 
 export function createDesktopRuntimePaths(electron?: ElectronModule): DesktopRuntimePaths {
@@ -79,6 +102,7 @@ export function createLocalApiLaunchCommand(
     ...env,
     HOST: config.host,
     PORT: String(config.apiPort),
+    MEDIATOOLBOX_DESKTOP_AUTH_TOKEN: config.desktopAuthToken,
   }
 
   if (config.mode === 'production') {
@@ -123,6 +147,15 @@ export function resolveAppIconPath(packaged: boolean, resourcesPath = process.re
   return resolveRendererResourcePath(DEFAULT_APP_ICON, packaged, resourcesPath, workspaceRoot)
 }
 
+export function isAllowedExternalUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function startLocalApi(
   config: DesktopShellConfig,
   env: NodeJS.ProcessEnv = process.env,
@@ -164,7 +197,7 @@ export async function stopLocalApi(apiProcess: DesktopApiProcess | null): Promis
 
 export async function runDesktopShell(config = createDesktopShellConfig(process.env)) {
   if (!isElectronRuntime()) {
-    console.log(createDesktopShellConfig(process.env))
+    console.log(toPublicDesktopShellConfig(createDesktopShellConfig(process.env)))
     return
   }
 
@@ -230,7 +263,7 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
 
   win.once('ready-to-show', () => win.show())
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void electron.shell.openExternal(url)
+    if (isAllowedExternalUrl(url)) void electron.shell.openExternal(url)
     return { action: 'deny' }
   })
   void win.loadURL(rendererUrl)
@@ -245,7 +278,7 @@ function registerIpcHandlers(
   runtimeEnv: NodeJS.ProcessEnv,
   runtimePaths: DesktopRuntimePaths,
 ) {
-  electron.ipcMain.handle('mediatoolbox:get-config', () => config)
+  electron.ipcMain.handle('mediatoolbox:get-config', () => toPublicDesktopShellConfig(config))
   electron.ipcMain.handle('mediatoolbox:get-api-status', () => {
     const apiProcess = getApiProcess()
     return {
@@ -263,6 +296,7 @@ function registerIpcHandlers(
     apiUrl: config.apiUrl,
     rootDir: runtimePaths.rootDir,
     env: runtimeEnv,
+    desktopAuthToken: config.desktopAuthToken,
   })
 }
 

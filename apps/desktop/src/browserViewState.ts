@@ -21,7 +21,7 @@ export type BrowserViewState = {
 export type BrowserViewRecord = {
   id: string
   sessionId: string
-  networkOptions: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv }
+  networkOptions: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv; desktopAuthToken: string }
   view: BrowserWebContentsView
   state: BrowserViewState
   cleanup?: () => void
@@ -202,6 +202,7 @@ function emitPopupPolicyEvent(
     apiUrl: record.networkOptions.apiUrl,
     rootDir: record.networkOptions.rootDir,
     env: record.networkOptions.env,
+    desktopAuthToken: record.networkOptions.desktopAuthToken,
   }, {
     view_id: record.id,
     session_id: record.sessionId,

@@ -1,7 +1,14 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { createDesktopShellConfig, createLocalApiLaunchCommand, resolveAppIconPath, type DesktopRuntimePaths } from './main.js'
+import {
+  createDesktopShellConfig,
+  createLocalApiLaunchCommand,
+  isAllowedExternalUrl,
+  resolveAppIconPath,
+  toPublicDesktopShellConfig,
+  type DesktopRuntimePaths,
+} from './main.js'
 
 const runtimePaths: DesktopRuntimePaths = {
   rootDir: path.resolve('/repo/MediaToolbox'),
@@ -21,6 +28,7 @@ describe('desktop local API launch command', () => {
     expect(launch.cwd).toBe(path.join(runtimePaths.rootDir, 'apps', 'api'))
     expect(launch.env.HOST).toBe('127.0.0.1')
     expect(launch.env.PORT).toBe('4701')
+    expect(launch.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN).toBe(config.desktopAuthToken)
   })
 
   it('starts the packaged API bundle through Electron run-as-node', () => {
@@ -35,6 +43,7 @@ describe('desktop local API launch command', () => {
     expect(launch.env.MEDIATOOLBOX_WORKSPACE_DIR).toBe(path.join(runtimePaths.userDataPath!, 'workspace'))
     expect(launch.env.MEDIATOOLBOX_DB_PATH).toBe(path.join(runtimePaths.userDataPath!, 'mediatoolbox.db'))
     expect(launch.env.NODE_PATH).toBe(path.join(runtimePaths.appPath!, 'node_modules'))
+    expect(launch.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN).toBe(config.desktopAuthToken)
   })
 
   it('uses an explicit node binary without Electron run-as-node', () => {
@@ -52,5 +61,19 @@ describe('desktop local API launch command', () => {
     expect(resolveAppIconPath(true, runtimePaths.resourcesPath, runtimePaths.rootDir)).toBe(
       path.join(runtimePaths.resourcesPath, 'renderer', 'static', 'app', 'icons', 'default', 'setting.png'),
     )
+  })
+
+  it('keeps desktop auth token out of the renderer-facing config', () => {
+    const config = createDesktopShellConfig({ MEDIATOOLBOX_DESKTOP_AUTH_TOKEN: 'secret' })
+
+    expect(config.desktopAuthToken).toBe('secret')
+    expect(toPublicDesktopShellConfig(config)).not.toHaveProperty('desktopAuthToken')
+  })
+
+  it('only allows http and https URLs to open externally', () => {
+    expect(isAllowedExternalUrl('https://example.com')).toBe(true)
+    expect(isAllowedExternalUrl('http://127.0.0.1:5173')).toBe(true)
+    expect(isAllowedExternalUrl('file:///C:/secret.txt')).toBe(false)
+    expect(isAllowedExternalUrl('javascript:alert(1)')).toBe(false)
   })
 })

@@ -11,6 +11,7 @@ import type {
 } from '@mediatoolbox/contracts'
 import { createJobRecord, transitionJob } from '@mediatoolbox/job-core'
 
+import { requireDesktopAuth } from '../desktop-auth.js'
 import {
   browserNetworkDownloadCreateSchema,
   browserNetworkDownloadUpdateSchema,
@@ -36,8 +37,6 @@ import {
   type BrowserRequestCreateBody,
   type BrowserRequestUpdateBody,
 } from './browser-network-model.js'
-
-const DESKTOP_MARKER = 'desktop'
 
 export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiState) {
   app.get<{ Reply: BrowserNetworkDownloadListResponse }>('/api/browser-network/downloads', async () => ({
@@ -201,7 +200,5 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
 }
 
 function requireDesktopMarker(request: FastifyRequest, reply: FastifyReply): boolean {
-  if (request.headers['x-mediatoolbox-browser-network'] === DESKTOP_MARKER) return true
-  reply.status(403)
-  return false
+  return requireDesktopAuth(request, reply, 'x-mediatoolbox-browser-network')
 }

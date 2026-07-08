@@ -1,3 +1,4 @@
+import { createReadStream, type ReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -23,7 +24,7 @@ export function toVirtualWorkspacePath(state: ApiState, physicalPath: string): s
   return relative ? `${state.workspaceRoot}/${relative}` : state.workspaceRoot
 }
 
-export async function readWorkspaceFileForDownload(state: ApiState, virtualPath: string): Promise<{ buffer: Buffer; filename: string }> {
+export async function readWorkspaceFileForDownload(state: ApiState, virtualPath: string): Promise<{ stream: ReadStream; filename: string; size: number }> {
   const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
   const stat = await fs.stat(physicalPath).catch(() => undefined)
   if (!stat?.isFile()) {
@@ -32,7 +33,8 @@ export async function readWorkspaceFileForDownload(state: ApiState, virtualPath:
     throw error
   }
   return {
-    buffer: await fs.readFile(physicalPath),
+    stream: createReadStream(physicalPath),
     filename: path.basename(physicalPath),
+    size: stat.size,
   }
 }

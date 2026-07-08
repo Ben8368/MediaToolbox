@@ -17,6 +17,7 @@ type PathGrantInfo = {
 
 async function postPathGrant(
   apiUrl: string,
+  desktopAuthToken: string,
   payload: { kind: string; physicalPath: string; displayName: string },
 ): Promise<PathGrantInfo | undefined> {
   try {
@@ -25,6 +26,7 @@ async function postPathGrant(
       headers: {
         'Content-Type': 'application/json',
         'x-mediatoolbox-desktop': 'desktop',
+        'x-mediatoolbox-desktop-token': desktopAuthToken,
       },
       body: JSON.stringify(payload),
     })
@@ -40,8 +42,9 @@ export async function requestFileReadGrant(options: {
   electron: ElectronModule
   hostWindow: BrowserWindow
   apiUrl: string
+  desktopAuthToken: string
 }): Promise<PathGrantInfo | undefined> {
-  const { electron, hostWindow, apiUrl } = options
+  const { electron, hostWindow, apiUrl, desktopAuthToken } = options
   const result = await electron.dialog.showOpenDialog(hostWindow, {
     title: '选择外部文件（只读授权）',
     properties: ['openFile'],
@@ -61,7 +64,7 @@ export async function requestFileReadGrant(options: {
   })
   if (confirm.response !== 0) return undefined
 
-  return postPathGrant(apiUrl, { kind: 'file.read', physicalPath, displayName })
+  return postPathGrant(apiUrl, desktopAuthToken, { kind: 'file.read', physicalPath, displayName })
 }
 
 export async function requestFileWriteGrant(options: {
@@ -69,8 +72,9 @@ export async function requestFileWriteGrant(options: {
   hostWindow: BrowserWindow
   apiUrl: string
   defaultPath?: string
+  desktopAuthToken: string
 }): Promise<PathGrantInfo | undefined> {
-  const { electron, hostWindow, apiUrl, defaultPath } = options
+  const { electron, hostWindow, apiUrl, defaultPath, desktopAuthToken } = options
   const result = await electron.dialog.showSaveDialog(hostWindow, {
     title: '选择导出路径（工作区外写入授权）',
     ...(defaultPath ? { defaultPath } : {}),
@@ -90,15 +94,16 @@ export async function requestFileWriteGrant(options: {
   })
   if (confirm.response !== 0) return undefined
 
-  return postPathGrant(apiUrl, { kind: 'file.write', physicalPath, displayName })
+  return postPathGrant(apiUrl, desktopAuthToken, { kind: 'file.write', physicalPath, displayName })
 }
 
 export async function requestDirReadGrant(options: {
   electron: ElectronModule
   hostWindow: BrowserWindow
   apiUrl: string
+  desktopAuthToken: string
 }): Promise<PathGrantInfo | undefined> {
-  const { electron, hostWindow, apiUrl } = options
+  const { electron, hostWindow, apiUrl, desktopAuthToken } = options
   const result = await electron.dialog.showOpenDialog(hostWindow, {
     title: '选择外部目录（只读授权）',
     properties: ['openDirectory'],
@@ -118,5 +123,5 @@ export async function requestDirReadGrant(options: {
   })
   if (confirm.response !== 0) return undefined
 
-  return postPathGrant(apiUrl, { kind: 'dir.read', physicalPath, displayName })
+  return postPathGrant(apiUrl, desktopAuthToken, { kind: 'dir.read', physicalPath, displayName })
 }

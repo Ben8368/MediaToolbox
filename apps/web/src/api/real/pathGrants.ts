@@ -1,33 +1,23 @@
 import { apiRequest, ApiRequestError } from '@/api/http'
-
-type PathGrantKind = 'file.read' | 'file.write' | 'dir.read'
-
-type PathGrantInfo = {
-  id: string
-  kind: PathGrantKind
-  status: string
-  displayName: string
-  expiresAt: number
-  createdAt: number
-  updatedAt: number
-  jobId?: string
-}
+import type { DesktopBrowserResult } from '@/desktopBrowser'
+import type { PathGrantInfo, PathGrantKind, PathGrantResponse } from '@mediatoolbox/contracts'
 
 export async function requestReadGrant(): Promise<PathGrantInfo | null> {
-  return (window as any).electron?.ipcRenderer?.invoke('mediatoolbox:path-grant:request-read') ?? null
+  return unwrapDesktopGrant(await window.mediaToolboxDesktop?.pathGrants?.requestRead())
 }
 
 export async function requestWriteGrant(defaultPath?: string): Promise<PathGrantInfo | null> {
-  return (window as any).electron?.ipcRenderer?.invoke('mediatoolbox:path-grant:request-write', { defaultPath }) ?? null
+  return unwrapDesktopGrant(await window.mediaToolboxDesktop?.pathGrants?.requestWrite(defaultPath))
 }
 
 export async function requestDirReadGrant(): Promise<PathGrantInfo | null> {
-  return (window as any).electron?.ipcRenderer?.invoke('mediatoolbox:path-grant:request-dir-read') ?? null
+  return unwrapDesktopGrant(await window.mediaToolboxDesktop?.pathGrants?.requestDirRead())
 }
 
 export async function getPathGrant(id: string): Promise<PathGrantInfo | null> {
   try {
-    return await apiRequest<PathGrantInfo>(`/api/path-grants/${encodeURIComponent(id)}`)
+    const result = await apiRequest<PathGrantResponse>(`/api/path-grants/${encodeURIComponent(id)}`)
+    return result.grant ?? null
   } catch (err) {
     if (err instanceof ApiRequestError && err.status === 404) return null
     throw err
@@ -40,3 +30,9 @@ export async function revokePathGrant(id: string): Promise<boolean> {
   })
   return result?.ok ?? false
 }
+
+function unwrapDesktopGrant(result: DesktopBrowserResult<PathGrantInfo | null> | undefined): PathGrantInfo | null {
+  return result?.ok ? result.data : null
+}
+
+export type { PathGrantInfo, PathGrantKind }

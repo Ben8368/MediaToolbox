@@ -91,10 +91,15 @@ export const transcodeJobCreateSchema = {
   body: {
     type: 'object',
     additionalProperties: false,
-    required: ['inputPath', 'outputPath'],
+    allOf: [
+      { anyOf: [{ required: ['inputPath'] }, { required: ['inputGrantId'] }] },
+      { anyOf: [{ required: ['outputPath'] }, { required: ['outputGrantId'] }] },
+    ],
     properties: {
       inputPath: { type: 'string', minLength: 1 },
       outputPath: { type: 'string', minLength: 1 },
+      inputGrantId: { type: 'string', minLength: 1 },
+      outputGrantId: { type: 'string', minLength: 1 },
       preset: { type: 'string', enum: ['mp4-h264-aac', 'audio-mp3', 'copy'] },
       title: { type: 'string' },
     },

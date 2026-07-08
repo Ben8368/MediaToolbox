@@ -22,6 +22,7 @@ MediaToolbox 是本地媒体工作流应用，涉及本地文件、下载、浏�
 - 前端不得直接读取或拼接工作区外物理路径。
 - 裸盘符、UNC、`..` 逃逸和工作区外路径默认由 API 拒绝。
 - 工作区外访问必须通过 PathGrant；读授权和写授权分离，写入工作区外必须二次确认。
+- 桌面专用写端点必须同时校验桌面 marker 与启动期 desktop token；token 只在 Electron 主进程与本地 API 之间传递，不暴露给 Web UI。
 - Electron 主进程持有浏览器 session、文件选择和下载事件；Web UI 只提交用户意图并展示状态。
 - 不向 Web UI 暴露原始 cookie、session 或本地敏感路径。
 - 第三方工具调用必须走 adapter，禁止把用户输入直接拼接成 shell 命令。
@@ -41,4 +42,3 @@ MediaToolbox 是本地媒体工作流应用，涉及本地文件、下载、浏�
 2. 收紧契约或权限边界。
 3. 更新 `CONTEXT.md`、`docs/TECH_DEBT.md` 或相关 ADR。
 4. 通过 `npm run verify` 后再合并。
-

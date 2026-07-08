@@ -71,11 +71,10 @@ export function TranscodeApp() {
     setNotice('')
     try {
       const job = await submitTranscodeJob({
-        inputPath: inputGrantId ? '' : inputPath.trim(),
         outputPath: outputPath.trim(),
         preset,
+        ...(inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }),
         ...(title.trim() ? { title: title.trim() } : {}),
-        ...(inputGrantId ? { inputGrantId } : {}),
       })
       setNotice(`已创建：${job.title}`)
       await refreshJobs()

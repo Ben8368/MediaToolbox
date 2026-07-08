@@ -56,7 +56,7 @@ export function configureDownloads(session: BrowserSession, options: BrowserNetw
     }
 
     emitDownloadEvent(options, toDownloadEvent(id, options.viewId, sessionId, item, target.virtualPath, 'running'))
-    void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/downloads', started)
+    void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/downloads', started, options.desktopAuthToken)
 
     item.on('updated', (_downloadEvent, state) => {
       const status = state === 'interrupted' ? 'failed' : 'running'
@@ -67,7 +67,7 @@ export function configureDownloads(session: BrowserSession, options: BrowserNetw
         ...(state === 'interrupted' ? { error: 'Browser download interrupted.' } : {}),
       }
       emitDownloadEvent(options, toDownloadEvent(id, options.viewId, sessionId, item, target.virtualPath, status, update.error))
-      void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/downloads/${encodeURIComponent(id)}`, update)
+      void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/downloads/${encodeURIComponent(id)}`, update, options.desktopAuthToken)
     })
 
     item.once('done', (_downloadEvent, state) => {
@@ -81,7 +81,7 @@ export function configureDownloads(session: BrowserSession, options: BrowserNetw
         ...(error ? { error } : {}),
       }
       emitDownloadEvent(options, toDownloadEvent(id, options.viewId, sessionId, item, target.virtualPath, status, error))
-      void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/downloads/${encodeURIComponent(id)}`, update)
+      void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/downloads/${encodeURIComponent(id)}`, update, options.desktopAuthToken)
     })
 
     if (webContents.id !== options.hostWindow.webContents.id) {
