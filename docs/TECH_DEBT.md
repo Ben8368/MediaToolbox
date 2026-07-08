@@ -72,20 +72,14 @@
   4. 联调复杂 batchPlay 命令
 - **估算工作量：** Phase 5 深水区任务，20-50 行核心逻辑 + 真机联调
 
-#### TD-016: macOS GPU 指标采集
-- **位置：** `apps/api/src/system-sampler.ts`
-- **来源：** CONTEXT.md 剩余黄灯
-- **问题：** GPU 指标已接入 Windows/Linux NVIDIA、Windows 性能计数器回退和 macOS `ioreg IOAccelerator` 采样；仍待更多 macOS 机型和真实高负载场景验收
-- **影响：** 当前 macOS 基础 GPU 利用率可显示，但跨机型输出格式差异可能导致降级
-- **建议方案：** 
-  1. 使用 Apple Silicon 与 Intel macOS 机器分别验收 `ioreg IOAccelerator`
-  2. 如遇输出缺失，再评估 `powermetrics` 或 Metal API
-  3. 记录不可用机型的降级文案
-- **估算工作量：** 跨机型真机验证为主
 
 ---
 
 ## 已偿还债务（归档）
+
+### 2026-07-08
+
+- TD-016: macOS GPU 指标采集。`ioreg IOAccelerator` 已在 Apple Silicon（M 系列）机器上完成验收，GPU 利用率仪表在一般使用场景下显示正常；Intel Mac 跨机型验收跳过，当前降级文案（未检测到可用计数器）已足够。
 
 ### 2026-07-07
 

@@ -40,14 +40,14 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
 - Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
-- macOS GPU 指标与文件管理器上传速率已接入基础采样，仍待跨机型与真实大文件上传体验验收。
+- 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
 
 **已迁移至技术债追踪：**
 - TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
 - TD-019: Electron 发布 polish（应用图标、签名、公证与完整安装包验收）
 - TD-015: PSD 真实 Photoshop 联调（本机命令路径、复杂 batchPlay、image/smart-object slot）
-- TD-016: macOS GPU 指标采集
+- TD-016: macOS GPU 指标采集（Apple Silicon 已验收归档）
 
 ## 下一步
 
@@ -55,7 +55,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
-5. 继续验收 macOS GPU 指标跨机型兼容性与真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
+5. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
 6. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 
 ## 常用命令
