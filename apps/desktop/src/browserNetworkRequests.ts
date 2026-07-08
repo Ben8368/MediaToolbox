@@ -50,7 +50,7 @@ export async function requestBrowserNetworkUrl(
   }
 
   emitRequestEvent(options, { id, viewId: options.viewId, sessionId, url, method, status: 'running', responseBytes: 0 })
-  void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/requests', started)
+  void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/requests', started, options.desktopAuthToken)
 
   try {
     const requestInit: RequestInit = {
@@ -81,7 +81,7 @@ export async function requestBrowserNetworkUrl(
       responseStatus: response.status,
       responseBytes: bodyBuffer.byteLength,
     })
-    void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/requests/${encodeURIComponent(id)}`, update)
+    void patchBrowserNetworkJson(options.apiUrl, `/api/browser-network/requests/${encodeURIComponent(id)}`, update, options.desktopAuthToken)
     return {
       id,
       url,
@@ -107,7 +107,7 @@ export async function requestBrowserNetworkUrl(
       status: 'failed',
       response_bytes: 0,
       error: message,
-    })
+    }, options.desktopAuthToken)
     throw error
   }
 }

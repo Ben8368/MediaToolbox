@@ -38,8 +38,10 @@ export type JobListResponse = OkResult & {
 }
 
 export type TranscodeJobDraft = {
-  inputPath: string
-  outputPath: string
+  inputPath?: string
+  outputPath?: string
+  inputGrantId?: string
+  outputGrantId?: string
   preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
   title?: string
 }

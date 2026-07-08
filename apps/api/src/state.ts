@@ -108,7 +108,17 @@ function resolvePhysicalWorkspaceBase(): string {
   if (configured) return path.resolve(configured)
   if (process.env['NODE_ENV'] === 'test') {
     testWorkspaceCounter += 1
-    return path.resolve(process.cwd(), '..', '..', '.tmp', `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
+    return path.resolve(findRepoRoot(process.cwd()), '.tmp', `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
   }
   return path.resolve(process.cwd(), '..', '..', '.tmp', 'workspace')
+}
+
+function findRepoRoot(start: string): string {
+  let current = path.resolve(start)
+  while (true) {
+    if (fs.existsSync(path.join(current, 'package.json')) && fs.existsSync(path.join(current, 'apps'))) return current
+    const parent = path.dirname(current)
+    if (parent === current) return path.resolve(start)
+    current = parent
+  }
 }

@@ -2,10 +2,21 @@ import { describe, expect, it } from 'vitest'
 
 import { buildApiServer } from '../app.js'
 
+const DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+const browserNetworkHeaders = {
+  'x-mediatoolbox-browser-network': 'desktop',
+  'x-mediatoolbox-desktop-token': DESKTOP_AUTH_TOKEN,
+}
+
+async function buildAuthedApiServer() {
+  process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = DESKTOP_AUTH_TOKEN
+  return buildApiServer()
+}
+
 describe('browser network API contract', () => {
   it('records browser network downloads as jobs and workspace assets', async () => {
-    const app = await buildApiServer()
-    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+    const app = await buildAuthedApiServer()
+    const headers = browserNetworkHeaders
 
     const created = await app.inject({
       method: 'POST',
@@ -91,8 +102,8 @@ describe('browser network API contract', () => {
   })
 
   it('records browser network requests as unified jobs', async () => {
-    const app = await buildApiServer()
-    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+    const app = await buildAuthedApiServer()
+    const headers = browserNetworkHeaders
 
     const created = await app.inject({
       method: 'POST',
@@ -136,7 +147,7 @@ describe('browser network API contract', () => {
   })
 
   it('protects browser network write endpoints and target paths', async () => {
-    const app = await buildApiServer()
+    const app = await buildAuthedApiServer()
     const payload = {
       source_url: 'https://example.com/file.zip',
       filename: 'file.zip',
@@ -153,19 +164,26 @@ describe('browser network API contract', () => {
     const wrongTarget = await app.inject({
       method: 'POST',
       url: '/api/browser-network/downloads',
-      headers: { 'x-mediatoolbox-browser-network': 'desktop' },
+      headers: browserNetworkHeaders,
       payload,
+    })
+    const missingToken = await app.inject({
+      method: 'POST',
+      url: '/api/browser-network/downloads',
+      headers: { 'x-mediatoolbox-browser-network': 'desktop' },
+      payload: { ...payload, target_path: '/Workspace/Downloads/file.zip' },
     })
 
     expect(missingMarker.statusCode).toBe(403)
+    expect(missingToken.statusCode).toBe(403)
     expect(wrongTarget.statusCode).toBe(400)
     expect(wrongTarget.json()).toMatchObject({ ok: false, message: '浏览器下载只能写入工作区 Downloads 目录。' })
     await app.close()
   })
 
   it('rejects duplicate browser network ids before job creation', async () => {
-    const app = await buildApiServer()
-    const headers = { 'x-mediatoolbox-browser-network': 'desktop' }
+    const app = await buildAuthedApiServer()
+    const headers = browserNetworkHeaders
     const payload = {
       id: 'desktop-generated-download-duplicate',
       source_url: 'https://example.com/file.zip',

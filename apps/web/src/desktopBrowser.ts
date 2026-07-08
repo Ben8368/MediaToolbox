@@ -1,3 +1,5 @@
+import type { PathGrantInfo } from '@mediatoolbox/contracts'
+
 export type DesktopBrowserBounds = {
   x: number
   y: number
@@ -102,6 +104,12 @@ export type DesktopBrowserEvent =
 
 export type DesktopBrowserResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
+export type DesktopPathGrantsBridge = {
+  requestRead: () => Promise<DesktopBrowserResult<PathGrantInfo | null>>
+  requestWrite: (defaultPath?: string) => Promise<DesktopBrowserResult<PathGrantInfo | null>>
+  requestDirRead: () => Promise<DesktopBrowserResult<PathGrantInfo | null>>
+}
+
 export type DesktopBrowserBridge = {
   create: (id: string, url?: string, options?: { sessionScope?: DesktopBrowserSessionScope }) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   destroy: (id: string) => Promise<DesktopBrowserResult<{ id: string }>>
@@ -122,6 +130,7 @@ declare global {
   interface Window {
     mediaToolboxDesktop?: {
       browser?: DesktopBrowserBridge
+      pathGrants?: DesktopPathGrantsBridge
     }
   }
 }

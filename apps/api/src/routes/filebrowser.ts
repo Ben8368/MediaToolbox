@@ -1,3 +1,4 @@
+import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { Transform } from 'node:stream'
@@ -171,6 +172,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
         await fs.mkdir(physicalDir, { recursive: true })
         const physicalTarget = path.join(physicalDir, safeName)
         const out = await fs.open(physicalTarget, 'w')
+        let uploadCompleted = false
         const meter = new Transform({
           transform(chunk, _encoding, callback) {
             state.filebrowserUploadedBytes += Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(chunk)
@@ -179,8 +181,10 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
         })
         try {
           await pipeline(part.file, meter, out.createWriteStream())
+          uploadCompleted = true
         } finally {
           await out.close()
+          if (!uploadCompleted) await fs.rm(physicalTarget, { force: true }).catch(() => undefined)
         }
         const virtualPath = toVirtualWorkspacePath(state, physicalTarget)
         addLog(state.db, 'INFO', 'file-manager', `上传文件：${virtualPath}`)
@@ -202,7 +206,7 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     void reply.header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
     void reply.header('Content-Type', 'application/octet-stream')
     void reply.header('Content-Length', String(stat.size))
-    return reply.send(await fs.readFile(physicalPath))
+    return reply.send(createReadStream(physicalPath))
   })
 }
 

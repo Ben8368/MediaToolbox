@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import path from 'node:path'
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
 
 import { buildApiServer } from './app.js'
@@ -244,6 +245,41 @@ describe('api skeleton contract', () => {
 
     expect(drivePath.statusCode).toBe(400)
     expect(outsideExports.statusCode).toBe(400)
+    await app.close()
+  })
+
+  it('accepts transcode jobs that use a read path grant instead of an input path', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: {
+        kind: 'file.read',
+        physicalPath: path.resolve('README.md'),
+        displayName: 'README.md',
+      },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: {
+        inputGrantId: grantId,
+        outputPath: '/Workspace/Exports/out.mp4',
+        preset: 'copy',
+      },
+    })
+
+    expect(created.statusCode).toBe(200)
+    expect(created.json()).toMatchObject({ kind: 'media.transcode' })
     await app.close()
   })
 

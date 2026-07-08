@@ -31,7 +31,7 @@ import { requestDirReadGrant, requestFileReadGrant, requestFileWriteGrant } from
 export function registerBrowserViewIpcHandlers(
   electron: ElectronModule,
   hostWindow: BrowserHostWindow,
-  options: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv },
+  options: { apiUrl: string; rootDir: string; env?: NodeJS.ProcessEnv; desktopAuthToken: string },
 ) {
   electron.ipcMain.handle('mediatoolbox:browser:create', async (event, payload: unknown): Promise<IpcResult<BrowserViewState>> => {
     assertBrowserSender(event, hostWindow)
@@ -49,6 +49,7 @@ export function registerBrowserViewIpcHandlers(
       viewId: id,
       apiUrl: options.apiUrl,
       rootDir: options.rootDir,
+      desktopAuthToken: options.desktopAuthToken,
     }
     const browserNetworkOptionsWithEnv = options.env ? { ...browserNetworkOptions, env: options.env } : browserNetworkOptions
     const sessionScope = getSessionScopeField(payload)
@@ -205,6 +206,7 @@ export function registerBrowserViewIpcHandlers(
         apiUrl: record.networkOptions.apiUrl,
         rootDir: record.networkOptions.rootDir,
         env: record.networkOptions.env,
+        desktopAuthToken: record.networkOptions.desktopAuthToken,
       }, webContents.session, record.sessionId, method ? { ...requestDraft, method } : requestDraft)
       return ok(result)
     } catch (error) {
@@ -232,13 +234,14 @@ export function registerBrowserViewIpcHandlers(
       apiUrl: record.networkOptions.apiUrl,
       rootDir: record.networkOptions.rootDir,
       env: record.networkOptions.env,
+      desktopAuthToken: record.networkOptions.desktopAuthToken,
     }, record.sessionId)
     return ok(selection ?? null)
   })
 
   electron.ipcMain.handle('mediatoolbox:path-grant:request-read', async (event) => {
     assertBrowserSender(event, hostWindow)
-    const grant = await requestFileReadGrant({ electron, hostWindow, apiUrl: options.apiUrl })
+    const grant = await requestFileReadGrant({ electron, hostWindow, apiUrl: options.apiUrl, desktopAuthToken: options.desktopAuthToken })
     return ok(grant ?? null)
   })
 
@@ -252,6 +255,7 @@ export function registerBrowserViewIpcHandlers(
       electron,
       hostWindow,
       apiUrl: options.apiUrl,
+      desktopAuthToken: options.desktopAuthToken,
       ...(defaultPath !== undefined ? { defaultPath } : {}),
     })
     return ok(grant ?? null)
@@ -259,7 +263,7 @@ export function registerBrowserViewIpcHandlers(
 
   electron.ipcMain.handle('mediatoolbox:path-grant:request-dir-read', async (event) => {
     assertBrowserSender(event, hostWindow)
-    const grant = await requestDirReadGrant({ electron, hostWindow, apiUrl: options.apiUrl })
+    const grant = await requestDirReadGrant({ electron, hostWindow, apiUrl: options.apiUrl, desktopAuthToken: options.desktopAuthToken })
     return ok(grant ?? null)
   })
 

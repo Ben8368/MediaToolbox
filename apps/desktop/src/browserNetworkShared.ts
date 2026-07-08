@@ -12,6 +12,7 @@ export type BrowserNetworkOptions = {
   apiUrl: string
   rootDir: string
   env?: NodeJS.ProcessEnv | undefined
+  desktopAuthToken: string
 }
 
 export type BrowserNetworkDownloadEvent = {
@@ -52,7 +53,7 @@ export function emitBrowserNetworkEvent(hostWindow: BrowserHostWindow, event: Br
 
 export function emitPermissionEvent(options: BrowserNetworkOptions, permission: BrowserNetworkPermissionEvent): void {
   emitBrowserNetworkEvent(options.hostWindow, { type: 'permission', permission })
-  void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/permission-events', permission).catch(() => undefined)
+  void postBrowserNetworkJson(options.apiUrl, '/api/browser-network/permission-events', permission, options.desktopAuthToken).catch(() => undefined)
 }
 
 export function resolveWorkspaceDirectory(options: BrowserNetworkOptions): string {
@@ -98,20 +99,21 @@ export function safePartitionSegment(value: string): string {
   return value.replace(/[^a-z0-9_-]+/gi, '-').slice(0, 48) || 'default'
 }
 
-export async function postBrowserNetworkJson(apiUrl: string, pathname: string, body: unknown): Promise<void> {
-  await sendBrowserNetworkJson(apiUrl, pathname, 'POST', body)
+export async function postBrowserNetworkJson(apiUrl: string, pathname: string, body: unknown, desktopAuthToken: string): Promise<void> {
+  await sendBrowserNetworkJson(apiUrl, pathname, 'POST', body, desktopAuthToken)
 }
 
-export async function patchBrowserNetworkJson(apiUrl: string, pathname: string, body: unknown): Promise<void> {
-  await sendBrowserNetworkJson(apiUrl, pathname, 'PATCH', body)
+export async function patchBrowserNetworkJson(apiUrl: string, pathname: string, body: unknown, desktopAuthToken: string): Promise<void> {
+  await sendBrowserNetworkJson(apiUrl, pathname, 'PATCH', body, desktopAuthToken)
 }
 
-async function sendBrowserNetworkJson(apiUrl: string, pathname: string, method: 'POST' | 'PATCH', body: unknown): Promise<void> {
+async function sendBrowserNetworkJson(apiUrl: string, pathname: string, method: 'POST' | 'PATCH', body: unknown, desktopAuthToken: string): Promise<void> {
   const response = await fetch(new URL(pathname, apiUrl), {
     method,
     headers: {
       'content-type': 'application/json',
       'x-mediatoolbox-browser-network': 'desktop',
+      'x-mediatoolbox-desktop-token': desktopAuthToken,
     },
     body: JSON.stringify(body),
   })

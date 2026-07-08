@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
+import { requireDesktopAuth } from '../desktop-auth.js'
 import type { ApiState } from '../state.js'
 import { WorkspacePathError } from '../workspace-path.js'
 import { addLog } from '../utils.js'
@@ -27,8 +28,7 @@ export function registerPathGrantRoutes(app: FastifyInstance, state: ApiState): 
       jobId?: string
     }
   }>('/api/path-grants', async (request, reply) => {
-    if (request.headers['x-mediatoolbox-desktop'] !== 'desktop') {
-      reply.status(403)
+    if (!requireDesktopAuth(request, reply, 'x-mediatoolbox-desktop')) {
       return { ok: false, message: '仅桌面端可签发路径授权。' }
     }
 
