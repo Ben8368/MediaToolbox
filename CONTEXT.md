@@ -4,16 +4,11 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-08
-> - Electron 生产打包基础链路已打通：`apps/api` 新增 esbuild 生产 runtime bundle；`apps/desktop` 打包资源包含 Web renderer 与 API runtime；packaged 主进程通过 Electron `ELECTRON_RUN_AS_NODE` 启动本地 API，并将工作区和 SQLite DB 默认收敛到 `userData`；macOS arm64 `electron-builder --dir` 已通过，包内 `/api/health` 烟测已通过。
-> - Phase 6A-C PathGrant 已接入：`packages/contracts` 新增 PathGrant 类型族；`packages/db` schema V3 新增 `path_grants` 表及 `pathGrants` DB 命名空间；`POST/GET/DELETE /api/path-grants` 三条路由已注册（仅桌面端可签发，TTL file.read=1h / file.write=30min / dir.read=2h）；`workspace-path.ts` 新增 `resolveGrantPath()`；Electron 新增三个 IPC handler（`mediatoolbox:path-grant:request-read/write/dir-read`）及对应 dialog 流程；前端 `apps/web/src/api/real/pathGrants.ts` 适配层已实现（含纯 Web 模式降级）。
-> - 文件管理器上传与下载能力落地：`POST /api/filebrowser/upload`（multipart，500 MB 上限，文件名净化，工作区边界）和 `GET /api/filebrowser/file`（流式下载，Content-Disposition attachment）已接入真实 API；前端工具栏上传按钮和下载按钮均已接通。
-> - 已接入：右侧状态面板 CPU / 内存 / GPU、浏览器错误页、生产资源相对路径、浏览器多标签页前端 UI、PSD 渲染 API 与 manifest 持久化。
-> - PathGrant 已全面集成：transcode/PSD 路由支持 inputGrantId（外部输入）；前端转码工作台新增「从外部导入」按钮，调用 requestReadGrant() 获取授权并自动填充输入。
-> - Phase 6B outputGrantId 已落地：transcode/PSD render 支持 outputGrantId 工作区外写授权；PSD 工作台加「导出到外部」按钮（requestWriteGrant）；全部已推送至远端。
-> - 浏览器多标签网络事件继续推进：下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消校验发起标签归属，避免后台标签事件干扰当前标签。
-> - Electron 发布 polish 继续推进：桌面窗口/托盘统一使用 renderer app 图标资源；新增 `npm run release:preflight` 检查 runtime bundle、renderer/API 打包资源、artifact 命名和签名/公证环境提示，并接入 release workflow。
-> - 系统指标继续补齐：macOS GPU 利用率新增 `ioreg IOAccelerator` 采样路径；项目上传速率新增文件管理器 multipart 上传字节统计，不再只依赖浏览器网络请求体。
-> - 待后续：真实 Photoshop 联调、多标签页桌面端真机验收、完整安装包签名/图标与跨平台 release 验收。
+> - Electron 生产打包基础链路已打通：renderer/API runtime 入包、`userData` 工作区与 SQLite 默认路径、macOS arm64 `electron-builder --dir` 和包内 `/api/health` 烟测已通过；发布侧仍待签名、公证与完整安装包验收。
+> - Phase 6A-C PathGrant 管道已落地：读/写/目录读授权、`inputGrantId` / `outputGrantId` 任务扩展、转码/PSD 外部导入导出和纯 Web 降级已接入；下一步继续做桌面端体验与边界验收。
+> - Browser Network 多标签能力继续收口：下载、权限和上传侧栏事件已按活动 `viewId` 隔离，下载取消校验标签归属；下一步验收桌面端 view 生命周期和真实下载/权限路径。
+> - 文件管理器上传/下载真实 API 与 multipart 上传字节统计已接入；下一步验收真实大文件上传体验。
+> - PSD 渲染 API、manifest 持久化和工作台闭环已接入；下一步做真实 Photoshop 联调与 image / smart-object slot 渲染。
 
 ## 项目定位
 

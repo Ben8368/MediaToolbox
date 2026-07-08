@@ -4,21 +4,28 @@
 
 ## 开局读取
 
-每轮先读最小上下文：
+每轮按四层读取，先小后大；入口文件保持短小，细节、历史和长复盘下沉到 `docs/`。
 
-1. `CONTEXT.md`：当前阶段、阻断项、黄灯、下一步。
-2. `LESSONS.md`：按任务关键词匹配压缩错题。
-3. 按需扩展：
-   - 架构边界：`docs/ARCHITECTURE.md`
-   - 编码与审查：`docs/AI_RULES.md`
-   - API 边界：`docs/FRONTEND_API_CONTRACT.md`
-   - UI 兼容：`docs/UI_COMPAT.md`
-   - 阶段路线：`docs/ROADMAP.md`
-   - 贡献与发布：`CONTRIBUTING.md`、`SECURITY.md`、`docs/RELEASE.md`
-   - 架构决策：`docs/ADR/`
-   - 长历史：`docs/archive/`
+1. **每轮必读**
+   - `CONTEXT.md`：当前阶段、阻断项、黄灯、下一步。
+   - `LESSONS.md`：按任务关键词匹配压缩错题。
+2. **代码改动按需**
+   - `docs/ARCHITECTURE.md`：架构边界与模块职责。
+   - `docs/AI_RULES.md`：审查、验证、提交与代码规模触发项。
+   - `docs/FRONTEND_API_CONTRACT.md`：前后端 API 边界。
+   - `docs/UI_COMPAT.md`：UI 兼容与体验约束。
+3. **高风险按需**
+   - `SECURITY.md`：安全策略。
+   - `docs/API_VALIDATION.md`：真实路径验收清单。
+   - `docs/MAINTAINERS.md`：领域责任与升级评审边界。
+   - `docs/ADR/`：已记录的架构决策。
+4. **规划 / 发布按需**
+   - `docs/ROADMAP.md`：阶段路线。
+   - `CONTRIBUTING.md`：人类贡献流程。
+   - `docs/RELEASE.md`：发布流程。
+   - `docs/archive/`：长历史与复盘。
 
-原则：入口文件保持短小；细节、历史和长复盘下沉到 `docs/`。
+治理文档维护原则：入口短小，事实单一，状态真实，规则可执行；同一条规则需要第二次展开时，优先链接权威来源而不是复制。
 
 ## 工作流
 
@@ -26,7 +33,7 @@
 - 代码改动后按 `docs/AI_RULES.md` 输出 `🚦 Audit Report`，再跑客观验证。
 - 客观验证由 AI 执行；用户只负责主观体验和业务判断。
 - 客观验证默认：`npm run verify`。
-- Audit Report 为 🟢 且验证通过时，按 `docs/AI_RULES.md` 自动提交；是否自动推送取决于当前分支保护规则（用户明确禁止时除外）。
+- Audit Report 为 🟢 且验证通过时，按 `docs/AI_RULES.md` 判断是否自动提交 / 推送；用户本轮明确禁止时遵从用户。
 - 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 `CONTEXT.md` 或相关 `docs/`。
 - 面向开放协作的流程、安全、发布和维护职责分别见 `CONTRIBUTING.md`、`SECURITY.md`、`docs/RELEASE.md` 与 `docs/MAINTAINERS.md`。
 
@@ -72,10 +79,10 @@
 
 ## 提交与署名
 
-- Audit Report 为 🟢 且客观验证通过时，自动 `git commit`；非 `main` / `master` 分支可自动 `git push`，保护分支需用户明确允许。细则见 `docs/AI_RULES.md`「绿灯自动提交与推送」。用户明确禁止提交时不提交；明确禁止推送时仅影响推送。
+- 绿灯自动提交与推送细则见 `docs/AI_RULES.md`「绿灯自动提交与推送」。
 - commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
 - AI 工具参与实质改动且工具未自动记录来源时，在 commit message 末尾追加对应 Git trailer，前方保留一个空行。
 - 已确认 trailer：
-  - Claude Code：`Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`
+  - Claude Code：`Co-authored-by: Claude Code <noreply@anthropic.com>`
   - Cursor：`Co-authored-by: Cursor <cursoragent@cursor.com>`
   - Codex：`Co-authored-by: Codex <codex@openai.com>`

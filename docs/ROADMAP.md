@@ -1,6 +1,6 @@
 # Roadmap
 
-阶段计划和 Feature 索引放在这里，避免污染每轮必读的 `CONTEXT.md`。
+阶段计划放在这里，避免污染每轮必读的 `CONTEXT.md`。
 
 ## Phase 1：前端基线迁回
 
@@ -112,24 +112,3 @@
 - 任务 payload 扩展 `inputGrantId` / `outputGrantId`
 
 与现状关系：文件管理器 `GET /api/filebrowser/disks` 已展示真实磁盘容量；未映射磁盘不直接开放裸路径，目录级授权浏览必须经桌面端 dialog 和 PathGrant。
-
-## Feature 索引
-
-| Feature | 主题 | 状态 |
-| --- | --- | --- |
-| 001 | NAS 风格前端迁回 | 完成 |
-| 002 | 应用注册与多窗口系统 | 完成 |
-| 003 | 下载器 UI | 完成 |
-| 004 | 文件管理器 UI | 完成 |
-| 005 | 治理文档与红绿灯审查 | 完成 |
-| 006 | monorepo 大项目骨架 | 完成 |
-| 007 | 本地 API 服务 | 本地能力部分接入 |
-| 008 | Electron 桌面壳 | BrowserWindow / IPC / 托盘已接入 |
-| 009 | 任务状态机 | jobs cancel 已联动 |
-| 010 | yt-dlp adapter | 执行入口已接入 |
-| 011 | ffmpeg adapter | 执行入口已接入，转码工作台 beta 已对接真实 API |
-| 012 | PSD 模版引擎 | engine 接口、Photoshop JSX adapter、检查/编辑/渲染/持久化闭环已建立，待 Photoshop 本机联调 |
-| 013 | 真浏览器 app | 多标签页 UI 已接入（前端），拖拽、缩放和错误页重试已主观验收，标签切换/生命周期待真机验收 |
-| 014 | Browser Network adapter | 非验收类能力已接入：隔离 session、下载事件、受控上传选择、权限审计、API/jobs 契约 |
-| 015 | PSD 渐进式渲染工作台 | manifest 编辑、批量渲染表单、manifest sidecar 持久化已接入，待真实 Photoshop 联调 |
-| 016 | 工作区外路径授权（Path Grant） | Phase 6A/B/C 管道已落地，桌面端体验验收继续跟进 |

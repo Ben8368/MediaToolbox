@@ -61,46 +61,23 @@
 
 ### 绿灯自动提交与推送
 
-当且仅当**同时满足**下列条件时，AI 须在完成本轮改动后**自动** `git commit`，无需用户再次口头确认：
+当且仅当 `🚦 Audit Report` 为 **🟢 完美**、客观验证通过（默认 `npm run verify`）、工作区存在可提交的实质改动，且用户本轮未禁止提交时，AI 须自动 `git commit`，无需再次口头确认。
 
-1. `🚦 Audit Report` 的**总体评价为 🟢 完美**
-2. 客观验证已通过（默认 `npm run verify`）
-3. 工作区存在可提交的实质改动（代码或治理文档）
-4. 用户未在本轮明确禁止提交
+自动推送只在提交后评估：非 `main` / `master` 分支可推送到当前 upstream；无 upstream 时可使用 `git push -u origin HEAD`；用户本轮禁止推送时不得推送。`main` / `master` 默认不自动推送，只有用户明确允许本轮推送保护分支时才可执行；禁止 `git push --force` 到保护分支，除非用户明确要求。
 
-自动 `git push` 额外要求：
+以下情况直接终止自动提交：总体评价为 🔴 或 🟡；客观验证未执行或未通过；本轮仅答疑、评审或方案讨论；用户明确要求不要提交；无待提交变更；pre-commit hook 拒绝后尚未修复。
 
-1. 当前分支不是 `main` / `master`
-2. 当前分支已有 upstream，或允许使用 `git push -u origin HEAD`
-3. 用户未在本轮明确禁止推送
-
-若当前分支是 `main` / `master`，默认只自动提交，不自动推送；只有用户明确允许本轮推送保护分支时才可执行。
-
-**执行顺序：**
+执行顺序：
 
 ```text
 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → 按分支规则决定是否 git push
 ```
 
-**提交规范（与 `AGENTS.md` 一致）：**
+提交规范（与 `AGENTS.md` 一致）：
 
 - commit message 标题与正文使用中文；Conventional Commit 类型前缀与 Git trailer 键名保留英文
 - 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` / `Co-Authored-By` trailer，前方保留一个空行
 - 不得提交 `.env`、凭据或其他敏感文件；若误纳入暂存区须先移除
-
-**不得自动提交的情形：**
-
-- 总体评价为 🔴 或 🟡
-- 客观验证未通过或尚未执行
-- 本轮仅为答疑、评审、方案讨论，无实质文件改动
-- 用户明确要求「先不要提交」或「不要提交」
-- 无待提交变更，或 pre-commit hook 拒绝后尚未修复
-
-**推送约束：**
-
-- 默认推送到当前分支的 upstream；无 upstream 时使用 `git push -u origin HEAD`
-- `main` / `master` 默认不自动推送，除非用户明确允许本轮推送
-- 禁止 `git push --force` 到 `main` / `master`，除非用户明确要求
 
 ### 代码规模触发项
 

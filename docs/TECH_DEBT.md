@@ -16,29 +16,16 @@
 
 ## 未偿还债务
 
-### 🔴 P0 — 正确性缺陷（0 项）
-
-暂无。
-
----
-
-### 🟡 P1 — 性能与可维护性（0 项）
-
-暂无。
-
----
-
-### 🟢 P2 — 设计层次问题（0 项）
-
-暂无。
-
----
+新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方阶段黄灯迁移列表。
 
 ### 🟡 P1 — 从 CONTEXT.md 黄灯迁移（4 项）
 
 #### TD-012: 浏览器 app 纯 Web 模式降级体验
 - **位置：** `apps/web/src/apps/browser/`
 - **来源：** CONTEXT.md 剩余黄灯
+- **目标阶段：** Phase 4.5 后续体验补齐
+- **阻断候选构建：** 否
+- **验证方式：** Web 模式手动打开浏览器 app，确认降级提示或替代路径可读且不可误操作
 - **问题：** 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示
 - **影响：** Web 模式用户无法使用浏览器能力，体验不完整
 - **建议方案：** 设计 Web 模式下的降级方案（如代理模式、iframe 沙箱或明确引导用户切换到桌面端）
@@ -47,6 +34,9 @@
 #### TD-013: 浏览器多标签页桌面端真机验收
 - **位置：** `apps/desktop/src/browserViews.ts` + `apps/web/src/apps/browser/`
 - **来源：** CONTEXT.md 剩余黄灯
+- **目标阶段：** Phase 4.5 桌面端验收
+- **阻断候选构建：** 是，若 view 生命周期或下载归属在真机失败
+- **验证方式：** 桌面端真机覆盖新建/切换/关闭标签、后台下载归属、权限提示和取消下载隔离
 - **问题：** 多标签页 UI 前端已接入，下载、权限和上传侧栏事件已按活动 `viewId` 展示，下载取消也校验 `viewId` 归属；但标签切换隐藏旧 view、view 生命周期与多标签下载体验仍待桌面端真机验收。
 - **影响：** 桌面端真机多标签场景仍可能暴露 view 隐藏、销毁或焦点生命周期问题
 - **建议方案：** 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），重点覆盖后台标签下载归属、权限提示和取消下载隔离。
@@ -55,6 +45,9 @@
 #### TD-019: Electron 发布 polish
 - **位置：** `apps/desktop/` + `.github/workflows/release.yml`
 - **来源：** TD-014 偿还后的剩余发布项
+- **目标阶段：** Release 候选构建前
+- **阻断候选构建：** 是，若签名、公证或安装包验收失败
+- **验证方式：** `npm run release:preflight` 后分别验收 `.dmg` / `.exe` / `.AppImage`
 - **问题：** Electron 目录包、preload 路径和本地 API 生产 runtime 已通过 macOS arm64 `--dir` 与包内 `/api/health` 烟测；桌面窗口/托盘图标入口、artifact 命名和 release preflight 已接入；但 macOS/Windows 签名、公证和完整安装包发布仍待验收
 - **影响：** 当前可生成可运行目录包，且发布前置检查更明确；正式分发体验仍取决于签名、公证和跨平台安装包验收
 - **建议方案：** 准备签名证书、公证凭据和 release tag 流程，运行 `npm run release:preflight` 后分别验收 `.dmg` / `.exe` / `.AppImage`
@@ -63,6 +56,9 @@
 #### TD-015: PSD 真实 Photoshop 联调
 - **位置：** `packages/psd-core/` + `workers/psd-worker/`
 - **来源：** CONTEXT.md 剩余黄灯
+- **目标阶段：** Phase 5 深水区
+- **阻断候选构建：** 是，若候选版本承诺 PSD 图片或智能对象渲染
+- **验证方式：** 配置真实 Photoshop 命令后跑通 `POST /api/psd/render`，检查输出 PNG 与 manifest 往返
 - **问题：** PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内，非文字 slot 现已显式拒绝避免静默忽略；但真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调
 - **影响：** PSD 工作台目前只能处理文字 slot，无法处理图片和智能对象
 - **建议方案：** 
