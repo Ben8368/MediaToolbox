@@ -50,12 +50,30 @@ export function DesktopWindow({
     if ((e.target as HTMLElement).closest('.wc') || isMaximized) return
     onFocus(windowId)
     dragS.current = { cx: e.clientX, cy: e.clientY, wx: ix, wy: iy }
-    const mm = (e: MouseEvent) => onDrag(
-      windowId,
-      dragS.current.wx + (e.clientX - dragS.current.cx),
-      Math.max(WINDOW_CHROME.minTop, dragS.current.wy + (e.clientY - dragS.current.cy)),
-    )
-    const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu) }
+    let frame: number | null = null
+    let pending: { x: number; y: number } | null = null
+
+    const flush = () => {
+      frame = null
+      if (!pending) return
+      onDrag(windowId, pending.x, pending.y)
+      pending = null
+    }
+    const mm = (e: MouseEvent) => {
+      pending = {
+        x: dragS.current.wx + (e.clientX - dragS.current.cx),
+        y: Math.max(WINDOW_CHROME.minTop, dragS.current.wy + (e.clientY - dragS.current.cy)),
+      }
+      if (frame === null) frame = window.requestAnimationFrame(flush)
+    }
+    const mu = () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame)
+        flush()
+      }
+      document.removeEventListener('mousemove', mm)
+      document.removeEventListener('mouseup', mu)
+    }
     document.addEventListener('mousemove', mm)
     document.addEventListener('mouseup', mu)
   }, [windowId, ix, iy, isMaximized, onFocus, onDrag])
@@ -68,6 +86,16 @@ export function DesktopWindow({
     resizeS.current = { cx: e.clientX, cy: e.clientY, ww: width, wh: height, wx: ix, wy: iy, dir: direction }
 
     document.body.style.userSelect = 'none'
+    let frame: number | null = null
+    let pending: { width: number; height: number; x: number; y: number; moved: boolean } | null = null
+
+    const flush = () => {
+      frame = null
+      if (!pending) return
+      onResize(windowId, pending.width, pending.height)
+      if (pending.moved) onDrag(windowId, pending.x, pending.y)
+      pending = null
+    }
 
     const mm = (e: MouseEvent) => {
       const dx = e.clientX - resizeS.current.cx
@@ -88,12 +116,14 @@ export function DesktopWindow({
         ny = resizeS.current.wy + (resizeS.current.wh - nh)
       }
 
-      onResize(windowId, nw, nh)
-      if (nx !== resizeS.current.wx || ny !== resizeS.current.wy) {
-        onDrag(windowId, nx, ny)
-      }
+      pending = { width: nw, height: nh, x: nx, y: ny, moved: nx !== resizeS.current.wx || ny !== resizeS.current.wy }
+      if (frame === null) frame = window.requestAnimationFrame(flush)
     }
     const mu = () => {
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame)
+        flush()
+      }
       document.body.style.userSelect = ''
       document.removeEventListener('mousemove', mm)
       document.removeEventListener('mouseup', mu)

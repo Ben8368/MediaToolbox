@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useMemo, useState, type FormEvent } from 'react'
 
 import { cancelJob, listJobs, submitTranscodeJob } from '@/api'
 import type { JobRecord, TranscodeJobDraft } from '@/api/types'
 import { requestReadGrant } from '@/api/real/pathGrants'
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 
 const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
   { value: 'mp4-h264-aac', label: 'MP4 H.264 / AAC' },
@@ -52,11 +53,7 @@ export function TranscodeApp() {
     }
   }, [])
 
-  useEffect(() => {
-    void refreshJobs()
-    const timer = window.setInterval(() => void refreshJobs(), 2000)
-    return () => window.clearInterval(timer)
-  }, [refreshJobs])
+  useVisibilityPolling(refreshJobs, 2000)
 
   const importExternal = useCallback(async () => {
     const grant = await requestReadGrant()
