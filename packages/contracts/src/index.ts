@@ -15,7 +15,7 @@ export type AppsResponse = {
   apps: WorkbenchApp[]
 }
 
-export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'browser.request' | 'media.transcode' | 'psd.batch'
+export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'browser.request' | 'media.transcode' | 'psd.apply'
 
 export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'retrying' | 'canceled'
 
@@ -53,30 +53,71 @@ export type AssetListResponse = OkResult & {
   assets: AssetRecord[]
 }
 
-export type TemplateSlotKind = 'text' | 'image' | 'smart-object' | 'shape' | 'canvas'
+// PS 工作台 — 工单系统
 
-export type TemplateSlot = {
-  id: string
-  kind: TemplateSlotKind
-  label: string
-  layerPath: string[]
-  required: boolean
+export type SoChainEntry = {
+  fileRef: string
+  layerPath: string
 }
 
-export type PsdTemplateManifest = {
+export type TextLayerRecord = {
   id: string
-  name: string
-  version: number
-  sourcePath?: string
-  document: {
-    width: number
-    height: number
-    resolution?: number
-  }
-  slots: TemplateSlot[]
+  layerId: number
+  layerPath: string
+  soChain: SoChainEntry[]
+  enabled: boolean
+  // 扫描阶段读取（只读）
+  originalText: string
+  originalFontFamily: string
+  originalFontStyle: string
+  originalFontPs: string
+  originalSizePt: number
+  originalLeadingPt: number | null
+  originalTrackingValue: number
+  boundsHPx: number
+  boundsWPx: number
+  fakesBold: boolean
+  // 工单填写字段（用户修改）
+  newText?: string
+  newFontFamily?: string
+  newFontStyle?: string
+  // AI 翻译预留
+  targetLanguage?: string
+  translationPrompt?: string
 }
 
-export type PsdRenderInput = Record<string, string | number | boolean>
+export type WorkOrder = {
+  id: string
+  psdPath: string
+  psdFileName: string
+  documentWidth: number
+  documentHeight: number
+  documentResolution: number
+  createdAt: number
+  updatedAt: number
+  records: TextLayerRecord[]
+}
+
+export type TranslationLanguage = 'ja' | 'zh' | 'pt' | 'en' | 'ko' | 'fr' | 'de' | 'es'
+
+export type WorkOrderScanResponse = OkResult & {
+  workOrderId?: string
+  recordCount?: number
+}
+
+export type WorkOrderGetResponse = OkResult & {
+  workOrder?: WorkOrder
+}
+
+export type WorkOrderApplyResponse = OkResult & {
+  outputPath?: string
+  appliedCount?: number
+  skippedCount?: number
+}
+
+export type WorkOrderTranslateResponse = OkResult & {
+  updatedRecords?: TextLayerRecord[]
+}
 
 export type HealthResponse = {
   ok: boolean

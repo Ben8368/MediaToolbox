@@ -2,7 +2,7 @@
  * Database schema definitions and migrations
  */
 
-export const CURRENT_SCHEMA_VERSION = 3
+export const CURRENT_SCHEMA_VERSION = 4
 
 export const SCHEMA_V1 = `
 -- Schema version tracking
@@ -82,4 +82,20 @@ CREATE TABLE IF NOT EXISTS path_grants (
 CREATE INDEX IF NOT EXISTS idx_path_grants_status ON path_grants(status);
 CREATE INDEX IF NOT EXISTS idx_path_grants_expires_at ON path_grants(expires_at);
 CREATE INDEX IF NOT EXISTS idx_path_grants_job_id ON path_grants(job_id);
+`
+
+export const SCHEMA_V4_WORKORDERS = `
+CREATE TABLE IF NOT EXISTS psd_workorders (
+  id TEXT PRIMARY KEY,
+  psd_path TEXT NOT NULL,
+  psd_file_name TEXT NOT NULL,
+  document_width INTEGER NOT NULL,
+  document_height INTEGER NOT NULL,
+  document_resolution REAL NOT NULL,
+  records_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_psd_workorders_psd_path ON psd_workorders(psd_path);
+CREATE INDEX IF NOT EXISTS idx_psd_workorders_updated_at ON psd_workorders(updated_at DESC);
 `

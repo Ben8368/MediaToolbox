@@ -192,13 +192,24 @@ export const browserNetworkRequestUpdateSchema = {
   },
 } as const
 
-export const psdInspectSchema = {
+export const psdScanSchema = {
   body: {
     type: 'object',
     additionalProperties: false,
     required: ['psdPath'],
     properties: {
       psdPath: { type: 'string', minLength: 1 },
+    },
+  },
+} as const
+
+export const psdWorkOrderUpdateSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['workOrder'],
+    properties: {
+      workOrder: { type: 'object' },
     },
   },
 } as const

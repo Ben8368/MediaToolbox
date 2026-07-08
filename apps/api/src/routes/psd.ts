@@ -1,195 +1,191 @@
-import fs from 'node:fs/promises'
 import type { FastifyInstance } from 'fastify'
-import type { OkResult } from '@mediatoolbox/contracts'
-import { PsdWorkerEngineNotConfiguredError, PsdWorkerInputError, runPsdWorkerJob, validateRenderInput } from '@mediatoolbox/psd-worker'
-import type { PsdRenderInput, PsdTemplateManifest } from '@mediatoolbox/psd-core'
+import type { WorkOrder, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, OkResult } from '@mediatoolbox/contracts'
+import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError } from '@mediatoolbox/psd-worker'
 
-import { psdInspectSchema } from '../schemas.js'
+import { psdScanSchema, psdWorkOrderUpdateSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog } from '../utils.js'
-import { toPhysicalWorkspacePath, toVirtualWorkspacePath } from '../workspace-files.js'
 import { normalizeWorkspacePath, resolveGrantPath } from '../workspace-path.js'
-
-type PsdInspectResponse = OkResult & {
-  manifest?: PsdTemplateManifest
-}
+import { toPhysicalWorkspacePath } from '../workspace-files.js'
 
 export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
-  app.post<{ Body: { psdPath?: string }; Reply: PsdInspectResponse }>(
-    '/api/psd/templates/inspect',
-    { schema: psdInspectSchema },
+  // POST /api/psd/scan — 扫描 PSD/PSB，创建工单
+  app.post<{ Body: { psdPath?: string; inputGrantId?: string }; Reply: WorkOrderScanResponse }>(
+    '/api/psd/scan',
+    { schema: psdScanSchema },
     async (request, reply) => {
-      const virtualPath = normalizeWorkspacePath(request.body.psdPath, state.workspaceRoot)
-      const physicalPath = toPhysicalWorkspacePath(state, virtualPath)
+      const { psdPath, inputGrantId } = request.body
+      let physicalPath: string
       try {
-        const result = await runPsdWorkerJob({ type: 'inspect', psdPath: physicalPath })
-        if (result.type !== 'inspect') return { ok: false, message: 'PSD worker 返回了非检查结果。' }
-        addLog(state.db, 'INFO', 'psd', `PSD 模板检查完成：${virtualPath}`)
-        return { ok: true, manifest: { ...result.manifest, sourcePath: virtualPath } }
-      } catch (error) {
-        if (error instanceof PsdWorkerInputError) {
-          reply.status(400)
-          return { ok: false, message: error.message }
+        if (inputGrantId) {
+          physicalPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
+        } else {
+          const virtualPath = normalizeWorkspacePath(psdPath, state.workspaceRoot)
+          physicalPath = toPhysicalWorkspacePath(state, virtualPath)
         }
+      } catch (error) {
+        reply.status(400)
+        return { ok: false, message: error instanceof Error ? error.message : String(error) }
+      }
+
+      try {
+        const result = await runPsdWorkerJob({ type: 'scan', psdPath: physicalPath })
+        if (result.type !== 'scan') {
+          return { ok: false, message: 'Worker returned non-scan result' }
+        }
+
+        const workOrderId = `wo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        const workOrder: WorkOrder = {
+          id: workOrderId,
+          psdPath: psdPath ?? physicalPath,
+          psdFileName: physicalPath.split(/[\\/]/).pop() ?? 'unknown.psd',
+          documentWidth: result.documentWidth,
+          documentHeight: result.documentHeight,
+          documentResolution: result.documentResolution,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          records: result.records,
+        }
+
+        await state.db.workOrders.create(workOrder)
+        addLog(state.db, 'INFO', 'psd', `PSD 扫描完成：${workOrder.psdFileName}，${result.records.length} 个文字图层`)
+
+        return { ok: true, workOrderId, recordCount: result.records.length }
+      } catch (error) {
         if (error instanceof PsdWorkerEngineNotConfiguredError) {
           reply.status(503)
-          return { ok: false, message: 'Photoshop 命令未配置，暂不能检查 PSD 模板。' }
+          return { ok: false, message: 'Photoshop 命令未配置，暂不能扫描 PSD。' }
         }
-        const message = error instanceof Error ? error.message : String(error)
-        reply.status(400)
-        return { ok: false, message }
+        if (error instanceof PsdWorkerInputError) {
+          reply.status(400)
+        }
+        return { ok: false, message: error instanceof Error ? error.message : String(error) }
       }
     },
   )
 
+  // GET /api/psd/workorders/:id — 获取工单
+  app.get<{ Params: { id: string }; Reply: WorkOrderGetResponse }>(
+    '/api/psd/workorders/:id',
+    async (request, reply) => {
+      const workOrder = await state.db.workOrders.findById(request.params.id)
+      if (!workOrder) {
+        reply.status(404)
+        return { ok: false, message: '工单不存在' }
+      }
+      return { ok: true, workOrder }
+    },
+  )
+
+  // PUT /api/psd/workorders/:id — 更新工单（编辑 records）
+  app.put<{ Params: { id: string }; Body: { workOrder?: WorkOrder }; Reply: OkResult }>(
+    '/api/psd/workorders/:id',
+    { schema: psdWorkOrderUpdateSchema },
+    async (request, reply) => {
+      const { workOrder } = request.body
+      if (!workOrder) {
+        reply.status(400)
+        return { ok: false, message: 'Missing workOrder in request body' }
+      }
+      if (workOrder.id !== request.params.id) {
+        reply.status(400)
+        return { ok: false, message: 'Work order ID mismatch' }
+      }
+
+      const existing = await state.db.workOrders.findById(request.params.id)
+      if (!existing) {
+        reply.status(404)
+        return { ok: false, message: '工单不存在' }
+      }
+
+      workOrder.updatedAt = Date.now()
+      await state.db.workOrders.update(workOrder)
+      addLog(state.db, 'INFO', 'psd', `工单已更新：${workOrder.id}`)
+      return { ok: true }
+    },
+  )
+
+  // POST /api/psd/workorders/:id/apply — 应用工单（运行自适应算法）
   app.post<{
-    Body: { template?: PsdTemplateManifest; input?: PsdRenderInput; inputGrantId?: string; outputGrantId?: string }
-    Reply: OkResult & { outputPath?: string }
-  }>('/api/psd/render', async (request, reply) => {
-    const { template, input, inputGrantId, outputGrantId } = request.body
-
-    if (!template) {
-      reply.status(400)
-      return { ok: false, message: 'Missing template in request body' }
-    }
-    if (!input) {
-      reply.status(400)
-      return { ok: false, message: 'Missing input in request body' }
+    Params: { id: string }
+    Body: { outputPath?: string; outputGrantId?: string }
+    Reply: WorkOrderApplyResponse
+  }>('/api/psd/workorders/:id/apply', async (request, reply) => {
+    const workOrder = await state.db.workOrders.findById(request.params.id)
+    if (!workOrder) {
+      reply.status(404)
+      return { ok: false, message: '工单不存在' }
     }
 
-    let payload: ResolvedRenderPayload
+    const { outputPath, outputGrantId } = request.body
+    let physicalOutputPath: string
+    let virtualOutputPath: string
+
     try {
-      payload = await resolveRenderPayload(state, template, input, inputGrantId, outputGrantId)
+      if (outputGrantId) {
+        physicalOutputPath = await resolveGrantPath(outputGrantId, state.db, 'file.write')
+        virtualOutputPath = `__grant:${outputGrantId}`
+      } else {
+        const fileName = workOrder.psdFileName.replace(/\.[^.]+$/, '') + `_adapted_${Date.now()}.psd`
+        virtualOutputPath = outputPath || `${state.workspaceRoot}/Exports/${fileName}`
+        physicalOutputPath = toPhysicalWorkspacePath(state, virtualOutputPath)
+      }
     } catch (error) {
       reply.status(400)
       return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
 
+    // 解析源 PSD 路径（虚拟 → 物理）
+    let physicalPsdPath: string
     try {
-      const result = await runPsdWorkerJob({ type: 'render', template: payload.template, input: payload.input })
-      if (result.type !== 'render') {
-        return { ok: false, message: 'PSD worker 返回了非渲染结果。' }
+      const virtualPsdPath = normalizeWorkspacePath(workOrder.psdPath, state.workspaceRoot)
+      physicalPsdPath = toPhysicalWorkspacePath(state, virtualPsdPath)
+    } catch (error) {
+      reply.status(400)
+      return { ok: false, message: `Invalid PSD path: ${error instanceof Error ? error.message : String(error)}` }
+    }
+
+    // 同步更新 workOrder 的 psdPath 为物理路径（worker 需要）
+    const workOrderForApply: WorkOrder = { ...workOrder, psdPath: physicalPsdPath }
+
+    try {
+      const result = await runPsdWorkerJob({
+        type: 'apply',
+        workOrder: workOrderForApply,
+        outputPsdPath: physicalOutputPath,
+      })
+      if (result.type !== 'apply') {
+        return { ok: false, message: 'Worker returned non-apply result' }
       }
 
-      // 输出路径由服务端在工作区内生成，回写虚拟路径供前端展示。
-      const virtualOutput = safeVirtualWorkspacePath(state, result.outputPath) ?? payload.virtualOutput
-
-      addLog(state.db, 'INFO', 'psd', `PSD 模板渲染完成：${template.name}`)
-      return { ok: true, outputPath: virtualOutput }
+      addLog(state.db, 'INFO', 'psd', `工单应用完成：${workOrder.id}，应用 ${result.appliedCount} 个图层`)
+      return {
+        ok: true,
+        outputPath: virtualOutputPath,
+        appliedCount: result.appliedCount,
+        skippedCount: result.skippedCount,
+      }
     } catch (error) {
       if (error instanceof PsdWorkerEngineNotConfiguredError) {
         reply.status(503)
-        return { ok: false, message: 'Photoshop 命令未配置，暂不能渲染 PSD 模板。' }
+        return { ok: false, message: 'Photoshop 命令未配置，暂不能应用工单。' }
       }
-      const message = error instanceof Error ? error.message : String(error)
-      reply.status(400)
-      return { ok: false, message }
+      return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
   })
 
-  app.post<{ Body: { manifest?: PsdTemplateManifest }; Reply: OkResult }>(
-    '/api/psd/manifests/save',
+  // POST /api/psd/workorders/:id/translate — AI 翻译（占位，v1 返回 501）
+  app.post<{ Params: { id: string }; Body: Record<string, unknown> }>(
+    '/api/psd/workorders/:id/translate',
     async (request, reply) => {
-      const { manifest } = request.body
-      if (!manifest?.sourcePath) {
-        reply.status(400)
-        return { ok: false, message: 'Missing manifest.sourcePath in request body' }
-      }
-      const virtualPath = normalizeWorkspacePath(manifest.sourcePath, state.workspaceRoot)
-      const physicalPsdPath = toPhysicalWorkspacePath(state, virtualPath)
-      const sidecarPath = `${physicalPsdPath}.manifest.json`
-      try {
-        const persisted: PsdTemplateManifest = { ...manifest, sourcePath: virtualPath }
-        await fs.writeFile(sidecarPath, JSON.stringify(persisted, null, 2), 'utf-8')
-        addLog(state.db, 'INFO', 'psd', `PSD manifest 已保存：${virtualPath}`)
-        return { ok: true }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        reply.status(400)
-        return { ok: false, message }
-      }
+      reply.status(501)
+      return { ok: false, message: 'AI 翻译功能尚未开放，敬请期待。' }
     },
   )
 
-  app.get<{ Querystring: { psdPath?: string }; Reply: PsdInspectResponse }>(
-    '/api/psd/manifests/load',
-    async (request, reply) => {
-      const virtualPath = normalizeWorkspacePath(request.query.psdPath, state.workspaceRoot)
-      const physicalPsdPath = toPhysicalWorkspacePath(state, virtualPath)
-      const sidecarPath = `${physicalPsdPath}.manifest.json`
-      try {
-        const raw = await fs.readFile(sidecarPath, 'utf-8')
-        const manifest = JSON.parse(raw) as PsdTemplateManifest
-        return { ok: true, manifest: { ...manifest, sourcePath: virtualPath } }
-      } catch (error) {
-        if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-          reply.status(404)
-          return { ok: false, message: '未找到已保存的 manifest。' }
-        }
-        const message = error instanceof Error ? error.message : String(error)
-        reply.status(400)
-        return { ok: false, message }
-      }
-    },
-  )
-}
-
-export type ResolvedRenderPayload = {
-  template: PsdTemplateManifest
-  input: PsdRenderInput
-  virtualOutput: string
-}
-
-// 收口渲染入参：源路径必须落在工作区内，输出路径完全由服务端生成，
-// 客户端传入的 `__` 保留键（如 __outputPath / __psdPath）一律剥离，杜绝工作区逃逸。
-export async function resolveRenderPayload(
-  state: ApiState,
-  template: PsdTemplateManifest,
-  input: PsdRenderInput,
-  inputGrantId?: string,
-  outputGrantId?: string,
-): Promise<ResolvedRenderPayload> {
-  if (!template.sourcePath) {
-    throw new Error('Missing template.sourcePath in request body')
-  }
-  const virtualSource = normalizeWorkspacePath(template.sourcePath, state.workspaceRoot)
-  const physicalSource = toPhysicalWorkspacePath(state, virtualSource)
-
-  const safeInput: PsdRenderInput = {}
-  for (const [key, value] of Object.entries(input)) {
-    if (key.startsWith('__')) continue
-    safeInput[key] = value
-  }
-  validateRenderInput(template, safeInput)
-
-  let physicalOutput: string
-  let virtualOutput: string
-  if (outputGrantId) {
-    // grant 模式：直接用授权的物理路径
-    physicalOutput = await resolveGrantPath(outputGrantId, state.db, 'file.write')
-    virtualOutput = `__grant:${outputGrantId}`  // 前端展示用的占位符
-  } else {
-    virtualOutput = `${state.workspaceRoot}/Exports/${safeFileStem(template.id)}-${Date.now()}.png`
-    physicalOutput = toPhysicalWorkspacePath(state, virtualOutput)
-  }
-  safeInput.__outputPath = physicalOutput
-
-  return {
-    template: { ...template, sourcePath: physicalSource },
-    input: safeInput,
-    virtualOutput,
-  }
-}
-
-function safeFileStem(id: string): string {
-  const stem = id.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '')
-  return stem || 'render'
-}
-
-function safeVirtualWorkspacePath(state: ApiState, physicalPath: string): string | null {
-  try {
-    return toVirtualWorkspacePath(state, physicalPath)
-  } catch {
-    return null
-  }
+  // GET /api/psd/workorders — 列出所有工单
+  app.get('/api/psd/workorders', async () => {
+    const workOrders = await state.db.workOrders.list()
+    return { ok: true, workOrders }
+  })
 }

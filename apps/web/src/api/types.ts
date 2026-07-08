@@ -9,8 +9,10 @@ import type {
   LogListResponse,
   LogMetadataResponse,
   OkResult,
-  PsdRenderInput,
-  PsdTemplateManifest,
+  WorkOrderScanResponse,
+  WorkOrderGetResponse,
+  WorkOrderApplyResponse,
+  WorkOrder,
   RuntimeMetrics,
   RuntimeMetricsSlice,
   SetWorkspaceResponse,
@@ -26,8 +28,7 @@ export type {
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
-  PsdRenderInput,
-  PsdTemplateManifest,
+  WorkOrder,
   RuntimeMetricsSlice,
   TaskListResponse,
   UnreadNotificationResponse,
@@ -46,10 +47,6 @@ export type TranscodeJobDraft = {
   title?: string
 }
 
-export type PsdInspectResponse = OkResult & {
-  manifest?: PsdTemplateManifest
-}
-
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
 export interface MediaToolboxApi {
   submitFetch(draft: Record<string, unknown>): Promise<SubmitFetchResponse>
@@ -65,10 +62,10 @@ export interface MediaToolboxApi {
   fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
-  inspectPsdTemplate(psdPath: string, inputGrantId?: string): Promise<PsdInspectResponse>
-  renderPsdTemplate(template: PsdTemplateManifest, input: PsdRenderInput, outputGrantId?: string): Promise<OkResult & { outputPath?: string }>
-  savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult>
-  loadPsdManifest(psdPath: string): Promise<PsdInspectResponse>
+  scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse>
+  getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse>
+  updateWorkOrder(workOrder: WorkOrder): Promise<OkResult>
+  applyWorkOrder(workOrderId: string, outputPath?: string, outputGrantId?: string): Promise<WorkOrderApplyResponse>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>

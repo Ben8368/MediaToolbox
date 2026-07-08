@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/http'
-import type { AssetListResponse, OkResult, PsdRenderInput } from '@mediatoolbox/contracts'
-import type { JobListResponse, JobRecord, PsdInspectResponse, PsdTemplateManifest, TranscodeJobDraft } from '@/api/types'
+import type { AssetListResponse, OkResult, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, WorkOrder } from '@mediatoolbox/contracts'
+import type { JobListResponse, JobRecord, TranscodeJobDraft } from '@/api/types'
 
 export function listJobs(): Promise<JobListResponse> {
   return apiRequest<JobListResponse>('/api/jobs')
@@ -23,31 +23,31 @@ export function cancelJob(jobId: string): Promise<OkResult> {
   })
 }
 
-export function inspectPsdTemplate(psdPath: string, inputGrantId?: string): Promise<PsdInspectResponse> {
-  return apiRequest<PsdInspectResponse>('/api/psd/templates/inspect', {
+export function scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse> {
+  return apiRequest<WorkOrderScanResponse>('/api/psd/scan', {
     method: 'POST',
     body: JSON.stringify({ psdPath, ...(inputGrantId ? { inputGrantId } : {}) }),
   })
 }
 
-export function renderPsdTemplate(
-  template: PsdTemplateManifest,
-  input: PsdRenderInput,
+export function getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse> {
+  return apiRequest<WorkOrderGetResponse>(`/api/psd/workorders/${encodeURIComponent(workOrderId)}`)
+}
+
+export function updateWorkOrder(workOrder: WorkOrder): Promise<OkResult> {
+  return apiRequest<OkResult>(`/api/psd/workorders/${encodeURIComponent(workOrder.id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ workOrder }),
+  })
+}
+
+export function applyWorkOrder(
+  workOrderId: string,
+  outputPath?: string,
   outputGrantId?: string,
-): Promise<OkResult & { outputPath?: string }> {
-  return apiRequest<OkResult & { outputPath?: string }>('/api/psd/render', {
+): Promise<WorkOrderApplyResponse> {
+  return apiRequest<WorkOrderApplyResponse>(`/api/psd/workorders/${encodeURIComponent(workOrderId)}/apply`, {
     method: 'POST',
-    body: JSON.stringify({ template, input, ...(outputGrantId ? { outputGrantId } : {}) }),
+    body: JSON.stringify({ ...(outputPath ? { outputPath } : {}), ...(outputGrantId ? { outputGrantId } : {}) }),
   })
-}
-
-export function savePsdManifest(manifest: PsdTemplateManifest): Promise<OkResult> {
-  return apiRequest<OkResult>('/api/psd/manifests/save', {
-    method: 'POST',
-    body: JSON.stringify({ manifest }),
-  })
-}
-
-export function loadPsdManifest(psdPath: string): Promise<PsdInspectResponse> {
-  return apiRequest<PsdInspectResponse>(`/api/psd/manifests/load?psdPath=${encodeURIComponent(psdPath)}`)
 }
