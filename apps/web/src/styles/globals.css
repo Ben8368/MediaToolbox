@@ -9,18 +9,26 @@
 @import './psd.css';
 
 .settings-app {
+  --mt-surface: rgba(15, 18, 26, .78);
+  --mt-fill: rgba(255, 255, 255, .07);
+  --mt-fill-2: rgba(255, 255, 255, .11);
+  --mt-border: rgba(255, 255, 255, .14);
+  --mt-divider: rgba(255, 255, 255, .08);
+  --mt-text-0: #f8fafc;
+  --mt-text-1: rgba(241, 245, 249, .84);
+  --mt-text-2: rgba(203, 213, 225, .68);
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   color: var(--mt-text-0);
-  background: rgba(10,12,16,.18);
+  background: linear-gradient(135deg, rgba(9, 12, 18, .68), rgba(13, 16, 23, .42));
 }
 
 .settings-sidebar {
   border-right: 1px solid var(--mt-divider);
   padding: 16px 10px;
-  background: rgba(255,255,255,.025);
+  background: rgba(7, 10, 15, .42);
 }
 
 .settings-nav {
@@ -51,7 +59,12 @@
 }
 
 .settings-nav-item--active {
-  background: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.12);
+  color: #fff;
+}
+
+.settings-nav-item:hover {
+  background: rgba(255,255,255,.08);
   color: #fff;
 }
 
@@ -72,6 +85,7 @@
 
 .settings-toolbar h2 {
   margin: 0 0 6px;
+  color: var(--mt-text-0);
   font-size: 20px;
 }
 
@@ -105,12 +119,16 @@
   gap: 14px;
   border: 1px solid var(--mt-divider);
   border-radius: 12px;
-  background: var(--mt-surface);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025)),
+    var(--mt-surface);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
   padding: 16px;
 }
 
 .settings-card h3 {
   margin: 0;
+  color: var(--mt-text-0);
   font-size: 14px;
 }
 
@@ -129,13 +147,20 @@
 
 .settings-field input,
 .settings-field select {
+  width: 100%;
   min-height: 34px;
   border: 1px solid var(--mt-border);
   border-radius: 8px;
-  background: var(--mt-fill);
+  background: rgba(8, 11, 17, .64);
   color: var(--mt-text-0);
   padding: 0 10px;
   outline: none;
+}
+
+.settings-field input:focus,
+.settings-field select:focus {
+  border-color: rgba(47, 125, 255, .72);
+  box-shadow: 0 0 0 2px rgba(47, 125, 255, .18);
 }
 
 .settings-wallpapers {
@@ -148,6 +173,7 @@
   height: 54px;
   border: 2px solid transparent;
   border-radius: 8px;
+  background-color: rgba(255,255,255,.06);
   background-size: cover;
   background-position: center;
   cursor: pointer;
@@ -155,6 +181,7 @@
 
 .settings-wallpaper--active {
   border-color: var(--mt-brand);
+  box-shadow: 0 0 0 2px rgba(0,102,255,.2);
 }
 
 .settings-actions {
