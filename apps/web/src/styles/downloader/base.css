@@ -303,6 +303,25 @@
   font-size: 12px;
 }
 
+.dl-action-error {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  z-index: 2;
+  max-width: min(520px, calc(100% - 18px));
+  overflow: hidden;
+  border: 1px solid rgba(255, 107, 107, .24);
+  border-radius: 999px;
+  background: rgba(36, 14, 18, .82);
+  color: #ffb7b7;
+  padding: 7px 12px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 10px 26px rgba(0,0,0,.22);
+}
+
 .dl-path-field {
   display: flex;
   align-items: stretch;
