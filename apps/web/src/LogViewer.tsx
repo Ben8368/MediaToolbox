@@ -12,6 +12,7 @@ import {
 } from '@/api'
 import { useLogViewerStore } from '@/logViewerStore'
 import { useNotificationUnreadStore } from '@/notificationUnreadStore'
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import { getErrorMessage } from '@/utils'
 
 type LogEntry = {
@@ -130,14 +131,11 @@ export function LogViewer() {
     setLevel(logMode === 'development' ? 'DEBUG' : 'NOTICE')
   }, [isNotificationPanel, logMode])
 
+  useVisibilityPolling(loadLogs, 3000)
+
   useEffect(() => {
-    void loadLogs()
     void loadMetadata()
-    const timer = window.setInterval(() => {
-      void loadLogs()
-    }, 3000)
-    return () => window.clearInterval(timer)
-  }, [loadLogs, loadMetadata])
+  }, [loadMetadata])
 
   const pages = useMemo(() => buildPages(page, totalPages), [page, totalPages])
 
