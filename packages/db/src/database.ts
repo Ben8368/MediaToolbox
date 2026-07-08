@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
-import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord } from '@mediatoolbox/contracts'
-import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS } from './schema.js'
+import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, WorkOrder } from '@mediatoolbox/contracts'
+import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS } from './schema.js'
 import type { MediaToolboxDatabase } from './index.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
@@ -30,6 +30,12 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       if (currentVersion < 3) {
         this.db.exec(SCHEMA_V3_PATH_GRANTS)
         this.recordSchemaVersion(3)
+        currentVersion = 3
+      }
+
+      if (currentVersion < 4) {
+        this.db.exec(SCHEMA_V4_WORKORDERS)
+        this.recordSchemaVersion(4)
       }
   }
 
@@ -283,6 +289,69 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     }
   }
 
+  readonly workOrders: MediaToolboxDatabase['workOrders'] = {
+    create: async (workOrder: WorkOrder): Promise<void> => {
+      this.db
+        .prepare(
+          `INSERT INTO psd_workorders (id, psd_path, psd_file_name, document_width, document_height, document_resolution, records_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          workOrder.id,
+          workOrder.psdPath,
+          workOrder.psdFileName,
+          workOrder.documentWidth,
+          workOrder.documentHeight,
+          workOrder.documentResolution,
+          JSON.stringify(workOrder.records),
+          workOrder.createdAt,
+          workOrder.updatedAt,
+        )
+    },
+
+    findById: async (id: string): Promise<WorkOrder | undefined> => {
+      const row = this.db
+        .prepare('SELECT * FROM psd_workorders WHERE id = ?')
+        .get(id) as DbWorkOrderRow | undefined
+      return row ? this.mapDbWorkOrderToRecord(row) : undefined
+    },
+
+    update: async (workOrder: WorkOrder): Promise<void> => {
+      this.db
+        .prepare(
+          `UPDATE psd_workorders
+           SET records_json = ?, updated_at = ?
+           WHERE id = ?`,
+        )
+        .run(JSON.stringify(workOrder.records), workOrder.updatedAt, workOrder.id)
+    },
+
+    list: async (): Promise<WorkOrder[]> => {
+      const rows = this.db
+        .prepare('SELECT * FROM psd_workorders ORDER BY updated_at DESC')
+        .all() as DbWorkOrderRow[]
+      return rows.map((r) => this.mapDbWorkOrderToRecord(r))
+    },
+
+    delete: async (id: string): Promise<void> => {
+      this.db.prepare('DELETE FROM psd_workorders WHERE id = ?').run(id)
+    },
+  }
+
+  private mapDbWorkOrderToRecord(row: DbWorkOrderRow): WorkOrder {
+    return {
+      id: row.id,
+      psdPath: row.psd_path,
+      psdFileName: row.psd_file_name,
+      documentWidth: row.document_width,
+      documentHeight: row.document_height,
+      documentResolution: row.document_resolution,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      records: JSON.parse(row.records_json),
+    }
+  }
+
   private mapDbGrantToRecord(row: DbPathGrantRow): PathGrantRecord {
     const record: PathGrantRecord = {
       id: row.id,
@@ -341,4 +410,16 @@ type DbPathGrantRow = {
   created_at: number
   updated_at: number
   job_id: string | null
+}
+
+type DbWorkOrderRow = {
+  id: string
+  psd_path: string
+  psd_file_name: string
+  document_width: number
+  document_height: number
+  document_resolution: number
+  records_json: string
+  created_at: number
+  updated_at: number
 }

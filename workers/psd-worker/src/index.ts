@@ -1,26 +1,29 @@
+import type { WorkOrder } from '@mediatoolbox/contracts'
 import {
+  buildScanScript,
+  parseScanOutput,
+  buildApplyScript,
+  parseApplyOutput,
+  buildFontListScript,
+  parseFontListOutput,
   createPhotoshopCommandRunner,
-  createPhotoshopPsdEngine,
-  type PsdEngine,
-  type PsdRenderInput,
-  type PsdTemplateManifest,
+  PhotoshopPsdEngineError,
+  type PhotoshopScriptRunner,
 } from '@mediatoolbox/psd-core'
 
 export type PsdWorkerJob =
-  | { type: 'inspect'; psdPath: string }
-  | { type: 'render'; template: PsdTemplateManifest; input: PsdRenderInput }
-
-export type PsdWorkerRunOptions = {
-  engine?: PsdEngine
-}
+  | { type: 'scan'; psdPath: string }
+  | { type: 'apply'; workOrder: WorkOrder; outputPsdPath: string }
+  | { type: 'list-fonts' }
 
 export type PsdWorkerResult =
-  | { type: 'inspect'; manifest: PsdTemplateManifest }
-  | { type: 'render'; outputPath: string }
+  | { type: 'scan'; documentWidth: number; documentHeight: number; documentResolution: number; records: WorkOrder['records'] }
+  | { type: 'apply'; outputPath: string; appliedCount: number; skippedCount: number }
+  | { type: 'list-fonts'; fonts: Array<{ postScriptName: string; family: string; style: string }> }
 
 export class PsdWorkerEngineNotConfiguredError extends Error {
   constructor() {
-    super('PSD worker requires a configured PSD engine.')
+    super('PSD worker requires MEDIATOOLBOX_PHOTOSHOP_COMMAND to be set.')
     this.name = 'PsdWorkerEngineNotConfiguredError'
   }
 }
@@ -32,80 +35,74 @@ export class PsdWorkerInputError extends Error {
   }
 }
 
-export function describePsdWorker(manifest?: PsdTemplateManifest) {
-  return {
-    name: 'psd-worker',
-    mode: process.env['MEDIATOOLBOX_PHOTOSHOP_COMMAND'] ? 'photoshop-adapter' : 'engine-adapter',
-    ...(manifest
-      ? {
-          templateId: manifest.id,
-          slotCount: manifest.slots.length,
-        }
-      : {}),
-  }
-}
+export async function runPsdWorkerJob(job: PsdWorkerJob, runScript?: PhotoshopScriptRunner): Promise<PsdWorkerResult> {
+  const runner = runScript ?? createRunnerFromEnv()
+  if (!runner) throw new PsdWorkerEngineNotConfiguredError()
 
-export async function runPsdWorkerJob(job: PsdWorkerJob, options: PsdWorkerRunOptions = {}): Promise<PsdWorkerResult> {
-  const engine = options.engine ?? createPsdEngineFromEnv()
-  if (!engine) throw new PsdWorkerEngineNotConfiguredError()
-
-  if (job.type === 'inspect') {
-    const manifest = await engine.inspect(job.psdPath)
-    return { type: 'inspect', manifest }
+  if (job.type === 'scan') {
+    const script = buildScanScript(job.psdPath)
+    const output = await runner(script)
+    const result = parseScanOutput(output)
+    if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Scan failed')
+    return {
+      type: 'scan',
+      documentWidth: result.documentWidth ?? 0,
+      documentHeight: result.documentHeight ?? 0,
+      documentResolution: result.documentResolution ?? 72,
+      records: result.records ?? [],
+    }
   }
 
-  validateRenderInput(job.template, job.input)
-  const result = await engine.render(job.template, job.input)
-  return { type: 'render', outputPath: result.outputPath }
+  if (job.type === 'apply') {
+    const script = buildApplyScript({
+      psdPath: job.workOrder.psdPath,
+      outputPath: job.outputPsdPath,
+      records: job.workOrder.records,
+    })
+    const output = await runner(script)
+    const result = parseApplyOutput(output)
+    if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Apply failed')
+    return {
+      type: 'apply',
+      outputPath: result.outputPath ?? job.outputPsdPath,
+      appliedCount: result.appliedCount ?? 0,
+      skippedCount: result.skippedCount ?? 0,
+    }
+  }
+
+  if (job.type === 'list-fonts') {
+    const script = buildFontListScript()
+    const output = await runner(script)
+    const result = parseFontListOutput(output)
+    if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Font list failed')
+    return { type: 'list-fonts', fonts: result.fonts ?? [] }
+  }
+
+  throw new PsdWorkerInputError(`Unknown job type: ${(job as { type: string }).type}`)
 }
 
-export function createPsdEngineFromEnv(env: NodeJS.ProcessEnv = process.env): PsdEngine | undefined {
-  const command = env['MEDIATOOLBOX_PHOTOSHOP_COMMAND']?.trim()
+function createRunnerFromEnv(env: NodeJS.ProcessEnv = process.env): PhotoshopScriptRunner | undefined {
+  const command = env['MEDIATOOLBOX_PHOTOSHOP_COMMAND']?.trim() || autoDetectPhotoshop()
   if (!command) return undefined
-  const args = parseCommandArgs(env['MEDIATOOLBOX_PHOTOSHOP_ARGS'])
-  const runnerOptions = {
-    command,
-    ...(args ? { args } : {}),
-  }
-  const engineOptions = {
-    runScript: createPhotoshopCommandRunner(runnerOptions),
-    ...(env['MEDIATOOLBOX_PSD_OUTPUT_DIR'] ? { outputDirectory: env['MEDIATOOLBOX_PSD_OUTPUT_DIR'] } : {}),
-  }
-  return createPhotoshopPsdEngine(engineOptions)
+  const rawArgs = env['MEDIATOOLBOX_PHOTOSHOP_ARGS']
+  const args = rawArgs?.trim()
+    ? rawArgs.split(' ').map((a) => a.trim()).filter(Boolean)
+    : undefined
+  return createPhotoshopCommandRunner({ command, ...(args ? { args } : {}) })
 }
 
-export function validateRenderInput(template: PsdTemplateManifest, input: PsdRenderInput): void {
-  const unsupportedRequired = template.slots
-    .filter((slot) => slot.kind !== 'text' && slot.required)
-    .map((slot) => `${slot.id}(${slot.kind})`)
+const PHOTOSHOP_YEARS = [2026, 2025, 2024, 2023, 2022, 2021]
 
-  if (unsupportedRequired.length) {
-    throw new PsdWorkerInputError(`PSD render currently supports text slots only. Unsupported required slots: ${unsupportedRequired.join(', ')}`)
-  }
-
-  const unsupportedProvided = template.slots
-    .filter((slot) => slot.kind !== 'text')
-    .filter((slot) => input[slot.id] !== undefined && input[slot.id] !== '')
-    .map((slot) => `${slot.id}(${slot.kind})`)
-
-  if (unsupportedProvided.length) {
-    throw new PsdWorkerInputError(`PSD render currently supports text slots only. Unsupported slot input: ${unsupportedProvided.join(', ')}`)
-  }
-
-  const missing = template.slots
-    .filter((slot) => slot.required)
-    .filter((slot) => input[slot.id] === undefined || input[slot.id] === '')
-    .map((slot) => slot.id)
-
-  if (missing.length) {
-    throw new PsdWorkerInputError(`Missing required PSD slot input: ${missing.join(', ')}`)
-  }
-}
-
-function parseCommandArgs(value: string | undefined): string[] | undefined {
-  if (!value?.trim()) return undefined
-  return value
-    .split(' ')
-    .map((item) => item.trim())
-    .filter(Boolean)
+function autoDetectPhotoshop(): string | undefined {
+  const { existsSync } = require('node:fs') as typeof import('node:fs')
+  const candidates: string[] =
+    process.platform === 'win32'
+      ? PHOTOSHOP_YEARS.flatMap((y) => [
+          `C:\\Program Files\\Adobe\\Adobe Photoshop ${y}\\Photoshop.exe`,
+          `C:\\Program Files (x86)\\Adobe\\Adobe Photoshop ${y}\\Photoshop.exe`,
+        ])
+      : PHOTOSHOP_YEARS.map(
+          (y) => `/Applications/Adobe Photoshop ${y}/Adobe Photoshop ${y}.app/Contents/MacOS/Adobe Photoshop ${y}`,
+        )
+  return candidates.find((p) => existsSync(p))
 }

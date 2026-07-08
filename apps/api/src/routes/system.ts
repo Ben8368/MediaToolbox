@@ -115,7 +115,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
         can_cancel: true,
       })),
       ...activeJobs
-        .filter((job) => job.kind === 'media.transcode' || job.kind === 'psd.batch')
+        .filter((job) => job.kind === 'media.transcode' || job.kind === 'psd.apply')
         .map((job) => ({
           id: job.id,
           name: job.title,
