@@ -1,8 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
 
 import { buildApiServer } from './app.js'
+
+vi.mock('@mediatoolbox/psd-worker', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mediatoolbox/psd-worker')>()
+  return {
+    ...actual,
+    runPsdWorkerJob: vi.fn().mockRejectedValue(new actual.PsdWorkerEngineNotConfiguredError()),
+  }
+})
 import { buildDownloadJob } from './download-executor.js'
 
 describe('api skeleton contract', () => {
@@ -368,12 +376,12 @@ describe('api skeleton contract', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: '/api/psd/templates/inspect',
+      url: '/api/psd/scan',
       payload: { psdPath: '/Workspace/PSD/template.psd' },
     })
 
     expect(response.statusCode).toBe(503)
-    expect(response.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能检查 PSD 模板。' })
+    expect(response.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能扫描 PSD。' })
     await app.close()
   })
 })
