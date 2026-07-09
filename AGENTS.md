@@ -4,7 +4,9 @@
 
 ## 开局读取
 
-每轮按四层读取，先小后大；入口文件保持短小，细节、历史和长复盘下沉到 `docs/`。
+每轮第一步先读取本文件 `AGENTS.md`，确认治理入口和读取顺序；随后按四层读取，先小后大。入口文件保持短小，细节、历史和长复盘下沉到 `docs/`。
+
+在 Windows PowerShell 中读取任何仓库文本文件前，先初始化 UTF-8 控制台编码，并对 `Get-Content` 明确使用 `-Encoding UTF8`；不得先用默认编码读取中文文档再事后纠偏。
 
 1. **每轮必读**
    - [CONTEXT.md](CONTEXT.md)：当前阶段、阻断项、黄灯、下一步。
@@ -43,6 +45,7 @@
 
 - Windows PowerShell 中读取中文文件或运行可能输出中文的命令前，默认先初始化 UTF-8 控制台编码。
 - 可在同一 PowerShell 会话中执行 `. .\scripts\dev\init-utf8-console.ps1`，或等价设置 `chcp 65001`、`[Console]::InputEncoding`、`[Console]::OutputEncoding`、`$OutputEncoding` 与 `PYTHONIOENCODING=utf-8`。
+- 读取仓库文本文件时，`Get-Content` 默认显式加 `-Encoding UTF8`，包括 `AGENTS.md`、`CONTEXT.md`、`LESSONS.md`、`README.md` 和 `docs/` 下的中文文档。
 - 只看到中文乱码时，优先按终端编码问题处理，不要反复向用户报告“再用 UTF-8 确认”。
 - 显式 UTF-8 读取后仍异常，才判断可能是文件本身编码或内容损坏。
 
