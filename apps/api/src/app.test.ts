@@ -434,9 +434,9 @@ describe('PSD workorder CRUD', () => {
     const getResp = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
     expect(getResp.statusCode).toBe(200)
     const { workOrder } = getResp.json<WorkOrderGetResponse>()
-    expect(workOrder!.records[0].originalText).toBe('Hello')
+    expect(workOrder!.records[0]!.originalText).toBe('Hello')
 
-    const updated = { ...workOrder!, records: [{ ...workOrder!.records[0], newText: '你好' }] }
+    const updated = { ...workOrder!, records: [{ ...workOrder!.records[0]!, newText: '你好' }] }
     const putResp = await app.inject({
       method: 'PUT',
       url: `/api/psd/workorders/${workOrderId}`,
@@ -446,7 +446,7 @@ describe('PSD workorder CRUD', () => {
     expect(putResp.json()).toMatchObject({ ok: true })
 
     const getAfterPut = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
-    expect(getAfterPut.json<WorkOrderGetResponse>().workOrder!.records[0].newText).toBe('你好')
+    expect(getAfterPut.json<WorkOrderGetResponse>().workOrder!.records[0]!.newText).toBe('你好')
 
     const listResp = await app.inject({ method: 'GET', url: '/api/psd/workorders' })
     expect(listResp.statusCode).toBe(200)
