@@ -92,6 +92,7 @@ async function main() {
       process.exitCode = 2
       return
     }
+    console.error('Error details:', error)
     throw error
   }
 }
