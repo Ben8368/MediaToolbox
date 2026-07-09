@@ -45,7 +45,10 @@ export async function runPsdWorkerJob(job: PsdWorkerJob, runScript?: PhotoshopSc
     const script = buildScanScript(job.psdPath)
     const output = await runner(script)
     const result = parseScanOutput(output)
-    if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Scan failed')
+    if (!result.ok) {
+      const msg = result.message ?? 'Scan failed'
+      throw new PhotoshopPsdEngineError(`${msg}\nRaw output: ${output.slice(0, 500)}`)
+    }
     return {
       type: 'scan',
       documentWidth: result.documentWidth ?? 0,

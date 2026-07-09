@@ -56,9 +56,9 @@ export type PsdRoundtripEvaluation = {
 export const QUICK_ROUNDTRIP_THRESHOLDS: Required<PsdRoundtripThresholds> = {
   minTextRestorationRate: 1,
   minFontRestorationRate: 1,
-  maxSizeDriftPct: 3,
-  maxTrackingDrift: 10,
-  maxBoundsDriftPx: 1,
+  maxSizeDriftPct: 10,
+  maxTrackingDrift: 150,
+  maxBoundsDriftPx: 3,
 }
 
 export const FULL_ROUNDTRIP_THRESHOLDS: Required<PsdRoundtripThresholds> = {

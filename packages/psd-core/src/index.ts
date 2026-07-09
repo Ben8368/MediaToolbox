@@ -72,7 +72,19 @@ function __mtbJS(v){
   if(t==="boolean")return v?"true":"false";
   if(t==="number")return isFinite(v)?String(v):"null";
   if(t==="string"){
-    return'"'+v.replace(/\\\\/g,"\\\\\\\\").replace(/"/g,'\\\\"').replace(/\\r/g,"\\\\r").replace(/\\n/g,"\\\\n").replace(/\\t/g,"\\\\t").replace(/\\b/g,"\\\\b").replace(/\\f/g,"\\\\f")+'"';
+    var s='"';
+    for(var i=0;i<v.length;i++){
+      var c=v.charAt(i);
+      if(c==='"')s+='\\\\"';
+      else if(c==='\\\\')s+='\\\\\\\\';
+      else if(c==='\\r')s+='\\\\r';
+      else if(c==='\\n')s+='\\\\n';
+      else if(c==='\\t')s+='\\\\t';
+      else if(c==='\\b')s+='\\\\b';
+      else if(c==='\\f')s+='\\\\f';
+      else s+=c;
+    }
+    return s+'"';
   }
   if(t==="object"){
     if(v instanceof Array){
