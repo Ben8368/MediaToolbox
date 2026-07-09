@@ -30,7 +30,7 @@ npm run verify
 - AI 协作规则：[AGENTS.md](AGENTS.md)
 - 贡献流程：[CONTRIBUTING.md](CONTRIBUTING.md)
 - 安全政策：[SECURITY.md](SECURITY.md)
-- 行为准则：`CODE_OF_CONDUCT.md`
+- 行为准则：[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - 发布流程：[docs/RELEASE.md](docs/RELEASE.md)
 - 维护职责：[docs/MAINTAINERS.md](docs/MAINTAINERS.md)
 - 架构决策记录：[docs/ADR/](docs/ADR/README.md)
