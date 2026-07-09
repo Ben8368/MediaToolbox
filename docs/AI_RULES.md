@@ -76,8 +76,16 @@
 提交规范（与 [AGENTS.md](../AGENTS.md) 一致）：
 
 - commit message 标题与正文使用中文；Conventional Commit 类型前缀与 Git trailer 键名保留英文
-- 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` / `Co-Authored-By` trailer，前方保留一个空行
+- 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` trailer，前方保留一个空行
+- Git trailer 记录工具来源，不记录具体模型来源；例如 Claude Code 使用不同模型执行任务时，仍统一写 `Co-authored-by: Claude Code <noreply@anthropic.com>`
 - 不得提交 `.env`、凭据或其他敏感文件；若误纳入暂存区须先移除
+
+提交粒度与历史整理：
+
+- 文档、链接、措辞和治理规则的小修可在本地多次提交；进入 `main` 或 PR 前应按主题合并为 1 到 2 个文档提交
+- 修复前一个提交引入的 typo、typecheck 或测试小错时，合入前优先 squash 回原提交，避免主历史长期保留“修刚才提交”的噪声
+- 大型功能按架构层拆提交，优先顺序为 `contracts/db` → `worker/core` → `api` → `web` → `test/docs`
+- 涉及工作区路径、安全授权、外部命令、Electron 发布、跨模块契约或大型 UI 重构时，不得把所有层一次性压成单个巨型提交
 
 ### 代码规模触发项
 

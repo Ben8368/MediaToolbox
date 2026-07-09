@@ -87,6 +87,7 @@
 - 绿灯自动提交与推送细则见 [docs/AI_RULES.md](docs/AI_RULES.md)「绿灯自动提交与推送」。
 - commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
 - AI 工具参与实质改动且工具未自动记录来源时，在 commit message 末尾追加对应 Git trailer，前方保留一个空行。
+- Git trailer 记录工具来源，不记录具体模型来源；历史提交中模型级署名不回改，后续按工具级映射统一。
 - 已确认 trailer：
   - Claude Code：`Co-authored-by: Claude Code <noreply@anthropic.com>`
   - Cursor：`Co-authored-by: Cursor <cursoragent@cursor.com>`

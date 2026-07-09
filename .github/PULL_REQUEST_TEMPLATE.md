@@ -9,8 +9,15 @@
 ## 验证
 
 - [ ] 已运行 `npm run verify`
+- [ ] 验证结果已写明为 pass / fail / 未运行及原因
 - [ ] 已补充必要的真实路径验收说明
 - [ ] 已更新 `CONTEXT.md` 或相关 `docs/`
+
+## 提交整理
+
+- [ ] 文档、链接、措辞类小修已按主题合并
+- [ ] 大型功能已按 contracts/db、worker/core、api、web、test/docs 等层次拆提交
+- [ ] AI trailer 使用工具级署名，不使用具体模型名
 
 ## 风险边界
 

@@ -18,6 +18,8 @@ MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期
 - 建议从 `main` 拉出短生命周期分支，例如 `feature/path-grant-import`、`fix/browser-download-error`。
 - commit message 标题和正文使用中文；Conventional Commit 类型前缀保留英文，例如 `feat:`、`fix:`、`docs:`。
 - AI 工具参与实质改动并提交时，按 [AGENTS.md](AGENTS.md) 追加对应 Git trailer。
+- AI trailer 记录工具来源而非具体模型来源；历史模型级署名不回改，后续按工具级映射统一。
+- 文档修补类改动进入 `main` 前按主题合并；大型功能按 `contracts/db`、`worker/core`、`api`、`web`、`test/docs` 等层次拆提交。
 - `main` / `master` 属于保护分支语义：默认不自动 push；非小型文档或修复改动建议先走分支和 PR。
 
 ## 改动要求
@@ -49,6 +51,7 @@ PR 描述应包含：
 - 主要文件或模块。
 - 验证命令与结果。
 - 是否更新治理文档、API 契约或路线图。
+- 提交是否已按主题整理；大型功能是否按架构层拆分。
 - 是否涉及本地文件、浏览器 session、下载、Photoshop 自动化等安全边界。
 
 以下改动应先讨论或拆成独立 PR：
