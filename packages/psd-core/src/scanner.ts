@@ -56,7 +56,9 @@ function scanLayerList(rootDoc, layers, pathParts, soChain, records, fontMap, de
         var fontInfo = fontMap[psName] || { family: psName, style: "" };
         var bPx = layerBoundsInPx(layer);
         var leadingPt = null;
-        try { if (!ti.autoLeading) leadingPt = Math.round(Number(ti.leading.as("pt")) * 100) / 100; } catch(e) {}
+        try { if (ti.autoLeading === false) leadingPt = Math.round(Number(ti.leading.as("pt")) * 100) / 100; } catch(e) {}
+        var fakesBoldVal = false;
+        try { fakesBoldVal = !!ti.fauxBold; } catch(e) {}
         var recId = "";
         for (var si = 0; si < soChain.length; si++) { recId += soChain[si].fileRef + "|"; }
         recId += currentPath.join("/");
@@ -75,7 +77,7 @@ function scanLayerList(rootDoc, layers, pathParts, soChain, records, fontMap, de
           originalTrackingValue: ti.tracking,
           boundsHPx: bPx.bottom - bPx.top,
           boundsWPx: bPx.right - bPx.left,
-          fakesBold: ti.fauxBold
+          fakesBold: fakesBoldVal
         });
       } else if (layer.kind === LayerKind.SMARTOBJECT) {
         var soDoc;

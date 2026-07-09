@@ -34,6 +34,7 @@ function getLayerW(layer) {
 }
 
 function setupLabText(text, psFont, sizePt, isMultiline, boxWPx, boxHPx) {
+  try { app.activeDocument = gLabDoc; } catch(e) {}
   var ti = gLabLayer.textItem;
   if (isMultiline) {
     ti.kind = TextType.PARAGRAPHTEXT;
@@ -44,7 +45,7 @@ function setupLabText(text, psFont, sizePt, isMultiline, boxWPx, boxHPx) {
   }
   ti.font    = psFont;
   ti.size    = new UnitValue(sizePt, "pt");
-  ti.autoLeading = true;
+  try { ti.autoLeading = true; } catch(e) {}
   ti.contents = text;
 }
 
@@ -52,10 +53,10 @@ function setLabSize(sizePt, leadingPt) {
   var ti = gLabLayer.textItem;
   ti.size = new UnitValue(sizePt, "pt");
   if (leadingPt !== null) {
-    ti.autoLeading = false;
+    try { ti.autoLeading = false; } catch(e) {}
     ti.leading = new UnitValue(leadingPt, "pt");
   } else {
-    ti.autoLeading = true;
+    try { ti.autoLeading = true; } catch(e) {}
   }
 }
 
@@ -127,7 +128,7 @@ function phase1(text, psFont, targetH, isMultiline, boxWPx, boxHPx) {
     ti.kind = TextType.POINTTEXT;
   }
   ti.font = psFont;
-  ti.autoLeading = true;
+  try { ti.autoLeading = true; } catch(e) {}
   ti.contents = text;
 
   var lo = 1, hi = 500, bestSize = 72;
@@ -157,7 +158,7 @@ function convergenceThreshold(targetH, fakesBold) {
 // Sub-A: binary-search leading in [sizePt*0.8, sizePt*2.5]
 function subA(ti, text, targetH, sizePt) {
   var loL = sizePt * 0.8, hiL = sizePt * 2.5;
-  ti.autoLeading = false;
+  try { ti.autoLeading = false; } catch(e) {}
   var bestLeading = sizePt * 1.2;
   for (var j = 0; j < PHASE2_SUB_ITERS; j++) {
     var midL = (loL + hiL) / 2;
@@ -190,7 +191,7 @@ function subB(ti, text, targetH, sizePt, leadingPt) {
 
 function phase2Multiline(ti, text, targetH, sizePt, thresh) {
   ti.size = new UnitValue(sizePt, "pt");
-  ti.autoLeading = false;
+  try { ti.autoLeading = false; } catch(e) {}
   ti.leading = new UnitValue(sizePt * 1.2, "pt");
   var leadingPt = sizePt * 1.2;
 
@@ -209,7 +210,7 @@ function phase2Multiline(ti, text, targetH, sizePt, thresh) {
 
 function phase2SingleLine(ti, text, targetH, sizePt, thresh) {
   var loS = sizePt * 0.95, hiS = sizePt * 1.05;
-  ti.autoLeading = true;
+  try { ti.autoLeading = true; } catch(e) {}
   for (var r = 0; r < PHASE2_MAX_ROUNDS; r++) {
     for (var j = 0; j < 5; j++) {
       var midS = (loS + hiS) / 2;
