@@ -417,6 +417,7 @@ describe('PSD workorder CRUD', () => {
       outputPath: '/Workspace/Exports/smoke_adapted.psd',
       appliedCount: 1,
       skippedCount: 0,
+      results: [],
     })
 
     const app = await buildApiServer()

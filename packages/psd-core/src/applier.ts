@@ -40,6 +40,9 @@ try {
   if (!psdFile.exists) throw new Error("PSD file not found: " + __input.psdPath);
   __mainDoc = app.open(psdFile);
 
+  // Suppress all Photoshop dialogs while the script runs
+  app.displayDialogs = DialogModes.NO;
+
   var dpi = __mainDoc.resolution;
   openLabDoc(dpi);
 
@@ -108,6 +111,10 @@ function applyToLayer(doc, rec, adapted, newText) {
   if (!layer) throw new Error("Layer not found: " + rec.layerPath);
 
   try {
+    // Make the containing document frontmost and the layer active before editing
+    try { app.activeDocument = nav.openedSoDocs.length > 0 ? nav.openedSoDocs[nav.openedSoDocs.length - 1] : doc; } catch(e) {}
+    try { app.activeDocument.activeLayer = layer; } catch(e) {}
+
     writeToTextLayer(layer, adapted, newText);
 
     // REFINE: real render verification (up to 5 rounds)
@@ -136,10 +143,10 @@ function writeToTextLayer(layer, adapted, newText) {
   ti.font = adapted.fontPs;
   ti.size = new UnitValue(adapted.sizePt, "pt");
   if (adapted.leadingPt !== null) {
-    ti.autoLeading = false;
+    try { ti.autoLeading = false; } catch(e) {}
     ti.leading = new UnitValue(adapted.leadingPt, "pt");
   } else {
-    ti.autoLeading = true;
+    try { ti.autoLeading = true; } catch(e) {}
   }
   ti.tracking = adapted.tracking;
   ti.contents = newText;
@@ -156,6 +163,7 @@ function navigateToLayer(doc, rec) {
       var soContainerPath = entry.layerPath.split("/");
       var soLayer = findLayerByPath(currentDoc.layers, soContainerPath, 0);
       if (!soLayer) throw new Error("SO layer not found: " + entry.layerPath);
+      try { app.activeDocument = currentDoc; } catch(e) {}
       currentDoc.activeLayer = soLayer;
       var desc = new ActionDescriptor();
       app.executeAction(app.stringIDToTypeID("placedLayerEditContents"), desc, DialogModes.NO);
