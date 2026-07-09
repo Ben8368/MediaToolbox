@@ -132,8 +132,9 @@
 | 7A | Cookie 持久化与 yt-dlp 打通 | B站大会员、YouTube Premium、需登录的私有内容 |
 | 7B | 多账号 session profile 管理 | 不同平台用不同登录态，账号切换不影响其他任务 |
 | 7C | 捕获规则配置化 | URL 模式 → 通道路由（浏览器下载 / yt-dlp / 拒绝），JSON 规则热更新 |
+| 7D | CDP 网络体捕获 | 通过 Electron `debugger` API 接入 CDP，抓取 XHR/Fetch 响应体；覆盖 yt-dlp 无法解析的 API 接口型内容（弹幕、字幕 JSON、私有 CDN 清单） |
 
-改动范围：`apps/desktop`（session profile 管理）、`apps/api`（账号配置与规则接口）、`apps/web`（账号管理 UI）、`packages/downloader`（Cookie 注入逻辑）。不改变现有 worker 边界。
+改动范围：`apps/desktop`（session profile 管理、CDP debugger 挂载）、`apps/api`（账号配置与规则接口）、`apps/web`（账号管理 UI）、`packages/downloader`（Cookie 注入逻辑）。不改变现有 worker 边界。
 
 ## Phase 8：LLM 辅助工作流
 
@@ -153,4 +154,54 @@
 - **批量任务解析**：支持自然语言输入（如"把这个播放列表的 1080p 都下了，文件名带日期"），LLM 解析为结构化 job 参数。
 - **格式与质量建议**：根据文件类型和用户历史推荐转码预设或下载格式。
 
+架构参考：参照 C:\Scry 已验证的 Agent 设计——Provider 无关的 `runAgentTurn` async generator、Dry-Run 危险操作守卫、每日 Token/Cost 限额、AbortController 取消。Provider 差异（Anthropic / OpenAI 兼容格式）在 adapter 层消化，上层逻辑不感知。
+
 改动范围：新增 `packages/agent`（TypeScript，薄封装 LLM API）、`apps/api` 新增 `/api/agent/parse-url` 和 `/api/agent/parse-intent` 端点、`apps/web` 下载和批量任务入口增加 LLM 辅助入口。现有 worker 和 job 模型不变。
+
+## Phase 9：浏览器体验深化
+
+状态：**规划中**。
+
+目标：通过 preload 注入和 CDP 把浏览器 app 从"网页容器"升格为"可编程捕获浏览器"，对标 C:\Scry 已验证的 Electron 内 CDP 能力边界。
+
+设计原则：
+
+- preload 注入按 Tab 隔离，注入策略（去水印 / 广告屏蔽 / 解锁）由用户在设置里显式开启，默认关闭。
+- CDP debugger 挂载限于活动 Tab，挂载/卸载事件写入权限审计日志，与 Phase 4.5 权限模型一致。
+- Canvas 捕获产物走现有 Job 模型入库，不绕过工作区路径约束。
+
+分期：
+
+| 子阶段 | 范围 | 典型场景 |
+| --- | --- | --- |
+| 9A | Tab preload 注入 | 去水印、广告屏蔽、解锁限制（per-tab 独立开关，用户显式授权） |
+| 9B | CDP Canvas 录制与视觉截图 | canvas 渲染型平台（如部分漫画阅读器、文档预览）内容截取；CDP 截图作为视觉兜底 |
+
+改动范围：`apps/desktop`（preload 脚本扩展、CDP debugger 管理）、`apps/api`（捕获任务接口）、`apps/web`（浏览器 app 设置面板扩展）。
+
+## Phase 10：插件平台
+
+状态：**规划中**。
+
+目标：允许用户编写自定义捕获脚本，在 Worker Thread 沙箱中运行，无需修改主程序即可扩展平台支持。对标 C:\Scry Worker Thread 沙箱 + 权能系统的已验证方案，不引入 WASM 运行时。
+
+设计原则：
+
+- 插件运行在 Node.js `worker_threads` 沙箱，通过白名单权能 API 与主进程通信，不直接访问文件系统或网络。
+- 权能按最小原则授予：读工作区 / 写工作区 / 发起受控网络请求 / 提交 Job；危险操作（写工作区外、访问原始 Cookie）需用户二次确认，与 PathGrant 模式一致。
+- 所有插件操作写入审计日志；插件可随时被用户禁用或卸载。
+- 内置若干官方适配器（平台捕获规则）作为参考实现，用户插件与官方适配器使用相同 SDK。
+
+分期：
+
+| 子阶段 | 范围 |
+| --- | --- |
+| 10A | Worker Thread 沙箱 + 权能白名单 + 审计日志 + 插件 SDK |
+| 10B | 若干内置官方适配器（作为 SDK 参考实现） |
+| 10C | 插件管理 UI（安装、启用/禁用、权能审查、日志查看） |
+
+改动范围：新增 `packages/plugin-core`（沙箱运行时、SDK 类型、权能模型）、`apps/api`（插件注册与生命周期接口）、`apps/web`（插件管理 UI）。
+
+---
+
+> **远期可选（暂不承诺）**：MITM HTTPS 代理（动态 TLS 签发 + HTTP/2）——解决需要深度拦截的认证场景，但安全边界复杂，待 Phase 7 Cookie 路径验证不足时再评估。
