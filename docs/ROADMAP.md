@@ -2,6 +2,35 @@
 
 阶段计划放在这里，避免污染每轮必读的 [CONTEXT.md](../CONTEXT.md)。
 
+## 近期规划评估（2026-07）
+
+总体判断：当前路线可行，但后续应先收口已接入能力的真实体验验收，再开启高权限扩展。近期目标不是继续扩大功能面，而是形成一个可交付的内部候选版本：浏览器网络稳定、PathGrant 安全可审计、PSD 基础路径可信、Electron 候选包可运行。
+
+优先级：
+
+1. **先收口 Phase 4.5 / 5 / 6：** 浏览器下载、多标签 `WebContentsView` 生命周期、PathGrant 外部导入/导出、目录级授权浏览、真实大文件上传和 PSD Photoshop 真机联调。
+2. **再进入 Phase 7：** Cookie/session profile 和捕获规则配置化可先做；CDP 网络体捕获需等统一 CDP 基座设计完成。
+3. **谨慎推进 Phase 8 / 9 / 10：** LLM 只做辅助入口，不进入危险操作闭环；preload/CDP/插件平台必须复用同一套权限、审计和 Job 入库模型。
+
+排期评估（按 1 名主力开发 + 用户关键体验验收估算）：
+
+| 时间窗口 | 阶段 | 目标 | 交付判断 |
+| --- | --- | --- | --- |
+| 2026-07-10 ~ 2026-07-17 | 收口验收 | Phase 4.5 + Phase 6 桌面端真机验收 | 浏览器下载、多标签、PathGrant、大文件上传形成通过/黄灯清单 |
+| 2026-07-20 ~ 2026-07-31 | PSD 真机联调 | Photoshop 命令、roundtrip 基线、text slot 稳定 | PSD 工作台形成可信 MVP；再决定 image / smart-object 细节 |
+| 2026-08-03 ~ 2026-08-14 | PSD 深水区 + 候选包 | image / smart-object MVP、unsigned Electron candidate | 内部候选包可运行，不把签名分发作为同一阻断项 |
+| 2026-08-17 ~ 2026-08-28 | Release polish | 跨平台安装包、release preflight、签名/公证准备 | 证书齐备则冲公开候选；否则交付 unsigned RC |
+| 2026-08-31 ~ 2026-09-11 | Phase 7A/B | Cookie 持久化、session profile、多账号隔离 | 登录态下载能力成型，原始 cookie 不暴露给 Web UI |
+| 2026-09-14 ~ 2026-09-25 | Phase 7C + CDP 设计 | 捕获规则配置化、统一 CDP 能力边界 | 形成 ADR 或等价设计文档，作为 Phase 7D / 9 的门禁 |
+| 2026-09-28 以后 | Phase 8 / 9 / 10 | LLM 辅助、CDP 捕获、插件平台 | 作为增强能力逐步进入，不阻塞核心产品 |
+
+门禁原则：
+
+- Phase 7D 和 Phase 9 共用 Electron `debugger`、Tab 隔离、权限审计和捕获产物入库模型；实现前需先完成统一 CDP 设计，避免重复挂载和审计分叉。
+- Phase 9 的 preload 注入只面向用户显式授权的页面辅助脚本、自有内容捕获或可访问性增强；不把规避站点限制作为默认产品承诺。
+- Phase 10 插件平台依赖 PathGrant、session profile、CDP 审计和权限模型稳定；在这些基础未稳定前只保留规划，不进入实现。
+- MITM HTTPS 代理继续作为远期可选，不进入当前排期承诺。
+
 ## Phase 1：前端基线迁回
 
 状态：**完成**。
@@ -124,6 +153,7 @@
 - Cookie 不向 Web UI 暴露原始值；导出通道仅限 yt-dlp 参数注入，不落盘明文。
 - 多账号 session 与 PathGrant 模式一致：前端只传 profileId，物理 session 由桌面端持有。
 - 捕获规则配置化，不硬编码双通道策略；规则变更不需要发版。
+- CDP 网络体捕获不得先行独立实现；需先完成统一 CDP 基座设计，明确 debugger 挂载、Tab 隔离、权限审计、Job 入库和降级策略。
 
 分期：
 
@@ -132,9 +162,9 @@
 | 7A | Cookie 持久化与 yt-dlp 打通 | B站大会员、YouTube Premium、需登录的私有内容 |
 | 7B | 多账号 session profile 管理 | 不同平台用不同登录态，账号切换不影响其他任务 |
 | 7C | 捕获规则配置化 | URL 模式 → 通道路由（浏览器下载 / yt-dlp / 拒绝），JSON 规则热更新 |
-| 7D | CDP 网络体捕获 | 通过 Electron `debugger` API 接入 CDP，抓取 XHR/Fetch 响应体；覆盖 yt-dlp 无法解析的 API 接口型内容（弹幕、字幕 JSON、私有 CDN 清单） |
+| 7D | CDP 网络体捕获 | 在统一 CDP 基座完成后，通过 Electron `debugger` API 抓取 XHR/Fetch 响应体；覆盖 yt-dlp 无法解析的 API 接口型内容（弹幕、字幕 JSON、私有 CDN 清单） |
 
-改动范围：`apps/desktop`（session profile 管理、CDP debugger 挂载）、`apps/api`（账号配置与规则接口）、`apps/web`（账号管理 UI）、`packages/downloader`（Cookie 注入逻辑）。不改变现有 worker 边界。
+改动范围：`apps/desktop`（session profile 管理、CDP debugger 基座）、`apps/api`（账号配置与规则接口）、`apps/web`（账号管理 UI）、`packages/downloader`（Cookie 注入逻辑）。不改变现有 worker 边界。
 
 ## Phase 8：LLM 辅助工作流
 
@@ -162,19 +192,19 @@
 
 状态：**规划中**。
 
-目标：通过 preload 注入和 CDP 把浏览器 app 从"网页容器"升格为"可编程捕获浏览器"，对标 C:\Scry 已验证的 Electron 内 CDP 能力边界。
+目标：通过用户显式授权的 preload 辅助脚本和 CDP 捕获能力，把浏览器 app 从"网页容器"升格为"可审计的内容捕获浏览器"，对标 C:\Scry 已验证的 Electron 内 CDP 能力边界。
 
 设计原则：
 
-- preload 注入按 Tab 隔离，注入策略（去水印 / 广告屏蔽 / 解锁）由用户在设置里显式开启，默认关闭。
-- CDP debugger 挂载限于活动 Tab，挂载/卸载事件写入权限审计日志，与 Phase 4.5 权限模型一致。
+- preload 注入按 Tab 隔离，只面向用户显式授权的页面辅助脚本、自有内容捕获或可访问性增强；默认关闭，按站点或 Tab 授权。
+- CDP debugger 挂载限于活动 Tab，挂载/卸载事件写入权限审计日志，与 Phase 4.5 权限模型一致，并复用 Phase 7D 前置的统一 CDP 基座。
 - Canvas 捕获产物走现有 Job 模型入库，不绕过工作区路径约束。
 
 分期：
 
 | 子阶段 | 范围 | 典型场景 |
 | --- | --- | --- |
-| 9A | Tab preload 注入 | 去水印、广告屏蔽、解锁限制（per-tab 独立开关，用户显式授权） |
+| 9A | Tab preload 注入 | 页面辅助脚本、自有内容捕获、可访问性增强（per-tab / per-site 独立开关，用户显式授权） |
 | 9B | CDP Canvas 录制与视觉截图 | canvas 渲染型平台（如部分漫画阅读器、文档预览）内容截取；CDP 截图作为视觉兜底 |
 
 改动范围：`apps/desktop`（preload 脚本扩展、CDP debugger 管理）、`apps/api`（捕获任务接口）、`apps/web`（浏览器 app 设置面板扩展）。
@@ -184,6 +214,8 @@
 状态：**规划中**。
 
 目标：允许用户编写自定义捕获脚本，在 Worker Thread 沙箱中运行，无需修改主程序即可扩展平台支持。对标 C:\Scry Worker Thread 沙箱 + 权能系统的已验证方案，不引入 WASM 运行时。
+
+进入门槛：PathGrant、session profile、统一 CDP 审计和 Job 入库模型稳定后再启动实现；在此之前只保留方案设计和接口草案。
 
 设计原则：
 

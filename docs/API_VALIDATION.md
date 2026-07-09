@@ -62,7 +62,7 @@
 
 1. `GET /api/system/metrics` 的 CPU / 内存 / GPU 值能在右侧状态面板刷新。
 2. Windows/Linux NVIDIA 或 Windows 性能计数器回退路径可用时，GPU 仪表不显示假成功。
-3. macOS GPU 尚未接入时，应显示可读降级状态，并保留技术债记录。
+3. macOS Apple Silicon GPU 采样可用时显示真实采样；不可用或不支持的机型显示可读降级状态，不写入假成功。
 
 ## 工作区外路径授权路径（Phase 6，已接入，待验收）
 
