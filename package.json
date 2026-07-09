@@ -17,6 +17,7 @@
     "dev:web": "npm run dev -w @mediatoolbox/web",
     "dev:api": "npm run dev -w @mediatoolbox/api",
     "dev:desktop": "npm run dev -w @mediatoolbox/desktop",
+    "psd:roundtrip": "tsx scripts/psd-roundtrip.ts",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",

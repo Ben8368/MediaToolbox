@@ -77,24 +77,24 @@ function scanLayerList(rootDoc, layers, pathParts, soChain, records, fontMap, de
           boundsWPx: bPx.right - bPx.left,
           fakesBold: ti.fauxBold
         });
+      } else if (layer.kind === LayerKind.SMARTOBJECT) {
+        var soDoc;
+        try {
+          rootDoc.activeLayer = layer;
+          var desc = new ActionDescriptor();
+          app.executeAction(app.stringIDToTypeID("placedLayerEditContents"), desc, DialogModes.NO);
+          soDoc = app.activeDocument;
+          var fileRef = "";
+          try { fileRef = soDoc.fullName.fsName; } catch(e) { fileRef = layer.name; }
+          var newChain = soChain.concat([{ fileRef: fileRef, layerPath: currentPath.join("/") }]);
+          scanLayerList(soDoc, soDoc.layers, [], newChain, records, fontMap, depth + 1);
+          soDoc.close(SaveOptions.DONOTSAVECHANGES);
+        } catch(soErr) {
+          if (soDoc) try { soDoc.close(SaveOptions.DONOTSAVECHANGES); } catch(e) {}
+        }
       }
     } else if (layer.typename === "LayerSet") {
       scanLayerList(rootDoc, layer.layers, currentPath, soChain, records, fontMap, depth);
-    } else if (layer.kind === LayerKind.SMARTOBJECT) {
-      var soDoc;
-      try {
-        rootDoc.activeLayer = layer;
-        var desc = new ActionDescriptor();
-        app.executeAction(app.stringIDToTypeID("placedLayerEditContents"), desc, DialogModes.NO);
-        soDoc = app.activeDocument;
-        var fileRef = "";
-        try { fileRef = soDoc.fullName.fsName; } catch(e) { fileRef = layer.name; }
-        var newChain = soChain.concat([{ fileRef: fileRef, layerPath: currentPath.join("/") }]);
-        scanLayerList(soDoc, soDoc.layers, [], newChain, records, fontMap, depth + 1);
-        soDoc.close(SaveOptions.DONOTSAVECHANGES);
-      } catch(soErr) {
-        if (soDoc) try { soDoc.close(SaveOptions.DONOTSAVECHANGES); } catch(e) {}
-      }
     }
   }
 }

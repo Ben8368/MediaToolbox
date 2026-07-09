@@ -103,21 +103,29 @@ try {
 
 // ─── Apply params to a real layer (with SO traversal) ──────────
 function applyToLayer(doc, rec, adapted, newText) {
-  var layer = navigateToLayer(doc, rec);
+  var nav = navigateToLayer(doc, rec);
+  var layer = nav.layer;
   if (!layer) throw new Error("Layer not found: " + rec.layerPath);
-  writeToTextLayer(layer, adapted, newText);
 
-  // REFINE: real render verification (up to 5 rounds)
-  var origH = rec.boundsHPx;
-  for (var refIter = 0; refIter < 5; refIter++) {
-    var realH = getLayerH(layer);
-    var diff = Math.abs(realH - origH);
-    var thresh = rec.fakesBold ? Math.max(4.0, origH * 0.01) : Math.max(2.0, origH * 0.005);
-    if (diff < thresh) break;
-    var ratio = origH / realH;
-    adapted.sizePt = Math.round(adapted.sizePt * ratio * 100) / 100;
-    if (adapted.leadingPt !== null) adapted.leadingPt = Math.round(adapted.leadingPt * ratio * 100) / 100;
+  try {
     writeToTextLayer(layer, adapted, newText);
+
+    // REFINE: real render verification (up to 5 rounds)
+    var origH = rec.boundsHPx;
+    for (var refIter = 0; refIter < 5; refIter++) {
+      var realH = getLayerH(layer);
+      var diff = Math.abs(realH - origH);
+      var thresh = rec.fakesBold ? Math.max(4.0, origH * 0.01) : Math.max(2.0, origH * 0.005);
+      if (diff < thresh) break;
+      var ratio = origH / realH;
+      adapted.sizePt = Math.round(adapted.sizePt * ratio * 100) / 100;
+      if (adapted.leadingPt !== null) adapted.leadingPt = Math.round(adapted.leadingPt * ratio * 100) / 100;
+      writeToTextLayer(layer, adapted, newText);
+    }
+    closeAppliedSoDocs(nav.openedSoDocs, true);
+  } catch(e) {
+    closeAppliedSoDocs(nav.openedSoDocs, false);
+    throw e;
   }
 }
 
@@ -156,7 +164,8 @@ function navigateToLayer(doc, rec) {
     }
     // Find the text layer within the final document
     var targetParts = rec.layerPath.split("/");
-    return findLayerByPath(currentDoc.layers, targetParts, 0);
+    var targetLayer = findLayerByPath(currentDoc.layers, targetParts, 0);
+    return { layer: targetLayer, openedSoDocs: openedSoDocs };
   } catch(e) {
     // Close any opened SO docs on error
     for (var ci = openedSoDocs.length - 1; ci >= 0; ci--) {
@@ -167,9 +176,9 @@ function navigateToLayer(doc, rec) {
 }
 
 // After applying, close SO docs from innermost outward (saving changes)
-function closeAppliedSoDocs(openedSoDocs) {
+function closeAppliedSoDocs(openedSoDocs, saveChanges) {
   for (var i = openedSoDocs.length - 1; i >= 0; i--) {
-    try { openedSoDocs[i].close(SaveOptions.SAVECHANGES); } catch(e) {}
+    try { openedSoDocs[i].close(saveChanges ? SaveOptions.SAVECHANGES : SaveOptions.DONOTSAVECHANGES); } catch(e) {}
   }
 }
 
