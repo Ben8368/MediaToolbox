@@ -1,6 +1,6 @@
 # AI 编码与审查规则
 
-> **用途：** 编码细节与红绿灯审查的完整规格。工作流入口见 `AGENTS.md`；阶段状态见 `CONTEXT.md`。
+> **用途：** 编码细节与红绿灯审查的完整规格。工作流入口见 [AGENTS.md](../AGENTS.md)；阶段状态见 [CONTEXT.md](../CONTEXT.md)。
 
 ## 1. 红绿灯审查系统 (Traffic Light Audit)
 
@@ -13,7 +13,7 @@
 **支柱 I：真实性与上下文**
 
 1. **幻觉检测**：引用的组件、hook、API 方法、文件路径、契约字段是否真实存在？
-2. **历史一致性**：是否违背 `AGENTS.md` 架构边界、mock/real 分层、NAS 桌面空间关系？
+2. **历史一致性**：是否违背 [AGENTS.md](../AGENTS.md) 架构边界、mock/real 分层、NAS 桌面空间关系？
 3. **用户意图**：是否理解真实需求，而非只完成字面任务？
 
 **支柱 II：健壮性与工艺**
@@ -55,8 +55,8 @@
 
 ### 与阶段文档的衔接
 
-- Audit Report 中的 🔴 阻断项，若影响阶段推进，应同步写入 `CONTEXT.md` 的「当前阻断项」
-- 🟡 优化项中可跨任务跟进的内容，可写入 `CONTEXT.md` 的「剩余黄灯」
+- Audit Report 中的 🔴 阻断项，若影响阶段推进，应同步写入 [CONTEXT.md](../CONTEXT.md) 的「当前阻断项」
+- 🟡 优化项中可跨任务跟进的内容，可写入 [CONTEXT.md](../CONTEXT.md) 的「剩余黄灯」
 - 总体评价为 🔴 时，不得将相关客观项标为完成；须先修复或明确降级方案
 
 ### 绿灯自动提交与推送
@@ -73,7 +73,7 @@
 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → 按分支规则决定是否 git push
 ```
 
-提交规范（与 `AGENTS.md` 一致）：
+提交规范（与 [AGENTS.md](../AGENTS.md) 一致）：
 
 - commit message 标题与正文使用中文；Conventional Commit 类型前缀与 Git trailer 键名保留英文
 - 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` / `Co-Authored-By` trailer，前方保留一个空行

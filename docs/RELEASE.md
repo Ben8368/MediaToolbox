@@ -11,13 +11,13 @@
 
 ## 发布前检查
 
-1. 确认 `CONTEXT.md` 的当前阶段、阻断项、黄灯和下一步真实。
-2. 确认 `docs/ROADMAP.md` 与当前状态一致。
+1. 确认 [CONTEXT.md](../CONTEXT.md) 的当前阶段、阻断项、黄灯和下一步真实。
+2. 确认 [ROADMAP.md](ROADMAP.md) 与当前状态一致。
 3. 运行 `npm run verify`。
 4. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、图标来源和发布签名/公证环境提示。
 5. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
 6. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
-7. 如涉及安全边界变化，更新 `SECURITY.md` 或新增 ADR。
+7. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
 
 ## 候选构建
 

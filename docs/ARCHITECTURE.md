@@ -30,7 +30,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - `apps/desktop` 持有 Chromium session、权限策略、下载事件、弹窗策略和文件选择桥接；当前第一版已接管隔离 session、下载事件和默认拒绝的权限审计。
 - `apps/api` 负责任务创建、权限校验、工作区路径约束、日志和统一 Job 状态；浏览器下载登记为 `browser.download` job。
 - `apps/web` 只提交用户意图并展示状态，例如“使用当前浏览器会话下载”“上传工作区文件到当前页面”。
-- 下载 app 后续采用双通道：普通浏览器下载走 Browser Network adapter；媒体解析、字幕提取、格式选择和后处理继续走 `yt-dlp` / worker adapter。
+- 下载 app 后续采用双通道：普通浏览器下载走 Browser Network adapter；媒体解析、字幕提取、格式选择和后处理继续走 `yt-dlp` / worker adapter。详见 [YTDLP_CAPABILITY.md](YTDLP_CAPABILITY.md)。
 - 所有下载写入受控工作区；所有上传来源必须经过工作区路径校验和用户确认。
 
 ## Workbench Apps
@@ -74,4 +74,4 @@ Phase 6 已引入 **PathGrant** 作为越界访问的唯一入口，与浏览器
 - 读授权与写授权分离；写入工作区外必须二次确认，且权限窄于读取。
 - 当前已接入单文件读授权、单路径写授权和目录级读授权管道；桌面端真实体验仍按 `docs/API_VALIDATION.md` 跟进验收。
 
-详细分期与端点状态见 `docs/ROADMAP.md` Phase 6 与 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节。关键决策记录见 `docs/ADR/0002-workspace-sandbox-and-pathgrant.md`。
+详细分期与端点状态见 [ROADMAP.md](ROADMAP.md) Phase 6 与 [FRONTEND_API_CONTRACT.md](FRONTEND_API_CONTRACT.md) 安全边界章节。关键决策记录见 [ADR/0002-workspace-sandbox-and-pathgrant.md](ADR/0002-workspace-sandbox-and-pathgrant.md)。

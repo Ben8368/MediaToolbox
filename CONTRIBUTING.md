@@ -1,6 +1,6 @@
 # 贡献指南
 
-MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期项目治理处理。本文面向人类贡献者；AI 协作工具的行为规则以 `AGENTS.md` 为权威入口，自动审查、验证和提交细则见 `docs/AI_RULES.md`。
+MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期项目治理处理。本文面向人类贡献者；AI 协作工具的行为规则以 [AGENTS.md](AGENTS.md) 为权威入口，自动审查、验证和提交细则见 [docs/AI_RULES.md](docs/AI_RULES.md)。
 
 ## 开发环境
 
@@ -17,7 +17,7 @@ MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期
 
 - 建议从 `main` 拉出短生命周期分支，例如 `feature/path-grant-import`、`fix/browser-download-error`。
 - commit message 标题和正文使用中文；Conventional Commit 类型前缀保留英文，例如 `feat:`、`fix:`、`docs:`。
-- AI 工具参与实质改动并提交时，按 `AGENTS.md` 追加对应 Git trailer。
+- AI 工具参与实质改动并提交时，按 [AGENTS.md](AGENTS.md) 追加对应 Git trailer。
 - `main` / `master` 属于保护分支语义：默认不自动 push；非小型文档或修复改动建议先走分支和 PR。
 
 ## 改动要求
@@ -37,7 +37,7 @@ MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期
 npm run verify
 ```
 
-提交或发起 PR 前，请记录验证命令和结果；如阶段、功能、API 契约或架构边界变化，同步更新 `CONTEXT.md` 或相关 `docs/`。AI 自动审查与自动提交流程不在本文重复，按 `docs/AI_RULES.md` 执行。
+提交或发起 PR 前，请记录验证命令和结果；如阶段、功能、API 契约或架构边界变化，同步更新 [CONTEXT.md](CONTEXT.md) 或相关 `docs/`。AI 自动审查与自动提交流程不在本文重复，按 [docs/AI_RULES.md](docs/AI_RULES.md) 执行。
 
 主观体验项，例如 NAS 风格桌面密度、浏览器多标签真机体验、Photoshop 联调结果，不能只用测试或构建代替。
 
