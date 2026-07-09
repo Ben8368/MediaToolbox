@@ -11,8 +11,47 @@ import { addLog, nowSeconds } from './utils.js'
 import { toVirtualWorkspacePath } from './workspace-files.js'
 
 const activeAbortControllers = new Map<string, AbortController>()
+let activeDownloadCount = 0
+const downloadQueue: Array<{ task: FetchTaskRecord; state: ApiState }> = []
+
+function drainQueue(): void {
+  while (downloadQueue.length > 0) {
+    const entry = downloadQueue[0]
+    if (!entry || activeDownloadCount >= entry.state.maxConcurrentDownloads) break
+    downloadQueue.shift()
+    activeDownloadCount++
+    void executeDownload(entry.task, entry.state).finally(() => {
+      activeDownloadCount--
+      drainQueue()
+    })
+  }
+}
+
+export function scheduleDownload(task: FetchTaskRecord, state: ApiState): void {
+  if (activeDownloadCount < state.maxConcurrentDownloads) {
+    activeDownloadCount++
+    void executeDownload(task, state).finally(() => {
+      activeDownloadCount--
+      drainQueue()
+    })
+  } else {
+    task.stage = `排队中（第 ${downloadQueue.length + 1} 位）`
+    downloadQueue.push({ task, state })
+  }
+}
 
 export function abortDownload(taskId: string): void {
+  const queueIndex = downloadQueue.findIndex((entry) => entry.task.id === taskId)
+  if (queueIndex >= 0) {
+    const [entry] = downloadQueue.splice(queueIndex, 1)
+    if (entry) {
+      entry.task.status = 'cancelled'
+      entry.task.stage = '已取消'
+      entry.task.updated_at = nowSeconds()
+      entry.task.completed_at = entry.task.updated_at
+    }
+    return
+  }
   activeAbortControllers.get(taskId)?.abort()
   activeAbortControllers.delete(taskId)
 }

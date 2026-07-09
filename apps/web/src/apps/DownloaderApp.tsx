@@ -25,6 +25,7 @@ import type { CookieBrowser } from '@/apps/downloader/types'
 const COOKIE_BROWSER_LABELS: Record<CookieBrowser, string> = {
   none: '不使用浏览器登录态',
   chrome: 'Chrome',
+  edge: 'Edge',
   safari: 'Safari',
   firefox: 'Firefox',
 }
