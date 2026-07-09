@@ -112,3 +112,45 @@
 - 任务 payload 扩展 `inputGrantId` / `outputGrantId`
 
 与现状关系：文件管理器 `GET /api/filebrowser/disks` 已展示真实磁盘容量；未映射磁盘不直接开放裸路径，目录级授权浏览必须经桌面端 dialog 和 PathGrant。
+
+## Phase 7：会话增强与内容捕获规则
+
+状态：**规划中**。
+
+目标：把现有 Electron session 管理升格为"带登录态的内容捕获层"，覆盖 yt-dlp 单独处理不了的场景（需登录内容、特殊格式、yt-dlp 不支持的平台）。
+
+设计原则：
+
+- Cookie 不向 Web UI 暴露原始值；导出通道仅限 yt-dlp 参数注入，不落盘明文。
+- 多账号 session 与 PathGrant 模式一致：前端只传 profileId，物理 session 由桌面端持有。
+- 捕获规则配置化，不硬编码双通道策略；规则变更不需要发版。
+
+分期：
+
+| 子阶段 | 范围 | 典型场景 |
+| --- | --- | --- |
+| 7A | Cookie 持久化与 yt-dlp 打通 | B站大会员、YouTube Premium、需登录的私有内容 |
+| 7B | 多账号 session profile 管理 | 不同平台用不同登录态，账号切换不影响其他任务 |
+| 7C | 捕获规则配置化 | URL 模式 → 通道路由（浏览器下载 / yt-dlp / 拒绝），JSON 规则热更新 |
+
+改动范围：`apps/desktop`（session profile 管理）、`apps/api`（账号配置与规则接口）、`apps/web`（账号管理 UI）、`packages/downloader`（Cookie 注入逻辑）。不改变现有 worker 边界。
+
+## Phase 8：LLM 辅助工作流
+
+状态：**规划中**。
+
+目标：通过 LLM API 调用让下载和批量任务更智能，不引入完整 Agent Runtime，不改变现有 job 模型。
+
+设计原则：
+
+- LLM 仅做意图解析，不直接操作文件系统或执行任务；解析结果交回现有 job 管线。
+- Provider 可配置（OpenAI / Claude / 本地模型），API key 存本地配置，不上传任何文件内容。
+- 降级安全：LLM 不可用时退回手动输入，不阻断核心功能。
+
+核心能力：
+
+- **URL 意图识别**：粘贴 URL 自动判断是视频 / 文档 / 图集 / 普通文件，自动路由到对应工作台。
+- **批量任务解析**：支持自然语言输入（如"把这个播放列表的 1080p 都下了，文件名带日期"），LLM 解析为结构化 job 参数。
+- **格式与质量建议**：根据文件类型和用户历史推荐转码预设或下载格式。
+
+改动范围：新增 `packages/agent`（TypeScript，薄封装 LLM API）、`apps/api` 新增 `/api/agent/parse-url` 和 `/api/agent/parse-intent` 端点、`apps/web` 下载和批量任务入口增加 LLM 辅助入口。现有 worker 和 job 模型不变。
