@@ -38,7 +38,7 @@ export interface TaskStats {
 
 export type DownloadPlatform = 'auto' | 'youtube' | 'bilibili' | 'short_video'
 export type DownloadChannel = 'auto' | 'media' | 'browser'
-export type CookieBrowser = 'none' | 'chrome' | 'safari' | 'firefox'
+export type CookieBrowser = 'none' | 'chrome' | 'edge' | 'safari' | 'firefox'
 export type SubtitleFormat = 'srt' | 'vtt'
 
 export type PlatformOption = {

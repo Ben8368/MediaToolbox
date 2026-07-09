@@ -2,6 +2,7 @@ import type { BrowserNetworkDownloadRecord, BrowserNetworkRequestRecord, FetchTa
 import { SqliteDatabase } from '@mediatoolbox/db'
 import type { MediaToolboxDatabase } from '@mediatoolbox/db'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 
 import type { ProjectNetworkSample } from './system-sampler.js'
@@ -32,6 +33,7 @@ export type ApiState = {
   workspaceRoot: string
   physicalWorkspaceBase: string
   physicalWorkspaceRoot: string
+  maxConcurrentDownloads: number
   fetchTasks: FetchTaskRecord[]
   browserDownloads: BrowserNetworkDownloadRecord[]
   browserRequests: BrowserNetworkRequestRecord[]
@@ -67,6 +69,7 @@ export function createApiState(): ApiState {
     workspaceRoot: WORKSPACE_ROOT,
     physicalWorkspaceBase,
     physicalWorkspaceRoot,
+    maxConcurrentDownloads: os.cpus().length,
     fetchTasks: [],
     browserDownloads: [],
     browserRequests: [],
@@ -108,7 +111,7 @@ function resolvePhysicalWorkspaceBase(): string {
   if (configured) return path.resolve(configured)
   if (process.env['NODE_ENV'] === 'test') {
     testWorkspaceCounter += 1
-    return path.resolve(findRepoRoot(process.cwd()), '.tmp', `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
+    return path.join(os.tmpdir(), `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
   }
   return path.resolve(process.cwd(), '..', '..', '.tmp', 'workspace')
 }

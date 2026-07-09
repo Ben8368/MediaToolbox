@@ -5,7 +5,7 @@ import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStr
 import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
-import { executeDownload, abortDownload, updateJob } from '../download-executor.js'
+import { executeDownload, abortDownload, updateJob, scheduleDownload } from '../download-executor.js'
 import { readWorkspaceFileForDownload } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
@@ -81,8 +81,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     for (const task of tasks) {
       await state.db.jobs.create(createJobRecord({ id: task.id, kind: 'download.video', title: task.title }))
       addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
-      // 异步执行，不阻塞 HTTP 响应
-      void executeDownload(task, state)
+      scheduleDownload(task, state)
     }
 
     const firstTask = tasks[0]!

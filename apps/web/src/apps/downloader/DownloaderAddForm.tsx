@@ -146,6 +146,7 @@ export function DownloaderAddForm({
           >
             <option value="none">不使用浏览器登录态</option>
             <option value="chrome">Chrome</option>
+            <option value="edge">Edge</option>
             <option value="safari">Safari</option>
             <option value="firefox">Firefox</option>
           </select>
