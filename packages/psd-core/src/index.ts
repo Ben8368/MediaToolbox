@@ -72,7 +72,7 @@ function __mtbJS(v){
   if(t==="boolean")return v?"true":"false";
   if(t==="number")return isFinite(v)?String(v):"null";
   if(t==="string"){
-    return'"'+v.replace(/\\\\/g,"\\\\\\\\").replace(/"/g,'\\\\"').replace(/\\r/g,"\\\\r").replace(/\\n/g,"\\\\n").replace(/\\t/g,"\\\\t")+'"';
+    return'"'+v.replace(/\\\\/g,"\\\\\\\\").replace(/"/g,'\\\\"').replace(/\\r/g,"\\\\r").replace(/\\n/g,"\\\\n").replace(/\\t/g,"\\\\t").replace(/\\b/g,"\\\\b").replace(/\\f/g,"\\\\f")+'"';
   }
   if(t==="object"){
     if(v instanceof Array){
@@ -88,7 +88,7 @@ function __mtbJS(v){
     const fileWriterPreamble = [
       jsonPolyfill,
       `var __MTB_OUT=new File(${JSON.stringify(outPathForJsx)});`,
-      `function __mtbOut(s){try{__MTB_OUT.encoding="UTF-8";__MTB_OUT.open("w");__MTB_OUT.write(s);__MTB_OUT.close();}catch(e){$.writeln(s);}}`,
+      `function __mtbOut(s){try{__MTB_OUT.encoding="UTF-8";__MTB_OUT.open("a");__MTB_OUT.write(s);__MTB_OUT.close();}catch(e){throw new Error("Failed to write output: "+e);}}`,
     ].join('\n')
     const transformedScript = fileWriterPreamble + '\n' +
       script.replace(/\$\.writeln\(/g, '__mtbOut(')
@@ -186,7 +186,7 @@ async function runViaDirectSpawn(
   options: PhotoshopCommandRunnerOptions,
   spawn: SpawnFn,
 ): Promise<void> {
-  const args = options.args?.length
+  const args = options.args !== undefined && options.args.length > 0
     ? options.args.map((arg) => (arg === '{script}' ? scriptPath : arg))
     : [scriptPath]
   return new Promise<void>((resolve, reject) => {
@@ -199,11 +199,18 @@ async function runViaDirectSpawn(
     child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
     child.on('error', reject)
     child.on('exit', (code) => {
-      // Don't fail on non-zero: PS may emit locale warnings but still succeed.
-      // Success is determined by reading the output file.
-      if (code === null) reject(new PhotoshopPsdEngineError('Photoshop process was killed'))
-      else resolve()
-      void stderr
+      if (code === null) {
+        reject(new PhotoshopPsdEngineError('Photoshop process was killed'))
+      } else if (code !== 0 && stderr.trim()) {
+        // Non-zero exit with stderr content — include it for diagnostics
+        reject(new PhotoshopPsdEngineError(
+          `Photoshop command exited with code ${code}: ${stderr.trim()}`
+        ))
+      } else {
+        // Don't fail on non-zero without stderr: PS may emit locale warnings but still succeed.
+        // Success is determined by reading the output file.
+        resolve()
+      }
     })
   })
 }
