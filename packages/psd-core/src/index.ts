@@ -9,6 +9,24 @@ export type { ApplyScriptInput, ApplyScriptOutput } from './applier.js'
 export { buildFontListScript, parseFontListOutput } from './fonts.js'
 export type { FontListOutput } from './fonts.js'
 
+export {
+  compareRoundtripRecords,
+  evaluatePsdRoundtripReport,
+  FULL_ROUNDTRIP_THRESHOLDS,
+  mirrorText,
+  prepareRoundtripRecords,
+  QUICK_ROUNDTRIP_THRESHOLDS,
+  textLayerComparisonKey,
+} from './roundtrip.js'
+export type {
+  PrepareRoundtripRecordsOptions,
+  PsdRoundtripEvaluation,
+  PsdRoundtripLayerDiff,
+  PsdRoundtripMode,
+  PsdRoundtripReport,
+  PsdRoundtripThresholds,
+} from './roundtrip.js'
+
 export type PhotoshopScriptRunner = (script: string) => Promise<string>
 
 export type PhotoshopCommandRunnerOptions = {

@@ -8,9 +8,12 @@ Files:
 - `baseline.psd`: larger baseline template for fuller scan/apply checks.
 
 Suggested manual validation flow:
-1. Copy the PSD files into the active workspace PSD directory, normally
-   `.tmp/workspace/Workspace/PSD/`.
-2. Configure `MEDIATOOLBOX_PHOTOSHOP_COMMAND` if auto-detection does not find
+1. Configure `MEDIATOOLBOX_PHOTOSHOP_COMMAND` if auto-detection does not find
    Photoshop.
-3. Start the local API and use `/api/psd/scan` with `/Workspace/PSD/smoke.psd`
-   or `/Workspace/PSD/baseline.psd`.
+2. Run `npm run psd:roundtrip -- --fixture smoke --mode quick` for a fast
+   scan/apply/scan/apply/scan smoke test.
+3. Run `npm run psd:roundtrip -- --fixture baseline --mode full` after the
+   smoke test passes and the required fonts are available.
+
+The roundtrip command writes generated PSDs and `comparison.json` under
+`.tmp/psd-roundtrip/` and never modifies these fixture files.
