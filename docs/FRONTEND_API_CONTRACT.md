@@ -102,7 +102,7 @@ Workers / adapters 负责：
 
 - 状态为“骨架”的端点只保证请求/响应契约和前端联调通路，不代表真实能力已完整接入。
 - 状态为“本地映射”的文件浏览端点会操作服务端受控工作区目录；默认目录为仓库 `.tmp/workspace`，可通过 `MEDIATOOLBOX_WORKSPACE_DIR` 覆盖。
-- 系统指标当前采样 uptime、CPU、内存、项目任务网络速率和 GPU；网络速率统计 MediaToolbox 浏览器下载、浏览器请求与 yt-dlp 任务流量，GPU 采样覆盖 Windows/Linux NVIDIA、Windows GPU 计数器回退，macOS GPU 仍待补齐。
+- 系统指标当前采样 uptime、CPU、内存、项目任务网络速率和 GPU；网络速率统计 MediaToolbox 浏览器下载、浏览器请求与 yt-dlp 任务流量，GPU 采样覆盖 Windows/Linux NVIDIA、Windows GPU 计数器回退，macOS Apple Silicon 路径已完成验收并保留不可用时的可读降级。
 
 已接入的 schema 与状态联动：
 
@@ -164,7 +164,7 @@ Workers / adapters 负责：
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
 
-说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU 与 Windows GPU 计数器回退已接入，但不表示 macOS GPU 指标、Electron 生产打包、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
+说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU、Windows GPU 计数器回退与 macOS Apple Silicon GPU 采样已接入，但不表示 Electron 完整安装包发布、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
 
 ## 5. 迁移规则
 
