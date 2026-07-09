@@ -448,3 +448,13 @@ export type PathGrantInfo = Omit<PathGrantRecord, 'physicalPath'>
 export type PathGrantResponse = OkResult & { grant?: PathGrantInfo }
 
 export type PathGrantListResponse = OkResult & { grants: PathGrantInfo[] }
+
+export type FontEntry = {
+  postScriptName: string
+  family: string
+  style: string
+}
+
+export type FontsListResponse = OkResult & {
+  fonts?: FontEntry[]
+}
