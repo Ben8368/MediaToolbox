@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
-import type { FetchTaskRecord } from '@mediatoolbox/contracts'
+import type { FetchTaskRecord, WorkOrderGetResponse } from '@mediatoolbox/contracts'
 
 import { buildApiServer } from './app.js'
 
@@ -11,6 +11,7 @@ vi.mock('@mediatoolbox/psd-worker', async (importOriginal) => {
     runPsdWorkerJob: vi.fn().mockRejectedValue(new actual.PsdWorkerEngineNotConfiguredError()),
   }
 })
+import { runPsdWorkerJob } from '@mediatoolbox/psd-worker'
 import { buildDownloadJob } from './download-executor.js'
 
 describe('api skeleton contract', () => {
@@ -382,6 +383,122 @@ describe('api skeleton contract', () => {
 
     expect(response.statusCode).toBe(503)
     expect(response.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能扫描 PSD。' })
+    await app.close()
+  })
+})
+
+describe('PSD workorder CRUD', () => {
+  it('scan → read → update → list → apply 全链路', async () => {
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'scan',
+      documentWidth: 1080,
+      documentHeight: 1920,
+      documentResolution: 72,
+      records: [{
+        id: 'layer-1',
+        layerId: 1,
+        layerPath: 'Group/Title',
+        soChain: [],
+        enabled: true,
+        originalText: 'Hello',
+        originalFontFamily: 'Arial',
+        originalFontStyle: 'Regular',
+        originalFontPs: 'ArialMT',
+        originalSizePt: 24,
+        originalLeadingPt: null,
+        originalTrackingValue: 0,
+        boundsHPx: 40,
+        boundsWPx: 200,
+        fakesBold: false,
+      }],
+    })
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'apply',
+      outputPath: '/Workspace/Exports/smoke_adapted.psd',
+      appliedCount: 1,
+      skippedCount: 0,
+    })
+
+    const app = await buildApiServer()
+
+    const scanResp = await app.inject({
+      method: 'POST',
+      url: '/api/psd/scan',
+      payload: { psdPath: '/Workspace/PSD/smoke.psd' },
+    })
+    expect(scanResp.statusCode).toBe(200)
+    const { workOrderId, recordCount } = scanResp.json<{ workOrderId: string; recordCount: number }>()
+    expect(workOrderId).toBeTruthy()
+    expect(recordCount).toBe(1)
+
+    const getResp = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
+    expect(getResp.statusCode).toBe(200)
+    const { workOrder } = getResp.json<WorkOrderGetResponse>()
+    expect(workOrder!.records[0].originalText).toBe('Hello')
+
+    const updated = { ...workOrder!, records: [{ ...workOrder!.records[0], newText: '你好' }] }
+    const putResp = await app.inject({
+      method: 'PUT',
+      url: `/api/psd/workorders/${workOrderId}`,
+      payload: { workOrder: updated },
+    })
+    expect(putResp.statusCode).toBe(200)
+    expect(putResp.json()).toMatchObject({ ok: true })
+
+    const getAfterPut = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
+    expect(getAfterPut.json<WorkOrderGetResponse>().workOrder!.records[0].newText).toBe('你好')
+
+    const listResp = await app.inject({ method: 'GET', url: '/api/psd/workorders' })
+    expect(listResp.statusCode).toBe(200)
+    const { workOrders } = listResp.json<{ workOrders: Array<{ id: string }> }>()
+    expect(workOrders.some((wo) => wo.id === workOrderId)).toBe(true)
+
+    const applyResp = await app.inject({
+      method: 'POST',
+      url: `/api/psd/workorders/${workOrderId}/apply`,
+      payload: {},
+    })
+    expect(applyResp.statusCode).toBe(200)
+    expect(applyResp.json()).toMatchObject({ ok: true, appliedCount: 1, skippedCount: 0 })
+
+    await app.close()
+  })
+
+  it('returns 404 for unknown workorder', async () => {
+    const app = await buildApiServer()
+    const resp = await app.inject({ method: 'GET', url: '/api/psd/workorders/nonexistent-id' })
+    expect(resp.statusCode).toBe(404)
+    expect(resp.json()).toMatchObject({ ok: false, message: '工单不存在' })
+    await app.close()
+  })
+})
+
+describe('PSD fonts endpoint', () => {
+  it('returns 503 when Photoshop is not configured', async () => {
+    const app = await buildApiServer()
+    const resp = await app.inject({ method: 'GET', url: '/api/psd/fonts' })
+    expect(resp.statusCode).toBe(503)
+    expect(resp.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能获取字体列表。' })
+    await app.close()
+  })
+
+  it('returns font list when Photoshop is configured', async () => {
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'list-fonts',
+      fonts: [
+        { postScriptName: 'ArialMT', family: 'Arial', style: 'Regular' },
+        { postScriptName: 'Arial-BoldMT', family: 'Arial', style: 'Bold' },
+      ],
+    })
+    const app = await buildApiServer()
+    const resp = await app.inject({ method: 'GET', url: '/api/psd/fonts' })
+    expect(resp.statusCode).toBe(200)
+    expect(resp.json()).toMatchObject({
+      ok: true,
+      fonts: expect.arrayContaining([
+        expect.objectContaining({ postScriptName: 'ArialMT', family: 'Arial' }),
+      ]),
+    })
     await app.close()
   })
 })

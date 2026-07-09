@@ -54,19 +54,37 @@
 - **估算工作量：** 发布配置与证书准备为主
 
 #### TD-015: PSD 真实 Photoshop 联调
-- **位置：** `packages/psd-core/` + `workers/psd-worker/`
+- **位置：** `packages/psd-core/` + `workers/psd-worker/` + `fixtures/psd/photoshop-workbench/`
 - **来源：** CONTEXT.md 剩余黄灯
 - **目标阶段：** Phase 5 深水区
 - **阻断候选构建：** 是，若候选版本承诺 PSD 图片或智能对象渲染
-- **验证方式：** 配置真实 Photoshop 命令后跑通 `POST /api/psd/render`，检查输出 PNG 与 manifest 往返
-- **问题：** PSD Photoshop adapter 已建立脚本命令边界；PSD 工作台已接入模板检查、manifest 编辑、批量渲染（仅文字 slot）和 manifest JSON sidecar 持久化；渲染输出路径已收口在工作区内，非文字 slot 现已显式拒绝避免静默忽略；但真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调
-- **影响：** PSD 工作台目前只能处理文字 slot，无法处理图片和智能对象
-- **建议方案：** 
-  1. 配置真实 Photoshop 命令路径
-  2. 验证 `POST /api/psd/render` 输出正确 PNG
-  3. 实现 image/smart-object slot 渲染逻辑
-  4. 联调复杂 batchPlay 命令
+- **验证方式：**
+  1. 配置 `MEDIATOOLBOX_PHOTOSHOP_COMMAND` 指向本机 Photoshop
+  2. 跑通 `npm run psd:roundtrip -- --fixture smoke --mode quick`（Quick 阈值：text/font 还原率 100%，size 漂移 ≤3%）
+  3. 跑通 `npm run psd:roundtrip -- --fixture baseline --mode full`（Full 阈值：text 100%，font ≥90%，size ≤8%）
+  4. 把通过后的 `comparison.json` 数值存入 `fixtures/psd/photoshop-workbench/` 作为回归基线
+  5. 验证 `GET /api/psd/fonts` 返回真实字体列表
+- **问题：** scan/apply/WorkOrder CRUD/list-fonts API 管道已完整实现，WorkOrder CRUD 与 list-fonts 已有 mock 集成测试（可进 CI）；但真实 Photoshop 本机命令路径、复杂 batchPlay 和 image/smart-object slot 渲染尚未联调
+- **影响：** PSD 工作台目前只能处理文字 slot，无法处理图片和智能对象；往返还原率未经真机验证
+- **建议方案：**
+  1. 配置真实 Photoshop 命令路径，依次跑 smoke（quick）→ baseline（full）往返测试
+  2. 锁定基线数值后，实现 image/smart-object slot 渲染逻辑
+  3. 联调复杂 batchPlay 命令
 - **估算工作量：** Phase 5 深水区任务，20-50 行核心逻辑 + 真机联调
+
+
+### 🟢 P2 — 长期规划
+
+#### TD-020: PSD fixture 边界场景覆盖
+- **位置：** `fixtures/psd/photoshop-workbench/`
+- **来源：** PSD 工作台后端测试完善规划（2026-07-09）
+- **目标阶段：** TD-015 真机联调通过后
+- **阻断候选构建：** 否
+- **验证方式：** 新增 fixture 文件能在 `psd:roundtrip` 各 mode 下正常完成往返
+- **问题：** 现有 smoke.psd / baseline.psd 的图层结构需本机扫描后才能确认是否覆盖以下边界场景：Smart Object 深层嵌套（depth=3）、超长单行文字（宽度溢出 precheck 路径）、多行文字（subA/subB 收敛路径）、字体缺失降级路径
+- **影响：** 若上述场景未覆盖，算法边界缺陷可能在真机联调后期才暴露
+- **建议方案：** 在 TD-015 扫描 smoke/baseline 后，对缺失的边界场景补制对应 PSD fixture，并在 README 说明每个文件的设计意图
+- **估算工作量：** 需要 Photoshop 操作，2-4 个新 PSD 文件 + 文档更新
 
 
 ---

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import type { WorkOrder, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, OkResult } from '@mediatoolbox/contracts'
+import type { WorkOrder, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, OkResult, FontsListResponse } from '@mediatoolbox/contracts'
 import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError } from '@mediatoolbox/psd-worker'
 
 import { psdScanSchema, psdWorkOrderUpdateSchema } from '../schemas.js'
@@ -187,5 +187,22 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
   app.get('/api/psd/workorders', async () => {
     const workOrders = await state.db.workOrders.list()
     return { ok: true, workOrders }
+  })
+
+  // GET /api/psd/fonts — 列出 Photoshop 可用字体
+  app.get<{ Reply: FontsListResponse }>('/api/psd/fonts', async (request, reply) => {
+    try {
+      const result = await runPsdWorkerJob({ type: 'list-fonts' })
+      if (result.type !== 'list-fonts') {
+        return { ok: false, message: 'Worker returned non-fonts result' }
+      }
+      return { ok: true, fonts: result.fonts }
+    } catch (error) {
+      if (error instanceof PsdWorkerEngineNotConfiguredError) {
+        reply.status(503)
+        return { ok: false, message: 'Photoshop 命令未配置，暂不能获取字体列表。' }
+      }
+      return { ok: false, message: error instanceof Error ? error.message : String(error) }
+    }
   })
 }
