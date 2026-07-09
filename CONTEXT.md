@@ -68,17 +68,17 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 常用文档
 
-- 治理规则：`AGENTS.md`
-- 架构说明：`docs/ARCHITECTURE.md`
-- 错题索引：`LESSONS.md`
-- 审查规格：`docs/AI_RULES.md`
-- 技术债追踪：`docs/TECH_DEBT.md`
-- API 契约：`docs/FRONTEND_API_CONTRACT.md`
-- API 联调：`docs/API_VALIDATION.md`
-- UI 兼容：`docs/UI_COMPAT.md`
-- 路线图：`docs/ROADMAP.md`（含 Phase 6 工作区外路径授权状态）
-- 贡献流程：`CONTRIBUTING.md`
-- 安全政策：`SECURITY.md`
-- 发布流程：`docs/RELEASE.md`
-- 维护职责：`docs/MAINTAINERS.md`
-- 架构决策：`docs/ADR/`
+- 治理规则：[AGENTS.md](AGENTS.md)
+- 架构说明：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- 错题索引：[LESSONS.md](LESSONS.md)
+- 审查规格：[docs/AI_RULES.md](docs/AI_RULES.md)
+- 技术债追踪：[docs/TECH_DEBT.md](docs/TECH_DEBT.md)
+- API 契约：[docs/FRONTEND_API_CONTRACT.md](docs/FRONTEND_API_CONTRACT.md)
+- API 联调：[docs/API_VALIDATION.md](docs/API_VALIDATION.md)
+- UI 兼容：[docs/UI_COMPAT.md](docs/UI_COMPAT.md)
+- 路线图：[docs/ROADMAP.md](docs/ROADMAP.md)（含 Phase 6 工作区外路径授权状态）
+- 贡献流程：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 安全政策：[SECURITY.md](SECURITY.md)
+- 发布流程：[docs/RELEASE.md](docs/RELEASE.md)
+- 维护职责：[docs/MAINTAINERS.md](docs/MAINTAINERS.md)
+- 架构决策：[docs/ADR/](docs/ADR/README.md)

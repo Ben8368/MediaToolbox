@@ -11,7 +11,7 @@
 | 桌面壳 | `apps/desktop`、Electron IPC、BrowserWindow、WebContentsView | session 边界、文件选择、下载事件、preload 和打包路径 |
 | Workers 与 adapter | `workers/*`、`packages/downloader`、`packages/ffmpeg`、`packages/psd-core` | 命令参数构建、进程执行、进度解析、取消和错误归一 |
 | 安全边界 | PathGrant、工作区路径、浏览器权限、外部工具调用 | 最小授权、审计日志、无裸路径、无命令注入 |
-| 治理文档 | `AGENTS.md`、`CONTEXT.md`、`LESSONS.md`、`docs/*` | 状态真实、规则不冲突、黄灯与技术债可追踪 |
+| 治理文档 | [AGENTS.md](../AGENTS.md)、[CONTEXT.md](../CONTEXT.md)、[LESSONS.md](../LESSONS.md)、`docs/*` | 状态真实、规则不冲突、黄灯与技术债可追踪 |
 
 ## 必须升级评审的改动
 
@@ -25,7 +25,7 @@
 ## 合并原则
 
 - 红灯不得合并。
-- 黄灯可以合并，但必须写入 `CONTEXT.md` 或 `docs/TECH_DEBT.md`。
+- 黄灯可以合并，但必须写入 [CONTEXT.md](../CONTEXT.md) 或 [TECH_DEBT.md](TECH_DEBT.md)。
 - 主观体验验收必须由用户或维护者确认，不能由构建通过代替。
 - 安全边界变化必须有文档记录；影响长期架构的变化应新增 ADR。
 

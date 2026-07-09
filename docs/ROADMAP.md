@@ -1,6 +1,6 @@
 # Roadmap
 
-阶段计划放在这里，避免污染每轮必读的 `CONTEXT.md`。
+阶段计划放在这里，避免污染每轮必读的 [CONTEXT.md](../CONTEXT.md)。
 
 ## Phase 1：前端基线迁回
 
@@ -104,7 +104,7 @@
 | 6B | 单路径 write grant | 已接入：导出到工作区外 |
 | 6C | 目录级 read grant 管道 | 已接入：目录授权浏览基础管道；体验验收继续跟进 |
 
-已接入端点（详见 `docs/FRONTEND_API_CONTRACT.md` 安全边界章节）：
+已接入端点（详见 [FRONTEND_API_CONTRACT.md](FRONTEND_API_CONTRACT.md) 安全边界章节）：
 
 - `POST /api/path-grants` — 桌面端选路后签发 grant
 - `GET /api/path-grants/{id}` — 校验与展示

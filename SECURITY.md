@@ -40,5 +40,5 @@ MediaToolbox 是本地媒体工作流应用，涉及本地文件、下载、浏�
 
 1. 复现并建立最小测试或验证步骤。
 2. 收紧契约或权限边界。
-3. 更新 `CONTEXT.md`、`docs/TECH_DEBT.md` 或相关 ADR。
+3. 更新 [CONTEXT.md](CONTEXT.md)、[docs/TECH_DEBT.md](docs/TECH_DEBT.md) 或相关 ADR。
 4. 通过 `npm run verify` 后再合并。

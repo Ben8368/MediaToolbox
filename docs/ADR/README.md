@@ -21,8 +21,8 @@ docs/ADR/0001-title.md
 
 ## 当前 ADR
 
-- `0001-ai-governance-entry.md`：AI 协作入口与红绿灯验证闭环。
-- `0002-workspace-sandbox-and-pathgrant.md`：工作区沙箱与 PathGrant。
-- `0003-browser-network-adapter.md`：Browser Network adapter。
-- `0004-psd-manifest-first.md`：PSD manifest 优先模型。
+- [0001-ai-governance-entry.md](0001-ai-governance-entry.md)：AI 协作入口与红绿灯验证闭环。
+- [0002-workspace-sandbox-and-pathgrant.md](0002-workspace-sandbox-and-pathgrant.md)：工作区沙箱与 PathGrant。
+- [0003-browser-network-adapter.md](0003-browser-network-adapter.md)：Browser Network adapter。
+- [0004-psd-manifest-first.md](0004-psd-manifest-first.md)：PSD manifest 优先模型。
 
