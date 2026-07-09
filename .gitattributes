@@ -17,5 +17,7 @@ Dockerfile text eol=lf
 *.webp binary
 *.svg  text eol=lf
 *.ico  binary
+*.psd  binary
+*.psb  binary
 *.woff  binary
 *.woff2 binary
