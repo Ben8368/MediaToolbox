@@ -100,8 +100,11 @@ export const transcodeJobCreateSchema = {
       outputPath: { type: 'string', minLength: 1 },
       inputGrantId: { type: 'string', minLength: 1 },
       outputGrantId: { type: 'string', minLength: 1 },
-      preset: { type: 'string', enum: ['mp4-h264-aac', 'audio-mp3', 'copy'] },
+      preset: { type: 'string', enum: ['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac', 'audio-aac', 'audio-mp3', 'copy', 'remux'] },
       title: { type: 'string' },
+      videoCrf: { type: 'number', minimum: 0, maximum: 51 },
+      videoEncodePreset: { type: 'string', enum: ['fast', 'slow', 'veryslow'] },
+      audioBitrate: { type: 'number', minimum: 64, maximum: 640 },
     },
   },
 } as const

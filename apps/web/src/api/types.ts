@@ -43,8 +43,11 @@ export type TranscodeJobDraft = {
   outputPath?: string
   inputGrantId?: string
   outputGrantId?: string
-  preset?: 'mp4-h264-aac' | 'audio-mp3' | 'copy'
+  preset?: 'mp4-h264-aac' | 'mp4-h265-aac' | 'mkv-h265-aac' | 'audio-aac' | 'audio-mp3' | 'copy' | 'remux'
   title?: string
+  videoCrf?: number
+  videoEncodePreset?: 'fast' | 'slow' | 'veryslow'
+  audioBitrate?: number
 }
 
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
