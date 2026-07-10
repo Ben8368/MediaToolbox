@@ -109,6 +109,18 @@ export const transcodeJobCreateSchema = {
   },
 } as const
 
+export const transcodeProbeSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    anyOf: [{ required: ['inputPath'] }, { required: ['inputGrantId'] }],
+    properties: {
+      inputPath: { type: 'string', minLength: 1 },
+      inputGrantId: { type: 'string', minLength: 1 },
+    },
+  },
+} as const
+
 export const browserNetworkDownloadCreateSchema = {
   body: {
     type: 'object',

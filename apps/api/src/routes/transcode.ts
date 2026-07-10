@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { createJobRecord } from '@mediatoolbox/job-core'
-import type { JobRecord, OkResult } from '@mediatoolbox/contracts'
+import type { JobRecord, OkResult, TranscodeProbeResponse, TranscodeSourceInfo } from '@mediatoolbox/contracts'
 import type { TranscodePreset, VideoEncodePreset } from '@mediatoolbox/ffmpeg'
+import { probeMedia, analyzeSource } from '@mediatoolbox/ffmpeg'
 
-import { transcodeJobCreateSchema } from '../schemas.js'
+import { transcodeJobCreateSchema, transcodeProbeSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
 import { normalizeWorkspacePath, WorkspacePathError, resolveGrantPath } from '../workspace-path.js'
@@ -71,6 +72,51 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         await updateTranscodeJob(state, job.id, 'canceled')
       }
       return { ok: true }
+    },
+  )
+
+  app.post<{ Body: { inputPath?: string; inputGrantId?: string }; Reply: TranscodeProbeResponse }>(
+    '/api/transcode/probe',
+    { schema: transcodeProbeSchema },
+    async (request) => {
+      const { inputPath, inputGrantId } = request.body
+
+      let effectiveInputPath: string
+      try {
+        if (inputGrantId) {
+          effectiveInputPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
+        } else {
+          effectiveInputPath = normalizeWorkspacePath(inputPath, state.workspaceRoot)
+        }
+      } catch {
+        return { ok: false }
+      }
+
+      try {
+        const probeResult = await probeMedia(effectiveInputPath)
+        const analysis = analyzeSource(probeResult)
+
+        const videoStream = probeResult.streams.find((s) => s.codec_type === 'video')
+        const source: TranscodeSourceInfo = {
+          ...(analysis.sourceVideoCodec !== undefined ? { videoCodec: analysis.sourceVideoCodec } : {}),
+          ...(analysis.sourceAudioCodec !== undefined ? { audioCodec: analysis.sourceAudioCodec } : {}),
+          ...(videoStream?.width !== undefined ? { width: videoStream.width } : {}),
+          ...(videoStream?.height !== undefined ? { height: videoStream.height } : {}),
+          ...(videoStream?.r_frame_rate !== undefined ? { fps: videoStream.r_frame_rate } : {}),
+          ...(analysis.sourceBitrateKbps !== undefined ? { bitrateKbps: analysis.sourceBitrateKbps } : {}),
+          ...(probeResult.format.duration !== undefined ? { durationSeconds: Number(probeResult.format.duration) } : {}),
+          isAlreadyHevc: analysis.isAlreadyHevc,
+          suggestRemux: analysis.suggestRemux,
+          recommendedPreset: analysis.recommendedPreset,
+          recommendedCrf: analysis.recommendedCrf,
+          recommendedEncodePreset: analysis.recommendedEncodePreset,
+          recommendedAudioBitrate: analysis.recommendedAudioBitrate,
+          notes: analysis.notes,
+        }
+        return { ok: true, source }
+      } catch {
+        return { ok: false }
+      }
     },
   )
 }

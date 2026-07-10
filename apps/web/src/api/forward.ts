@@ -27,6 +27,8 @@ export const getWorkOrder = forwardMethod('getWorkOrder')
 export const updateWorkOrder = forwardMethod('updateWorkOrder')
 export const applyWorkOrder = forwardMethod('applyWorkOrder')
 
+export const probeTranscodeSource = forwardMethod('probeTranscodeSource')
+
 export const getWorkspace = forwardMethod('getWorkspace')
 export const fetchFilebrowserDisks = forwardMethod('fetchFilebrowserDisks')
 export const listFilebrowserDirectory = forwardMethod('listFilebrowserDirectory')

@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { cancelJob, listJobs, submitTranscodeJob } from '@/api'
-import type { JobRecord, TranscodeJobDraft } from '@/api/types'
+import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource } from '@/api'
+import type { JobRecord, TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
 import { requestReadGrant } from '@/api/real/pathGrants'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 
@@ -42,6 +42,8 @@ export function TranscodeApp() {
   const [videoCrf, setVideoCrf] = useState(20)
   const [videoEncodePreset, setVideoEncodePreset] = useState<NonNullable<TranscodeJobDraft['videoEncodePreset']>>('slow')
   const [audioBitrate, setAudioBitrate] = useState(192)
+  const [sourceInfo, setSourceInfo] = useState<TranscodeSourceInfo | null>(null)
+  const [probing, setProbing] = useState(false)
 
   const transcodeJobs = useMemo(
     () => jobs.filter((job) => job.kind === 'media.transcode'),
@@ -61,6 +63,43 @@ export function TranscodeApp() {
   }, [])
 
   useVisibilityPolling(refreshJobs, 2000)
+
+  useEffect(() => {
+    if (!inputPath.trim() && !inputGrantId) {
+      setSourceInfo(null)
+      return
+    }
+
+    const draft = inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      setProbing(true)
+      try {
+        const result = await probeTranscodeSource(draft)
+        if (cancelled) return
+        if (result.ok && result.source) {
+          setSourceInfo(result.source)
+          setVideoCrf(result.source.recommendedCrf)
+          setVideoEncodePreset(result.source.recommendedEncodePreset as NonNullable<TranscodeJobDraft['videoEncodePreset']>)
+          setAudioBitrate(result.source.recommendedAudioBitrate)
+          if (result.source.recommendedPreset) {
+            setPreset(result.source.recommendedPreset as NonNullable<TranscodeJobDraft['preset']>)
+          }
+        } else {
+          setSourceInfo(null)
+        }
+      } catch {
+        if (!cancelled) setSourceInfo(null)
+      } finally {
+        if (!cancelled) setProbing(false)
+      }
+    }, inputGrantId ? 0 : 600)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [inputPath, inputGrantId])
 
   const importExternal = useCallback(async () => {
     const grant = await requestReadGrant()
@@ -150,6 +189,27 @@ export function TranscodeApp() {
               </button>
             </div>
           </label>
+          {(probing || sourceInfo) && (
+            <div className="transcode-source-info">
+              {probing && <span className="transcode-source-info__probing">分析中...</span>}
+              {!probing && sourceInfo && (
+                <>
+                  <div className="transcode-source-info__meta">
+                    {sourceInfo.videoCodec && (
+                      <span>{sourceInfo.videoCodec.toUpperCase()}{sourceInfo.width && sourceInfo.height ? ` ${sourceInfo.width}×${sourceInfo.height}` : ''}{sourceInfo.fps ? ` / ${sourceInfo.fps} fps` : ''}</span>
+                    )}
+                    {sourceInfo.audioCodec && <span>{sourceInfo.audioCodec.toUpperCase()}</span>}
+                    {sourceInfo.bitrateKbps && <span>{sourceInfo.bitrateKbps} kbps</span>}
+                  </div>
+                  {sourceInfo.notes.length > 0 && (
+                    <ul className="transcode-source-info__notes">
+                      {sourceInfo.notes.map((note, i) => <li key={i}>{note}</li>)}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           <label className="mt-field">
             <span>输出路径</span>
             <input value={outputPath} onChange={(event) => setOutputPath(event.target.value)} placeholder="/Workspace/Exports/output.mp4" />
