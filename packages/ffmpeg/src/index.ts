@@ -1,5 +1,5 @@
 export type { TranscodePreset, TranscodeRequest, VideoEncodePreset } from './args.js'
-export { buildFfmpegArgs, buildFfprobeArgs } from './args.js'
+export { buildFfmpegArgs, buildFfprobeArgs, buildTwoPassFfmpegArgs } from './args.js'
 export type { NormalizedFfmpegError } from './errors.js'
 export { FfmpegRunError, FfmpegToolNotFoundError, normalizeFfmpegError } from './errors.js'
 export type { FfprobeFormat, FfprobeResult, FfprobeStream, ProbeMediaOptions } from './probe.js'
@@ -12,3 +12,5 @@ export type { FfmpegProbe, FfmpegProbeResult, FfmpegToolCandidate, FfmpegToolSou
 export { getFfmpegCandidates, getFfprobeCandidates, probeFfmpegCommand, probeFfprobeCommand, resolveFfmpegTool, resolveFfprobeTool } from './tool.js'
 export type { SourceAnalysis } from './analyze.js'
 export { analyzeSource } from './analyze.js'
+export type { VmafResult, VmafRunOptions } from './vmaf.js'
+export { buildVmafArgs, runVmafComparison } from './vmaf.js'

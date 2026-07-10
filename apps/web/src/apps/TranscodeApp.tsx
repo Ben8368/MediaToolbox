@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource } from '@/api'
+import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource, previewTranscodeCommand } from '@/api'
 import type { JobRecord, TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
 import { requestReadGrant } from '@/api/real/pathGrants'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
@@ -27,6 +27,16 @@ const STATUS_LABELS: Record<JobRecord['status'], string> = {
 
 const TERMINAL_STATUSES = new Set<JobRecord['status']>(['succeeded', 'failed', 'canceled'])
 
+const PRESET_EXTENSIONS: Record<NonNullable<TranscodeJobDraft['preset']>, string> = {
+  'mp4-h265-aac': 'mp4',
+  'mp4-h264-aac': 'mp4',
+  'mkv-h265-aac': 'mkv',
+  'remux': 'mp4',
+  'audio-aac': 'm4a',
+  'audio-mp3': 'mp3',
+  'copy': 'mp4',
+}
+
 export function TranscodeApp() {
   const [inputPath, setInputPath] = useState('')
   const [outputPath, setOutputPath] = useState('/Workspace/Exports/output.mp4')
@@ -44,6 +54,13 @@ export function TranscodeApp() {
   const [audioBitrate, setAudioBitrate] = useState(192)
   const [sourceInfo, setSourceInfo] = useState<TranscodeSourceInfo | null>(null)
   const [probing, setProbing] = useState(false)
+  const [useTargetBitrate, setUseTargetBitrate] = useState(false)
+  const [targetBitrateKbps, setTargetBitrateKbps] = useState(8000)
+  const [enableVmaf, setEnableVmaf] = useState(false)
+  const [commandPreview, setCommandPreview] = useState<string[] | null>(null)
+  const [batchPaths, setBatchPaths] = useState('')
+  const [batchSubmitting, setBatchSubmitting] = useState(false)
+  const [batchResult, setBatchResult] = useState('')
 
   const transcodeJobs = useMemo(
     () => jobs.filter((job) => job.kind === 'media.transcode'),
@@ -101,6 +118,34 @@ export function TranscodeApp() {
     }
   }, [inputPath, inputGrantId])
 
+  useEffect(() => {
+    if (preset === 'copy' || preset === 'remux') {
+      setCommandPreview(null)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const result = await previewTranscodeCommand({
+          ...(inputPath.trim() ? { inputPath: inputPath.trim() } : {}),
+          ...(outputPath.trim() ? { outputPath: outputPath.trim() } : {}),
+          preset,
+          videoCrf,
+          videoEncodePreset,
+          audioBitrate,
+          ...(useTargetBitrate ? { targetBitrateKbps } : {}),
+        })
+        if (!cancelled) setCommandPreview(result.ok ? (result.args ?? null) : null)
+      } catch {
+        if (!cancelled) setCommandPreview(null)
+      }
+    }, 500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [preset, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, inputPath, outputPath])
+
   const importExternal = useCallback(async () => {
     const grant = await requestReadGrant()
     if (!grant) return
@@ -123,6 +168,8 @@ export function TranscodeApp() {
         ...(inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }),
         ...(title.trim() ? { title: title.trim() } : {}),
         ...(isReencode ? { videoCrf, videoEncodePreset, audioBitrate } : {}),
+        ...(isReencode && useTargetBitrate ? { targetBitrateKbps } : {}),
+        ...(isReencode && enableVmaf ? { enableVmaf } : {}),
       })
       setNotice(`已创建：${job.title}`)
       await refreshJobs()
@@ -131,7 +178,37 @@ export function TranscodeApp() {
     } finally {
       setSubmitting(false)
     }
-  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId, videoCrf, videoEncodePreset, audioBitrate])
+  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, enableVmaf])
+
+  const submitBatch = useCallback(async () => {
+    const paths = batchPaths.split('\n').map((p) => p.trim()).filter(Boolean)
+    if (paths.length === 0 || batchSubmitting) return
+    setBatchSubmitting(true)
+    setBatchResult('')
+    let succeeded = 0
+    const isReencode = preset !== 'copy' && preset !== 'remux'
+    for (const path of paths) {
+      try {
+        const fileName = path.split('/').pop() ?? 'output'
+        const baseName = fileName.replace(/\.[^.]+$/, '')
+        const ext = PRESET_EXTENSIONS[preset]
+        const outPath = `/Workspace/Exports/${baseName}.${ext}`
+        await submitTranscodeJob({
+          inputPath: path,
+          outputPath: outPath,
+          preset,
+          ...(isReencode ? { videoCrf, videoEncodePreset, audioBitrate } : {}),
+          ...(isReencode && useTargetBitrate ? { targetBitrateKbps } : {}),
+          ...(isReencode && enableVmaf ? { enableVmaf } : {}),
+        })
+        succeeded += 1
+      } catch {
+      }
+    }
+    setBatchResult(`已提交 ${succeeded}/${paths.length} 个批量任务`)
+    setBatchSubmitting(false)
+    await refreshJobs()
+  }, [batchPaths, batchSubmitting, preset, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, enableVmaf, refreshJobs])
 
   const cancel = useCallback(async (jobId: string) => {
     setError('')
@@ -255,6 +332,34 @@ export function TranscodeApp() {
                   </select>
                 </label>
               )}
+              <label className="mt-field">
+                <span>
+                  <input type="checkbox" checked={useTargetBitrate} onChange={(e) => setUseTargetBitrate(e.target.checked)} />
+                  {' '}使用目标码率（2-pass，优先于 CRF）
+                </span>
+              </label>
+              {useTargetBitrate && (
+                <label className="mt-field">
+                  <span>目标码率（kbps）</span>
+                  <input type="number" min={500} max={100000} value={targetBitrateKbps} onChange={(e) => setTargetBitrateKbps(Number(e.target.value))} />
+                </label>
+              )}
+              <label className="mt-field">
+                <span>
+                  <input type="checkbox" checked={enableVmaf} onChange={(e) => setEnableVmaf(e.target.checked)} />
+                  {' '}转码后验证画质（VMAF，耗时较长）
+                </span>
+              </label>
+              {sourceInfo && sourceInfo.durationSeconds && (
+                <div className="transcode-estimate">
+                  预估输出体积：{formatEstimatedSize(sourceInfo, videoCrf, useTargetBitrate ? targetBitrateKbps : undefined, audioBitrate)}
+                </div>
+              )}
+              {commandPreview && (
+                <div className="transcode-command-preview">
+                  <code>{commandPreview.join(' ')}</code>
+                </div>
+              )}
             </>
           )}
           <label className="mt-field">
@@ -304,6 +409,25 @@ export function TranscodeApp() {
             ))}
           </div>
         </section>
+
+        <section className="transcode-batch">
+          <div className="transcode-jobs__header">
+            <strong>批量转码（使用当前预设与质量设置）</strong>
+          </div>
+          <label className="mt-field">
+            <span>批量输入路径（每行一个工作区路径）</span>
+            <textarea
+              value={batchPaths}
+              onChange={(e) => setBatchPaths(e.target.value)}
+              placeholder={'/Workspace/Downloads/a.mov\n/Workspace/Downloads/b.mov'}
+              rows={4}
+            />
+          </label>
+          <button className="mt-btn mt-btn--primary" type="button" onClick={() => void submitBatch()} disabled={!batchPaths.trim() || batchSubmitting}>
+            {batchSubmitting ? '提交中' : '批量提交'}
+          </button>
+          {batchResult && <div className="transcode-message">{batchResult}</div>}
+        </section>
       </main>
     </div>
   )
@@ -316,4 +440,26 @@ function formatProgress(job: JobRecord): string {
     : job.progress.current
   if (job.progress.unit === 'percent') return `${Math.min(100, Math.max(0, value))}%`
   return `${job.progress.current}/${job.progress.total} ${job.progress.unit}`
+}
+
+function estimateVideoBitrateKbps(width: number | undefined, height: number | undefined, crf: number): number {
+  const pixels = (width ?? 1920) * (height ?? 1080)
+  const table4k: Record<number, number> = { 16: 40000, 18: 32000, 20: 24000, 22: 18000, 24: 13000, 26: 9000, 28: 6500 }
+  const table1080p: Record<number, number> = { 16: 12000, 18: 8500, 20: 6000, 22: 4500, 24: 3200, 26: 2200, 28: 1500 }
+  const tableSd: Record<number, number> = { 16: 4000, 18: 2800, 20: 2000, 22: 1400, 24: 1000, 26: 700, 28: 500 }
+  const table = pixels >= 3840 * 2160 * 0.8 ? table4k : pixels >= 1920 * 1080 * 0.8 ? table1080p : tableSd
+  const keys = Object.keys(table).map(Number)
+  let closest = keys[0] ?? 20
+  for (const k of keys) {
+    if (Math.abs(k - crf) < Math.abs(closest - crf)) closest = k
+  }
+  return table[closest] ?? 6000
+}
+
+function formatEstimatedSize(source: TranscodeSourceInfo, crf: number, targetBitrateKbpsValue: number | undefined, audioBitrateKbps: number): string {
+  const videoBitrateKbps = targetBitrateKbpsValue ?? estimateVideoBitrateKbps(source.width, source.height, crf)
+  const totalKbps = videoBitrateKbps + audioBitrateKbps
+  const durationSeconds = source.durationSeconds ?? 0
+  const sizeMb = (totalKbps * durationSeconds) / 8 / 1024
+  return sizeMb >= 1024 ? `约 ${(sizeMb / 1024).toFixed(2)} GB` : `约 ${sizeMb.toFixed(1)} MB`
 }

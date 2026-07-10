@@ -20,6 +20,7 @@ export type FfmpegRunOptions = {
   onEvent?: (event: FfmpegProgressEvent) => void
   onLog?: (line: string, stream: 'stdout' | 'stderr') => void
   spawnProcess?: FfmpegSpawn
+  argsOverride?: string[]
 }
 
 export type FfmpegRunResult = {
@@ -50,7 +51,7 @@ function createLineReader(onLine: (line: string) => void) {
 export function runFfmpeg(request: TranscodeRequest, options: FfmpegRunOptions = {}): Promise<FfmpegRunResult> {
   const command = options.command ?? 'ffmpeg'
   // Inject -progress pipe:1 -nostats before output args so we get structured progress on stdout
-  const baseArgs = buildFfmpegArgs(request)
+  const baseArgs = options.argsOverride ?? buildFfmpegArgs(request)
   const progressArgs = makeFfmpegProgressArgs(1)
   // Insert progress flags before the output path (last arg)
   const outputPath = baseArgs[baseArgs.length - 1]!

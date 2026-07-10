@@ -479,3 +479,7 @@ export type TranscodeSourceInfo = {
 export type TranscodeProbeResponse = OkResult & {
   source?: TranscodeSourceInfo
 }
+
+export type TranscodeCommandPreviewResponse = OkResult & {
+  args?: string[]
+}

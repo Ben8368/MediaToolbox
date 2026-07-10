@@ -62,6 +62,9 @@ export async function executeTranscode(job: JobRecord, workerJob: TranscodeWorke
         updatedAt: new Date().toISOString(),
       }).catch(() => undefined)
       addLog(state.db, 'INFO', 'transcode', `转码完成：${job.title}`)
+      if (result.vmafScore !== undefined) {
+        addLog(state.db, 'INFO', 'transcode', `VMAF 分数：${result.vmafScore.toFixed(2)} — ${job.title}`)
+      }
     }
   } catch (error) {
     activeAbortControllers.delete(job.id)

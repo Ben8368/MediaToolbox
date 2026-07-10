@@ -16,6 +16,7 @@ export type TranscodeRequest = {
   videoCrf?: number
   videoEncodePreset?: VideoEncodePreset
   audioBitrate?: number
+  targetBitrateKbps?: number
 }
 
 export function buildFfprobeArgs(inputPath: string): string[] {
@@ -79,4 +80,35 @@ export function buildFfmpegArgs(request: TranscodeRequest): string[] {
         request.outputPath,
       ]
   }
+}
+
+export function buildTwoPassFfmpegArgs(request: TranscodeRequest, pass: 1 | 2, passLogFile: string): string[] {
+  const encPreset = request.videoEncodePreset ?? 'slow'
+  const bitrate = request.targetBitrateKbps ?? 8000
+  const audioBitrate = request.audioBitrate ?? 192
+  const codec = request.preset === 'mp4-h264-aac' ? 'libx264' : 'libx265'
+
+  if (pass === 1) {
+    return [
+      '-i', request.inputPath,
+      '-map', '0:v:0',
+      '-c:v', codec, '-b:v', `${bitrate}k`, '-preset', encPreset,
+      '-pass', '1', '-passlogfile', passLogFile,
+      // NUL is the Windows null device; this project only targets Windows.
+      '-an', '-f', 'null', 'NUL',
+    ]
+  }
+
+  const mapArgs = request.preset === 'mkv-h265-aac'
+    ? ['-map', '0:v:0', '-map', '0:a?', '-map', '0:s?']
+    : ['-map', '0:v:0', '-map', '0:a?']
+
+  return [
+    '-i', request.inputPath,
+    ...mapArgs,
+    '-c:v', codec, '-b:v', `${bitrate}k`, '-preset', encPreset,
+    '-pass', '2', '-passlogfile', passLogFile,
+    '-c:a', 'aac', '-b:a', `${audioBitrate}k`,
+    request.outputPath,
+  ]
 }
