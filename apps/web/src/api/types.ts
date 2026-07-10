@@ -9,6 +9,8 @@ import type {
   LogListResponse,
   LogMetadataResponse,
   OkResult,
+  TranscodeProbeResponse,
+  TranscodeSourceInfo,
   WorkOrderScanResponse,
   WorkOrderGetResponse,
   WorkOrderApplyResponse,
@@ -28,6 +30,8 @@ export type {
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
+  TranscodeProbeResponse,
+  TranscodeSourceInfo,
   WorkOrder,
   RuntimeMetricsSlice,
   TaskListResponse,
@@ -65,6 +69,7 @@ export interface MediaToolboxApi {
   fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
+  probeTranscodeSource(draft: { inputPath?: string; inputGrantId?: string }): Promise<TranscodeProbeResponse>
   scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse>
   getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse>
   updateWorkOrder(workOrder: WorkOrder): Promise<OkResult>
