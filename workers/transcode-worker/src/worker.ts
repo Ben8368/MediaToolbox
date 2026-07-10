@@ -1,9 +1,11 @@
 import {
   buildFfmpegArgs,
+  buildTwoPassFfmpegArgs,
   resolveFfmpegTool,
   resolveFfprobeTool,
   probeMedia,
   runFfmpeg,
+  runVmafComparison,
   getDurationSeconds,
   type ResolveFfmpegToolOptions,
   type TranscodeRequest,
@@ -16,6 +18,7 @@ import type { JobRecord, JobProgress } from '@mediatoolbox/contracts'
 export type TranscodeWorkerJob = TranscodeRequest & {
   ffmpeg?: ResolveFfmpegToolOptions
   ffprobe?: ResolveFfmpegToolOptions
+  enableVmaf?: boolean
 }
 
 export type TranscodeWorkerRunOptions = {
@@ -27,6 +30,7 @@ export type TranscodeWorkerRunOptions = {
 
 export type TranscodeWorkerResult = FfmpegRunResult & {
   durationSeconds?: number
+  vmafScore?: number
 }
 
 export function describeTranscodeWorker() {
@@ -39,6 +43,8 @@ export function describeTranscodeWorker() {
     }),
   }
 }
+
+const TWO_PASS_PRESETS = new Set<TranscodeRequest['preset']>(['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac'])
 
 export async function runTranscodeWorkerJob(
   job: TranscodeWorkerJob,
@@ -53,24 +59,58 @@ export async function runTranscodeWorkerJob(
   })
   const durationSeconds = getDurationSeconds(probeResult)
 
-  const result = await runFfmpeg(job, {
-    command: ffmpegTool.command,
-    ...(options.signal ? { signal: options.signal } : {}),
-    ...(durationSeconds !== undefined ? { durationSeconds } : {}),
-    onEvent(event) {
-      if (event.type === 'progress' && options.onProgress) {
-        options.onProgress({
-          current: Math.round(event.percent * 10) / 10,
-          total: 100,
-          unit: 'percent',
-        })
-      }
-      options.onEvent?.(event)
-    },
-    ...(options.onLog ? { onLog: options.onLog } : {}),
-  })
+  const handleEvent = (event: FfmpegProgressEvent) => {
+    if (event.type === 'progress' && options.onProgress) {
+      options.onProgress({
+        current: Math.round(event.percent * 10) / 10,
+        total: 100,
+        unit: 'percent',
+      })
+    }
+    options.onEvent?.(event)
+  }
 
-  return { ...result, ...(durationSeconds !== undefined ? { durationSeconds } : {}) }
+  let result: FfmpegRunResult
+  if (job.targetBitrateKbps && TWO_PASS_PRESETS.has(job.preset)) {
+    const passLogFile = `${job.outputPath}.ffmpeg2pass`
+    await runFfmpeg(job, {
+      command: ffmpegTool.command,
+      argsOverride: buildTwoPassFfmpegArgs(job, 1, passLogFile),
+      ...(options.signal ? { signal: options.signal } : {}),
+    })
+    result = await runFfmpeg(job, {
+      command: ffmpegTool.command,
+      argsOverride: buildTwoPassFfmpegArgs(job, 2, passLogFile),
+      ...(options.signal ? { signal: options.signal } : {}),
+      ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+      onEvent: handleEvent,
+      ...(options.onLog ? { onLog: options.onLog } : {}),
+    })
+  } else {
+    result = await runFfmpeg(job, {
+      command: ffmpegTool.command,
+      ...(options.signal ? { signal: options.signal } : {}),
+      ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+      onEvent: handleEvent,
+      ...(options.onLog ? { onLog: options.onLog } : {}),
+    })
+  }
+
+  let vmafScore: number | undefined
+  if (result.status === 'succeeded' && job.enableVmaf) {
+    try {
+      const vmafResult = await runVmafComparison(job.inputPath, job.outputPath, { command: ffmpegTool.command })
+      vmafScore = vmafResult.vmafScore
+    } catch {
+      // best-effort quality check; a failed VMAF run must not fail the transcode job
+    }
+  }
+
+  return {
+    ...result,
+    ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+    ...(vmafScore !== undefined ? { vmafScore } : {}),
+  }
 }
 
 export function applyTranscodeResult(

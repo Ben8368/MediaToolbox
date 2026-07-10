@@ -20,6 +20,7 @@ import type {
   SetWorkspaceResponse,
   SubmitFetchResponse,
   TaskListResponse,
+  TranscodeCommandPreviewResponse,
   TrashListResponse,
   UnreadNotificationResponse,
   WorkspaceResponse,
@@ -30,6 +31,7 @@ export type {
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
+  TranscodeCommandPreviewResponse,
   TranscodeProbeResponse,
   TranscodeSourceInfo,
   WorkOrder,
@@ -52,6 +54,8 @@ export type TranscodeJobDraft = {
   videoCrf?: number
   videoEncodePreset?: 'fast' | 'slow' | 'veryslow'
   audioBitrate?: number
+  targetBitrateKbps?: number
+  enableVmaf?: boolean
 }
 
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
@@ -70,6 +74,7 @@ export interface MediaToolboxApi {
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
   probeTranscodeSource(draft: { inputPath?: string; inputGrantId?: string }): Promise<TranscodeProbeResponse>
+  previewTranscodeCommand(draft: { inputPath?: string; outputPath?: string; preset?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number }): Promise<TranscodeCommandPreviewResponse>
   scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse>
   getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse>
   updateWorkOrder(workOrder: WorkOrder): Promise<OkResult>

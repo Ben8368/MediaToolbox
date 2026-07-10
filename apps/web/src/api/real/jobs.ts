@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/http'
 import type { AssetListResponse, OkResult, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, WorkOrder } from '@mediatoolbox/contracts'
-import type { JobListResponse, JobRecord, TranscodeJobDraft, TranscodeProbeResponse } from '@/api/types'
+import type { JobListResponse, JobRecord, TranscodeCommandPreviewResponse, TranscodeJobDraft, TranscodeProbeResponse } from '@/api/types'
 
 export function listJobs(): Promise<JobListResponse> {
   return apiRequest<JobListResponse>('/api/jobs')
@@ -54,6 +54,13 @@ export function applyWorkOrder(
 
 export function probeTranscodeSource(draft: { inputPath?: string; inputGrantId?: string }): Promise<TranscodeProbeResponse> {
   return apiRequest<TranscodeProbeResponse>('/api/transcode/probe', {
+    method: 'POST',
+    body: JSON.stringify(draft),
+  })
+}
+
+export function previewTranscodeCommand(draft: { inputPath?: string; outputPath?: string; preset?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number }): Promise<TranscodeCommandPreviewResponse> {
+  return apiRequest<TranscodeCommandPreviewResponse>('/api/transcode/preview-command', {
     method: 'POST',
     body: JSON.stringify(draft),
   })

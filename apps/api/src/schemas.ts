@@ -105,6 +105,8 @@ export const transcodeJobCreateSchema = {
       videoCrf: { type: 'number', minimum: 0, maximum: 51 },
       videoEncodePreset: { type: 'string', enum: ['fast', 'slow', 'veryslow'] },
       audioBitrate: { type: 'number', minimum: 64, maximum: 640 },
+      targetBitrateKbps: { type: 'number', minimum: 500, maximum: 100000 },
+      enableVmaf: { type: 'boolean' },
     },
   },
 } as const
@@ -117,6 +119,22 @@ export const transcodeProbeSchema = {
     properties: {
       inputPath: { type: 'string', minLength: 1 },
       inputGrantId: { type: 'string', minLength: 1 },
+    },
+  },
+} as const
+
+export const transcodePreviewCommandSchema = {
+  body: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      inputPath: { type: 'string' },
+      outputPath: { type: 'string' },
+      preset: { type: 'string', enum: ['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac', 'audio-aac', 'audio-mp3', 'copy', 'remux'] },
+      videoCrf: { type: 'number', minimum: 0, maximum: 51 },
+      videoEncodePreset: { type: 'string', enum: ['fast', 'slow', 'veryslow'] },
+      audioBitrate: { type: 'number', minimum: 64, maximum: 640 },
+      targetBitrateKbps: { type: 'number', minimum: 500, maximum: 100000 },
     },
   },
 } as const
