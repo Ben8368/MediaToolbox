@@ -6,9 +6,13 @@ import { requestReadGrant } from '@/api/real/pathGrants'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 
 const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
+  { value: 'mp4-h265-aac', label: 'MP4 H.265 / AAC（推荐）' },
   { value: 'mp4-h264-aac', label: 'MP4 H.264 / AAC' },
+  { value: 'mkv-h265-aac', label: 'MKV H.265 / AAC（保留字幕）' },
+  { value: 'remux', label: 'Remux（仅转封装）' },
+  { value: 'audio-aac', label: 'AAC 音频' },
   { value: 'audio-mp3', label: 'MP3 音频' },
-  { value: 'copy', label: '封装复制' },
+  { value: 'copy', label: '流复制' },
 ]
 
 const STATUS_LABELS: Record<JobRecord['status'], string> = {
@@ -26,7 +30,7 @@ const TERMINAL_STATUSES = new Set<JobRecord['status']>(['succeeded', 'failed', '
 export function TranscodeApp() {
   const [inputPath, setInputPath] = useState('')
   const [outputPath, setOutputPath] = useState('/Workspace/Exports/output.mp4')
-  const [preset, setPreset] = useState<NonNullable<TranscodeJobDraft['preset']>>('mp4-h264-aac')
+  const [preset, setPreset] = useState<NonNullable<TranscodeJobDraft['preset']>>('mp4-h265-aac')
   const [title, setTitle] = useState('')
   const [jobs, setJobs] = useState<JobRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,6 +39,9 @@ export function TranscodeApp() {
   const [notice, setNotice] = useState('')
   const [inputGrantId, setInputGrantId] = useState<string | null>(null)
   const [inputGrantLabel, setInputGrantLabel] = useState<string>('')
+  const [videoCrf, setVideoCrf] = useState(20)
+  const [videoEncodePreset, setVideoEncodePreset] = useState<NonNullable<TranscodeJobDraft['videoEncodePreset']>>('slow')
+  const [audioBitrate, setAudioBitrate] = useState(192)
 
   const transcodeJobs = useMemo(
     () => jobs.filter((job) => job.kind === 'media.transcode'),
@@ -70,11 +77,13 @@ export function TranscodeApp() {
     setError('')
     setNotice('')
     try {
+      const isReencode = preset !== 'copy' && preset !== 'remux'
       const job = await submitTranscodeJob({
         outputPath: outputPath.trim(),
         preset,
         ...(inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }),
         ...(title.trim() ? { title: title.trim() } : {}),
+        ...(isReencode ? { videoCrf, videoEncodePreset, audioBitrate } : {}),
       })
       setNotice(`已创建：${job.title}`)
       await refreshJobs()
@@ -83,7 +92,7 @@ export function TranscodeApp() {
     } finally {
       setSubmitting(false)
     }
-  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId])
+  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId, videoCrf, videoEncodePreset, audioBitrate])
 
   const cancel = useCallback(async (jobId: string) => {
     setError('')
@@ -151,6 +160,43 @@ export function TranscodeApp() {
               {PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
+          {preset !== 'copy' && preset !== 'remux' && (
+            <>
+              <label className="mt-field">
+                <span>视频质量 CRF（越低越好，推荐 18–24）</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="range"
+                    min={0}
+                    max={51}
+                    value={videoCrf}
+                    onChange={(e) => setVideoCrf(Number(e.target.value))}
+                    style={{ flex: 1 }}
+                  />
+                  <span style={{ minWidth: '28px', textAlign: 'right' }}>{videoCrf}</span>
+                </div>
+              </label>
+              <label className="mt-field">
+                <span>编码速度</span>
+                <select value={videoEncodePreset} onChange={(e) => setVideoEncodePreset(e.target.value as NonNullable<TranscodeJobDraft['videoEncodePreset']>)}>
+                  <option value="fast">快速（体积较大）</option>
+                  <option value="slow">均衡（推荐）</option>
+                  <option value="veryslow">最优（速度最慢）</option>
+                </select>
+              </label>
+              {preset !== 'audio-mp3' && (
+                <label className="mt-field">
+                  <span>音频码率（kbps）</span>
+                  <select value={audioBitrate} onChange={(e) => setAudioBitrate(Number(e.target.value))}>
+                    <option value={128}>128</option>
+                    <option value={192}>192（推荐）</option>
+                    <option value={256}>256</option>
+                    <option value={320}>320</option>
+                  </select>
+                </label>
+              )}
+            </>
+          )}
           <label className="mt-field">
             <span>任务名</span>
             <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="可选" />

@@ -55,7 +55,7 @@ export async function executeTranscode(job: JobRecord, workerJob: TranscodeWorke
       await updateTranscodeJob(state, job.id, 'succeeded', { current: 100, total: 100, unit: 'percent' })
       await state.db.assets.create({
         id: `asset-${job.id}`,
-        kind: workerJob.preset === 'audio-mp3' ? 'audio' : 'video',
+        kind: (workerJob.preset === 'audio-mp3' || workerJob.preset === 'audio-aac') ? 'audio' : 'video',
         name: workerJob.outputPath.split('/').pop() || job.title,
         path: workerJob.outputPath,
         createdAt: new Date().toISOString(),
