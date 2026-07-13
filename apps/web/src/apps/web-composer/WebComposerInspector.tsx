@@ -77,6 +77,10 @@ export function WebComposerInspector({
             )}
           </label>
         ))}
+        <div className="wc-copy-note">
+          <strong>{preset.name} · 模板已锁定</strong>
+          <span>只修改预设声明的文案、素材与颜色，不改变页面结构。</span>
+        </div>
       </section>
 
       <section className="wc-inspector-section">

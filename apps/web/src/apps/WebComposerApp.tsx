@@ -4,8 +4,8 @@ import type { WebComposerExportSettings, WebComposerPresetId, WebComposerPresetS
 import { createExportSettings, createInitialPresetStates } from './web-composer/model'
 import { presetById, presets, clonePresetState } from './web-composer/presets'
 import { WebComposerInspector } from './web-composer/WebComposerInspector'
+import { WebComposerPresetPicker } from './web-composer/WebComposerPresetPicker'
 import { WebComposerPreviewStage } from './web-composer/WebComposerPreviewStage'
-import { WebComposerSidebar } from './web-composer/WebComposerSidebar'
 import { useWebComposerExport } from './web-composer/useWebComposerExport'
 
 export function WebComposerApp() {
@@ -28,15 +28,8 @@ export function WebComposerApp() {
 
   return (
     <div className="wc-app">
+      <WebComposerPresetPicker activePresetId={activePresetId} onSelect={setActivePresetId} />
       <div className="wc-workspace">
-        <WebComposerSidebar activePresetId={activePresetId} onSelect={setActivePresetId} />
-        <WebComposerPreviewStage
-          iframeRef={iframeRef}
-          presetId={activePreset.id}
-          state={activeState}
-          settings={exportSettings}
-          ready={exporter.ready}
-        />
         <WebComposerInspector
           preset={activePreset}
           state={activeState}
@@ -46,6 +39,13 @@ export function WebComposerApp() {
           onSettingsChange={setExportSettings}
           onExport={(kind) => void exporter.exportComposition(kind, activePreset.id, exportSettings)}
           onReset={resetActivePreset}
+        />
+        <WebComposerPreviewStage
+          iframeRef={iframeRef}
+          presetId={activePreset.id}
+          state={activeState}
+          settings={exportSettings}
+          ready={exporter.ready}
         />
       </div>
       <footer className="wc-statusbar">
