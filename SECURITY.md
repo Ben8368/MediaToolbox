@@ -26,7 +26,8 @@ MediaToolbox 是本地媒体工作流应用，涉及本地文件、下载、浏�
 - Electron 主进程持有浏览器 session、文件选择和下载事件；Web UI 只提交用户意图并展示状态。
 - 不向 Web UI 暴露原始 cookie、session 或本地敏感路径。
 - 第三方工具调用必须走 adapter，禁止把用户输入直接拼接成 shell 命令。
-- 下载、转码、PSD 渲染等产物默认写入受控工作区，除非携带有效写授权。
+- 下载、转码、网页合成、PSD 渲染等产物默认写入受控工作区，除非携带有效写授权。
+- Web Composer 预览运行在受限 iframe；API 不信任客户端声明的格式或路径，必须校验 PNG/WebM 文件签名、尺寸/时长上限，并在服务端生成 `/Workspace/Exports` 输出路径。
 
 ## 不应提交的内容
 

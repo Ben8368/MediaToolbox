@@ -8,7 +8,7 @@ MediaToolbox 采用桌面壳、Web UI、本地 API、任务系统、worker 和 a
 apps/desktop  Electron 桌面壳，负责窗口、托盘、启动本地服务
 apps/web      NAS 风格 React 前端，负责展示与交互
 apps/api      本地 HTTP API，负责鉴权边界、任务编排、资产访问
-workers/*     下载、转码、PSD 批处理等可隔离执行单元
+workers/*     下载、转码、网页合成和 PSD 批处理等可隔离执行单元
 packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 ```
 
@@ -19,6 +19,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - 第三方工具必须通过 adapter 包装，命令参数构建与进程执行分开。
 - 所有长任务进入统一 Job 模型，支持进度、日志、取消、失败重试和恢复。
 - PSD 能力以模版 manifest 为中心，高保真编辑通过 Photoshop adapter 实现。
+- Web Composer 以版本化预设为中心；编辑器只写入预设声明的 slot，预设 DOM、样式和动画源码保持只读并由完整性测试锁定。
 - 浏览器网络能力由 Electron 主进程承载，其他 app 只能通过受控 API / IPC 调用，不直接读取 cookie、session 或本地文件。
 
 ## 浏览器网络能力
@@ -41,13 +42,17 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - 下载：视频、音频、字幕下载底层封装 `yt-dlp`；普通网页资源下载接入 Browser Network adapter 后再汇入下载 app 双通道策略。
 - 转码：按预设调用 `ffmpeg`。
 - PS：PSD 模版检查、slot 替换、批量导出，复杂场景接 Photoshop 自动化。
+- Web Composer：在锁定网页预设上编辑文案、图片/视频和颜色，按目标比例与分辨率导出 PNG 或 MP4。
 - 任务中心：统一任务队列、日志和历史。
+
+Web Composer 使用独立同源 iframe 承载预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成，API 校验捕获元数据与文件签名，MP4 编码交给 `web-render-worker` 和 ffmpeg。输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。详见 [ADR/0005-web-composer-versioned-presets.md](ADR/0005-web-composer-versioned-presets.md)。
 
 ## 数据模型
 
 - `AssetRecord`：视频、音频、字幕、图片、PSD、文件夹和导出结果。
-- `JobRecord`：下载、转码、PSD 批处理等长任务。
+- `JobRecord`：下载、转码、网页合成、PSD 批处理等长任务。
 - `PsdTemplateManifest`：PSD 模版、图层 slot、画布和导出约束。
+- `WebComposerPresetManifest` / `WebComposerPresetState`：版本化网页预设、可编辑 slot 与导出设置。
 
 共享类型位于 `packages/contracts`，任务状态机位于 `packages/job-core`。
 

@@ -110,6 +110,19 @@
 - [ ] 复杂 PSD 接 Photoshop 本机联调；优先 DOM，复杂命令再 batchPlay。
 - [ ] image / smart-object slot 渲染实现（当前渲染脚本仅处理 text slot）。
 
+## Phase 5.5：Web Composer 工作台
+
+状态：**桌面 App beta 已接入，基础 PNG/MP4 闭环已验收；待默认远程素材离线化与 4K 长时压力验收**。
+
+- [x] 通过统一 `appRegistry` 接入 `web-composer`，复用全局窗口默认/最小尺寸和任务状态徽章。
+- [x] 迁入 Lumora、VaultShield、Viktor 三个版本化预设；预设 DOM、样式和动画由完整性测试锁定。
+- [x] 支持 manifest 声明的文案、图片/视频、字体和颜色变量编辑，不提供任意 DOM 拖拽或结构改写。
+- [x] 独立 iframe 以目标像素尺寸渲染，工作台只缩放外层预览；支持 `16:9`、`4:3`、`1:1`、`9:16` 和 720p/1080p/1440p/4K。
+- [x] PNG 与 MP4 接入统一 Job/Asset；WebM 由 `web-render-worker` 通过 ffmpeg 编码为 H.264 MP4，输出固定进入 `/Workspace/Exports`。
+- [x] 2026-07-13 完成桌面默认/最小窗口、Slot 编辑、4:3 画布、PNG 和 1 秒 MP4 本地烟测。
+- [ ] 将默认远程字体/视频整理为版本化本地资源包，提升离线可重复导出能力。
+- [ ] 完成 4K/15 秒、三套预设和图片/视频替换的桌面端压力与体验验收。
+
 ## Phase 6：工作区外路径授权
 
 状态：**Phase 6A/B/C 管道已落地，桌面端体验与边界验收继续跟进**。

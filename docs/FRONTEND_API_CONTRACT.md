@@ -41,7 +41,7 @@ Workers / adapters 负责：
 | 端点 | 用途 | 当前状态 |
 | --- | --- | --- |
 | `GET /api/health` | 本地 API 健康检查 | 骨架 |
-| `GET /api/apps` | 工作台应用列表；应用 ID 与前端 registry 对齐为 `browser`、`file-manager`、`fetcher`、`transcode`、`ps`、`settings`、`logs` | 骨架 |
+| `GET /api/apps` | 工作台应用列表；应用 ID 与前端 registry 对齐为 `browser`、`file-manager`、`fetcher`、`transcode`、`ps`、`web-composer`、`settings`、`logs` | 骨架 |
 | `GET /api/system/metrics` | 右侧状态面板系统快照 | 本地采样 |
 | `GET /api/system/runtime` | 下载器状态栏网络速率 | 本地采样 |
 | `POST /api/system/shutdown` | 关闭本地服务，需 `x-mediatoolbox-shutdown: desktop` 请求头 | 骨架 |
@@ -56,7 +56,7 @@ Workers / adapters 负责：
 | `GET /api/jobs` | 任务列表 | SQLite |
 | `GET /api/jobs/{id}` | 任务详情 | SQLite |
 | `POST /api/jobs/{id}/cancel` | 取消任务 | 状态联动 |
-| `GET /api/assets` | 文件库资产索引，汇总浏览器下载、转码和后续 PSD 产出 | SQLite |
+| `GET /api/assets` | 文件库资产索引，汇总浏览器下载、转码、网页合成和 PSD 产出 | SQLite |
 | `GET /api/browser-network/downloads` | 浏览器下载记录列表 | 本地状态 + jobs |
 | `GET /api/browser-network/downloads/{id}` | 浏览器下载记录详情 | 本地状态 + jobs |
 | `POST /api/browser-network/downloads` | 桌面端登记 Electron 浏览器下载，需 `x-mediatoolbox-browser-network: desktop` 与 `x-mediatoolbox-desktop-token`；桌面端传入的 `id` 会作为下载记录和 job 的稳定 ID | 执行入口 |
@@ -81,6 +81,8 @@ Workers / adapters 负责：
 | `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash` | 清空回收站 | 本地映射 |
+| `POST /api/web-composer/exports/png` | 提交 `application/octet-stream` PNG 捕获；query 携带预设 ID/版本和目标宽高。服务端校验 PNG 签名、版本与 4K 像素上限，创建 `web.render.image` job，输出固定写入 `/Workspace/Exports` | 执行入口 |
+| `POST /api/web-composer/exports/video` | 提交 `application/octet-stream` WebM 捕获；query 额外携带 fps 与时长。服务端校验 WebM 签名、30 fps/15 秒/4K 上限，创建 `web.render.video` job，由 worker 编码为 H.264 MP4 并写入 `/Workspace/Exports` | 执行入口 |
 | `POST /api/transcode/jobs` | 创建转码任务，输入可为工作区路径或 `inputGrantId`；输出可为 `/Workspace/Exports` 路径或 `outputGrantId` | 执行入口 |
 | `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot，需配置 Photoshop 命令 runner；未配置返回 503 可读错误 | 执行入口 |
@@ -109,10 +111,10 @@ Workers / adapters 负责：
 - 下列端点已加入基础 Fastify schema：
   - 下载：`POST /api/fetch/tasks`、`POST /api/fetch/tasks/clear`、`GET /api/fetch/tasks/{id}/file`
   - 文件浏览：`POST /api/filebrowser/list`、`POST /api/filebrowser/mkdir`、`DELETE /api/filebrowser/path`、`PUT /api/filebrowser/workspace`
-  - 转码与 PSD：`POST /api/transcode/jobs`、`POST /api/psd/templates/inspect`
+  - 转码、网页合成与 PSD：`POST /api/transcode/jobs`、`POST /api/web-composer/exports/png`、`POST /api/web-composer/exports/video`、`POST /api/psd/templates/inspect`
   - 浏览器网络写入端点
 - `POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 兼容 `urls` 数组，按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`。
-- `POST /api/jobs/{id}/cancel` 会联动下载/转码 abort controller，并可标记浏览器下载 job 取消状态。
+- `POST /api/jobs/{id}/cancel` 会联动下载/转码/网页合成 abort controller，并可标记浏览器下载 job 取消状态。
 - `GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。
 
 安全边界：
@@ -120,6 +122,7 @@ Workers / adapters 负责：
 - `GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。
 - 浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID。
 - 受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。
+- Web Composer 不接收客户端输出路径；服务端校验 PNG/WebM 文件签名、体积和捕获元数据，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。
 - PSD manifest、slot 与渲染输入类型收敛到 `packages/contracts`；`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**。
 - 服务端会剥离客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；非文字 slot 当前会明确拒绝，避免静默忽略。
 
@@ -164,7 +167,7 @@ Workers / adapters 负责：
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
 
-说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU、Windows GPU 计数器回退与 macOS Apple Silicon GPU 采样已接入，但不表示 Electron 完整安装包发布、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
+说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、网页合成 PNG/MP4 导出、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU、Windows GPU 计数器回退与 macOS Apple Silicon GPU 采样已接入，但不表示 Electron 完整安装包发布、Web Composer 默认远程素材离线化/4K 长时压力验收、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
 
 ## 5. 迁移规则
 

@@ -2,8 +2,9 @@
 
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
-> **当前阶段：** Phase 4.5/5 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
-> **最近更新：** 2026-07-08
+> **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
+> **最近更新：** 2026-07-13
+> - Web Composer 已按桌面 App 模式接入统一应用注册，继承 `960×640` 默认窗口和 `760×520` 最小窗口；三套版本化预设、Slot 编辑、精确尺寸画布、PNG/MP4 Job/Asset 导出闭环已完成本地烟测。
 > - Electron 生产打包基础链路已打通：renderer/API runtime 入包、`userData` 工作区与 SQLite 默认路径、macOS arm64 `electron-builder --dir` 和包内 `/api/health` 烟测已通过；发布侧仍待签名、公证与完整安装包验收。
 > - Phase 6A-C PathGrant 管道已落地：读/写/目录读授权、`inputGrantId` / `outputGrantId` 任务扩展、转码/PSD 外部导入导出和纯 Web 降级已接入；下一步继续做桌面端体验与边界验收。
 > - Browser Network 多标签能力继续收口：下载、权限和上传侧栏事件已按活动 `viewId` 隔离，下载取消校验标签归属；下一步验收桌面端 view 生命周期和真实下载/权限路径。
@@ -12,17 +13,17 @@
 
 ## 项目定位
 
-MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目标是用 TypeScript 统一前后端主要开发体验，提供文件管理、下载、转码、PSD 模板处理、浏览器辅助和批量自动化能力。
+MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目标是用 TypeScript 统一前后端主要开发体验，提供文件管理、下载、转码、网页合成、PSD 模板处理、浏览器辅助和批量自动化能力。
 
 ## 当前快照
 
 - **仓库形态：** npm workspaces monorepo。
-- **前端：** `apps/web`，React 18 + TypeScript + Vite + Zustand；保留 NAS 风格 UI、窗口系统、下载器、文件管理器、转码工作台、PSD 工作台、设置、日志和浏览器入口。
+- **前端：** `apps/web`，React 18 + TypeScript + Vite + Zustand；保留 NAS 风格 UI、窗口系统、下载器、文件管理器、转码工作台、PSD 工作台、Web Composer 工作台、设置、日志和浏览器入口。
 - **桌面壳：** `apps/desktop`，具备 Electron BrowserWindow、托盘、基础 IPC、可选本地 API 子进程启动能力；浏览器 app 通过 `WebContentsView` 由主进程承载真实网页，并已接入 Browser Network session、权限审计和下载事件。
-- **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、系统指标、日志、通知和 jobs 的最小契约。
+- **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
-- **Workers：** `download-worker`、`transcode-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** `npm run verify` 已通过；浏览器 app 拖拽、缩放已完成用户主观验收；右侧状态面板 CPU / 内存 / GPU 仪表已验收为真实系统采样（开发模式 Web + 本地 API）。
+- **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
+- **验证：** `npm run verify` 已通过；Web Composer 桌面入口、默认/最小窗口、Slot 编辑、PNG 和 H.264 MP4 已完成本地烟测；浏览器 app 拖拽、缩放已完成用户主观验收；右侧状态面板 CPU / 内存 / GPU 仪表已验收为真实系统采样（开发模式 Web + 本地 API）。
 
 ## 当前阻断项
 
@@ -36,8 +37,10 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
 - Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
+- Web Composer 默认预设仍引用远程字体/视频；离线资源包和 4K/15 秒长时视频压力验收待补齐。
 
 **已迁移至技术债追踪：**
+- TD-021: Web Composer 默认素材离线资源包与 4K/15 秒压力验收
 - TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
 - TD-019: Electron 发布 polish（应用图标、签名、公证与完整安装包验收）
@@ -46,12 +49,13 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 下一步
 
-1. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
-2. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
-3. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
-4. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
-5. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
-6. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
+1. 验收 Web Composer 三套默认预设、图片/视频替换、4K/15 秒压力路径，并规划远程字体/视频的版本化本地资源包。
+2. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
+3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
+4. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
+5. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
+6. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
+7. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 
 ## 常用命令
 
