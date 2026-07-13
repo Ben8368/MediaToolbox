@@ -88,6 +88,9 @@
   right: 0;
   display: grid;
   width: max(220px, 100%);
+  max-height: min(420px, calc(100vh - 120px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 5px;
   border: 1px solid rgba(255,255,255,.13);
   border-radius: 8px;
@@ -130,6 +133,10 @@
 
 .wc-preview-actions { display: flex; flex: 0 0 auto; align-items: end; gap: 5px; }
 .wc-preview-actions button { height: 24px; border: 1px solid rgba(0,102,255,.35); border-radius: 4px; background: var(--mt-brand); color: #fff; cursor: pointer; padding: 0 7px; font-size: 9.5px; font-weight: 700; white-space: nowrap; }
+.wc-mode-toggle { display: grid; grid-template-columns: repeat(2, auto); padding: 2px; border: 1px solid rgba(255,255,255,.12); border-radius: 5px; background: rgba(0,0,0,.28); }
+.wc-mode-toggle button { height: 20px; border: 0; background: transparent; color: var(--wc-muted); padding: 0 6px; }
+.wc-mode-toggle button.is-active { background: rgba(77,171,255,.2); color: #d8efff; box-shadow: inset 0 0 0 1px rgba(77,171,255,.2); }
+.wc-mode-toggle button:focus-visible { outline: 2px solid rgba(77,171,255,.72); outline-offset: 2px; }
 .wc-preview-actions__reset { border-color: rgba(255,255,255,.14) !important; background: rgba(255,255,255,.055) !important; color: var(--wc-text) !important; }
 .wc-preview-actions button:disabled { cursor: wait; opacity: .45; }
 

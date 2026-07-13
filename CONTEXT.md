@@ -4,8 +4,9 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-13
+> - Web Composer 已升级为 Slot v2 的“预览区点选、左侧上下文编辑”工作流：三套预设提供显式文案/Logo/Icon/背景 Slot，支持字体、设计字号、字重、颜色、内容类型替换、X/Y 偏移和显隐；元素大纲支持搜索、分组与隐藏恢复，编辑/交互预览模式分离。
 > - 各工作台左侧栏已统一为 `200px` 默认宽度，并接入共享拖拽调整、键盘调整、双击复位与按 App 记忆宽度能力。
-> - Web Composer 的预设入口已迁移到窗口右上角的紧凑选择菜单；文案、样式与背景素材收纳到左侧属性栏，导出参数与操作位于预览区顶部。
+> - Web Composer 的预设入口位于窗口右上角的紧凑可滚动选择菜单；当前 Slot 的编辑能力收纳到左侧上下文 Inspector，导出参数与操作位于预览区顶部。
 > - Web Composer 已按桌面 App 模式接入统一应用注册，继承 `960×640` 默认窗口和 `760×520` 最小窗口；三套版本化预设、Slot 编辑、精确尺寸画布、PNG/MP4 Job/Asset 导出闭环已完成本地烟测。
 > - Electron 生产打包基础链路已打通：renderer/API runtime 入包、`userData` 工作区与 SQLite 默认路径、macOS arm64 `electron-builder --dir` 和包内 `/api/health` 烟测已通过；发布侧仍待签名、公证与完整安装包验收。
 > - Phase 6A-C PathGrant 管道已落地：读/写/目录读授权、`inputGrantId` / `outputGrantId` 任务扩展、转码/PSD 外部导入导出和纯 Web 降级已接入；下一步继续做桌面端体验与边界验收。
@@ -25,7 +26,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** `npm run verify` 已通过；Web Composer 桌面入口、默认/最小窗口、Slot 编辑、PNG 和 H.264 MP4 已完成本地烟测；浏览器 app 拖拽、缩放已完成用户主观验收；右侧状态面板 CPU / 内存 / GPU 仪表已验收为真实系统采样（开发模式 Web + 本地 API）。
+- **验证：** 2026-07-13 `npm run verify` 已通过；Web Composer v2 manifest/default/DOM Slot 契约、消息校验、状态更新与 API 版本拒绝路径已纳入测试，浏览器自动化已确认大纲选择、上下文编辑器刷新、选择框与设计坐标回传；预览区直接点选的最终主观手感仍待用户确认。既有 PNG 和 H.264 MP4 本地烟测保持有效；浏览器 app 拖拽、缩放已完成用户主观验收；右侧状态面板 CPU / 内存 / GPU 仪表已验收为真实系统采样（开发模式 Web + 本地 API）。
 
 ## 当前阻断项
 
@@ -40,6 +41,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
 - Web Composer 默认预设仍引用远程字体/视频；离线资源包和 4K/15 秒长时视频压力验收待补齐。
+- Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
 
 **已迁移至技术债追踪：**
 - TD-021: Web Composer 默认素材离线资源包与 4K/15 秒压力验收
@@ -51,7 +53,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 下一步
 
-1. 验收 Web Composer 三套默认预设、图片/视频替换、4K/15 秒压力路径，并规划远程字体/视频的版本化本地资源包。
+1. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换、4K/15 秒压力路径，并规划远程字体/视频的版本化本地资源包。
 2. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
 3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 4. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。

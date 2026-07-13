@@ -29,7 +29,7 @@ describe('web composer export routes', () => {
     ])
     const response = await server.inject({
       method: 'POST',
-      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=1&width=1920&height=1080',
+      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=2&width=1920&height=1080',
       headers: { 'content-type': 'application/octet-stream' },
       payload: png,
     })
@@ -53,7 +53,7 @@ describe('web composer export routes', () => {
     servers.push(server)
     const response = await server.inject({
       method: 'POST',
-      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=1&width=1920&height=1080',
+      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=2&width=1920&height=1080',
       headers: { 'content-type': 'application/octet-stream' },
       payload: Buffer.from('not-a-png'),
     })
@@ -61,25 +61,33 @@ describe('web composer export routes', () => {
     expect(response.json()).toMatchObject({ ok: false, message: 'PNG 捕获数据格式不正确。' })
   })
 
-  it('rejects an unsupported preset version or oversized canvas before persistence', async () => {
+  it('rejects unsupported preset references or an oversized canvas before persistence', async () => {
     const server = await buildApiServer()
     servers.push(server)
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     const unsupportedVersion = await server.inject({
       method: 'POST',
-      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=2&width=1920&height=1080',
+      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=1&width=1920&height=1080',
+      headers: { 'content-type': 'application/octet-stream' },
+      payload: png,
+    })
+    const unknownPreset = await server.inject({
+      method: 'POST',
+      url: '/api/web-composer/exports/png?presetId=unknown&presetVersion=2&width=1920&height=1080',
       headers: { 'content-type': 'application/octet-stream' },
       payload: png,
     })
     const oversizedCanvas = await server.inject({
       method: 'POST',
-      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=1&width=3840&height=3840',
+      url: '/api/web-composer/exports/png?presetId=lumora&presetVersion=2&width=3840&height=3840',
       headers: { 'content-type': 'application/octet-stream' },
       payload: png,
     })
 
     expect(unsupportedVersion.statusCode).toBe(400)
-    expect(unsupportedVersion.json()).toMatchObject({ ok: false, message: 'presetVersion 必须是 1 到 1 之间的整数。' })
+    expect(unsupportedVersion.json()).toMatchObject({ ok: false, message: '未知或不受支持的网页合成预设版本。' })
+    expect(unknownPreset.statusCode).toBe(400)
+    expect(unknownPreset.json()).toMatchObject({ ok: false, message: '未知或不受支持的网页合成预设版本。' })
     expect(oversizedCanvas.statusCode).toBe(400)
     expect(oversizedCanvas.json()).toMatchObject({ ok: false, message: '输出画布不能超过 4K 像素总量。' })
   })
@@ -89,7 +97,7 @@ describe('web composer export routes', () => {
     servers.push(server)
     const response = await server.inject({
       method: 'POST',
-      url: '/api/web-composer/exports/video?presetId=viktor&presetVersion=1&width=1920&height=1080&fps=12&durationSeconds=4',
+      url: '/api/web-composer/exports/video?presetId=viktor&presetVersion=2&width=1920&height=1080&fps=12&durationSeconds=4',
       headers: { 'content-type': 'application/octet-stream' },
       payload: Buffer.from('not-a-webm'),
     })

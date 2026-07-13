@@ -19,9 +19,12 @@ describe('web composer model', () => {
     })
   })
 
-  it('creates independent mutable state for every locked preset', () => {
-    const states = createInitialPresetStates()
-    states.lumora.texts.badge = 'changed'
-    expect(states.vaultshield.texts.badge).toBeUndefined()
+  it('lazily creates independent mutable state for the initial preset', () => {
+    const first = createInitialPresetStates()
+    const second = createInitialPresetStates()
+    const badge = first.lumora?.slots['hero.badge']?.text
+    if (badge) badge.value = 'changed'
+    expect(second.lumora?.slots['hero.badge']?.text?.value).toContain('10,000')
+    expect(Object.keys(first)).toEqual(['lumora'])
   })
 })

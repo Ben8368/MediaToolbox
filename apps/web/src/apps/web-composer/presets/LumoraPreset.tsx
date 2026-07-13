@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 
-import { getMediaProps } from './shared'
+import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, slotElementProps } from './shared'
+import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
 
 export const lumoraVideos = [
@@ -23,15 +24,23 @@ export const lumoraVideos = [
   }
 ];
 
-export function LumoraPreset({ state }: { state: PresetState }) {
+const navItems = [
+  { id: 'nav.how', fallback: 'How It Works' },
+  { id: 'nav.features', fallback: 'Features' },
+  { id: 'nav.pricing', fallback: 'Pricing' },
+  { id: 'nav.community', fallback: 'Community' },
+]
+
+export function LumoraPreset({ state, viewport }: { state: PresetState; viewport: PresetViewport }) {
   const [activeVideo, setActiveVideo] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const navItems = ["How It Works", "Features", "Pricing", "Community"];
   const isDarkSlide = activeVideo === 2;
-  const foreground = isDarkSlide ? "#182C41" : state.textColor;
+  const foreground = isDarkSlide ? "#182C41" : state.theme.textColor;
   const muted = isDarkSlide ? "rgba(24, 44, 65, 0.78)" : "rgba(255, 255, 255, 0.82)";
-  const stats = state.texts.stats.split("|").map((item) => item.trim()).filter(Boolean);
+  const background = getMedia(state);
+  const statsSlot = getSlot(state, 'hero.stats');
+  const stats = getText(state, 'hero.stats').split("|").map((item) => item.trim()).filter(Boolean);
 
   const switchVideo = (index: number) => {
     if (index === activeVideo || isTransitioning) return;
@@ -41,11 +50,11 @@ export function LumoraPreset({ state }: { state: PresetState }) {
   };
 
   return (
-    <section className="lumora-preset preset-canvas" style={{ fontFamily: state.headingFont }}>
-      <div className="lumora-video-stack">
+    <section className="lumora-preset preset-canvas" style={{ fontFamily: state.theme.headingFont }}>
+      <div className="lumora-video-stack" {...slotElementProps(state, 'background', viewport)}>
         {lumoraVideos.map((video, index) => {
-          const source = state.backgroundUrl && index === activeVideo ? state.backgroundUrl : video.src;
-          return state.backgroundKind === "image" && index === activeVideo ? (
+          const source = background?.src && index === activeVideo ? background.src : video.src;
+          return background?.kind === "image" && index === activeVideo ? (
             <img
               key={video.src}
               className={`lumora-bg-layer ${activeVideo === index ? "is-active" : ""}`}
@@ -79,19 +88,19 @@ export function LumoraPreset({ state }: { state: PresetState }) {
 
       <div className="lumora-content">
         <nav className="lumora-nav" aria-label="Lumora navigation">
-          <a className="lumora-logo" href="#" aria-label="Lumora home">
-            Lumora
+          <a className="lumora-logo" href="#" aria-label="Lumora home" {...slotElementProps(state, 'brand.logo', viewport)}>
+            <PresetSlotContent state={state} slotId="brand.logo" viewport={viewport} />
           </a>
           <div className="lumora-nav-pill liquid-glass">
-            <div className="lumora-nav-links" style={{ fontFamily: state.bodyFont }}>
+            <div className="lumora-nav-links" style={{ fontFamily: state.theme.bodyFont }}>
               {navItems.map((item) => (
-                <a key={item} href="#">
-                  {item}
+                <a key={item.id} href="#" {...slotElementProps(state, item.id, viewport)}>
+                  <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
                 </a>
               ))}
             </div>
-            <a className="lumora-white-button" href="#" style={{ fontFamily: state.bodyFont }}>
-              Get Started
+            <a className="lumora-white-button" href="#" {...slotElementProps(state, 'nav.cta', viewport, { fontFamily: state.theme.bodyFont })}>
+              <PresetSlotContent state={state} slotId="nav.cta" viewport={viewport} />
             </a>
           </div>
           <button
@@ -107,20 +116,28 @@ export function LumoraPreset({ state }: { state: PresetState }) {
         </nav>
 
         <div className="lumora-hero" style={{ color: foreground }}>
-          <div className="lumora-badge liquid-glass" style={{ fontFamily: state.bodyFont }}>
-            {state.texts.badge}
+          <div className="lumora-badge liquid-glass" {...slotElementProps(state, 'hero.badge', viewport, { fontFamily: state.theme.bodyFont })}>
+            <PresetSlotContent state={state} slotId="hero.badge" viewport={viewport} />
           </div>
           <h1>
-            {state.texts.headingLine1}
+            <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.line1', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.heading.line1" viewport={viewport} />
+            </span>
             <br />
-            {state.texts.headingLine2}
+            <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.line2', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.heading.line2" viewport={viewport} />
+            </span>
           </h1>
-          <p style={{ color: muted, fontFamily: state.bodyFont }}>{state.texts.subtext}</p>
-          <form className="lumora-email liquid-glass" style={{ fontFamily: state.bodyFont }}>
-            <input aria-label="Email" placeholder={state.texts.emailPlaceholder} />
-            <button type="button">{state.texts.cta}</button>
+          <p {...slotElementProps(state, 'hero.subtext', viewport, { color: muted, fontFamily: state.theme.bodyFont })}>
+            <PresetSlotContent state={state} slotId="hero.subtext" viewport={viewport} />
+          </p>
+          <form className="lumora-email liquid-glass" style={{ fontFamily: state.theme.bodyFont }}>
+            <input aria-label="Email" placeholder={getText(state, 'hero.email-placeholder')} {...slotElementProps(state, 'hero.email-placeholder', viewport)} />
+            <button type="button" {...slotElementProps(state, 'hero.cta', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.cta" viewport={viewport} />
+            </button>
           </form>
-          <div className="lumora-switcher" style={{ fontFamily: state.bodyFont }}>
+          <div className="lumora-switcher" style={{ fontFamily: state.theme.bodyFont }}>
             {lumoraVideos.map((video, index) => (
               <button
                 key={video.label}
@@ -128,36 +145,37 @@ export function LumoraPreset({ state }: { state: PresetState }) {
                 disabled={isTransitioning}
                 className={activeVideo === index ? "is-active" : ""}
                 onClick={() => switchVideo(index)}
+                {...slotElementProps(state, `switch.${index}`, viewport)}
               >
-                {video.label}
+                <PresetSlotContent state={state} slotId={`switch.${index}`} viewport={viewport} />
               </button>
             ))}
           </div>
         </div>
 
-        <div className="lumora-stats" style={{ fontFamily: state.bodyFont }}>
-          {stats.map((item, index) => (
-            <span key={item}>
-              {item}
-              {index < stats.length - 1 && <b>|</b>}
-            </span>
-          ))}
+        <div className="lumora-stats" {...slotElementProps(state, 'hero.stats', viewport, { fontFamily: state.theme.bodyFont })}>
+          {statsSlot?.activeKind === 'text' ? stats.map((item, index) => (
+              <span key={`${item}-${index}`}>
+                {item}
+                {index < stats.length - 1 && <b>|</b>}
+              </span>
+            )) : <PresetSlotContent state={state} slotId="hero.stats" viewport={viewport} />}
         </div>
       </div>
 
       <div className={`lumora-mobile-panel ${menuOpen ? "is-open" : ""}`}>
         {navItems.map((item, index) => (
           <a
-            key={item}
+            key={item.id}
             href="#"
-            style={{ transitionDelay: menuOpen ? `${100 + index * 50}ms` : "0ms" }}
             onClick={() => setMenuOpen(false)}
+            {...slotElementProps(state, item.id, viewport, { transitionDelay: menuOpen ? `${100 + index * 50}ms` : "0ms" })}
           >
-            {item}
+            <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
           </a>
         ))}
-        <a className="mobile-cta" href="#" onClick={() => setMenuOpen(false)}>
-          Get Started
+        <a className="mobile-cta" href="#" onClick={() => setMenuOpen(false)} {...slotElementProps(state, 'nav.cta', viewport)}>
+          <PresetSlotContent state={state} slotId="nav.cta" viewport={viewport} />
         </a>
       </div>
     </section>

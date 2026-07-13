@@ -8,6 +8,7 @@
 @import './transcode.css';
 @import './psd.css';
 @import './web-composer.css';
+@import './web-composer-inspector.css';
 
 .settings-app {
   --mt-surface: rgba(15, 18, 26, .78);
