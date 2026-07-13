@@ -11,17 +11,11 @@ import type { PresetDefinition } from './presets/types'
 export function WebComposerInspector({
   preset,
   state,
-  busy,
   onStateChange,
-  onExport,
-  onReset,
 }: {
   preset: PresetDefinition
   state: WebComposerPresetState
-  busy: boolean
   onStateChange: (state: WebComposerPresetState) => void
-  onExport: (kind: 'png' | 'webm') => void
-  onReset: () => void
 }) {
   const [uploadStatus, setUploadStatus] = useState('')
 
@@ -50,7 +44,6 @@ export function WebComposerInspector({
 
   return (
     <ResizableAppSidebar className="wc-inspector" storageKey="web-composer" aria-label="预设属性编辑器">
-      <div className="wc-inspector-content">
       <section className="wc-inspector-section">
         <header><strong>文案</strong><span>{preset.fields.length} 个 Slot</span></header>
         {preset.fields.map((field) => (
@@ -115,15 +108,6 @@ export function WebComposerInspector({
         </label>
         {uploadStatus && <p className="wc-inline-status">{uploadStatus}</p>}
       </section>
-      </div>
-
-      <div className="wc-inspector-actions">
-        <div className="wc-export-actions" aria-label="导出操作">
-          <button type="button" disabled={busy} onClick={() => onExport('png')}>导出 PNG</button>
-          <button type="button" disabled={busy} onClick={() => onExport('webm')}>导出 MP4</button>
-        </div>
-        <button className="wc-reset" type="button" disabled={busy} onClick={onReset}>恢复预设默认值</button>
-      </div>
     </ResizableAppSidebar>
   )
 }
