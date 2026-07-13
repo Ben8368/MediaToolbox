@@ -134,7 +134,7 @@ export function WebComposerPresetPicker({ activePresetId, onSelect }: {
     portalTarget,
   ) : null
 
-  const dialog = open ? createPortal(
+  const dialog = open ? (
     <div
       className="wc-preset-dialog-overlay"
       onMouseDown={() => setOpen(false)}
@@ -174,8 +174,7 @@ export function WebComposerPresetPicker({ activePresetId, onSelect }: {
           ))}
         </div>
       </div>
-    </div>,
-    document.body,
+    </div>
   ) : null
 
   return (
