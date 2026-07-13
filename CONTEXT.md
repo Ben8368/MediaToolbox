@@ -5,7 +5,7 @@
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-13
 > - 各工作台左侧栏已统一为 `200px` 默认宽度，并接入共享拖拽调整、键盘调整、双击复位与按 App 记忆宽度能力。
-> - Web Composer 的预设入口已迁移到窗口右上角的紧凑选择菜单；文案、样式与背景素材收纳到左侧属性栏，导出参数位于预览区上方，导出操作固定在左侧栏底部。
+> - Web Composer 的预设入口已迁移到窗口右上角的紧凑选择菜单；文案、样式与背景素材收纳到左侧属性栏，导出参数与操作位于预览区顶部。
 > - Web Composer 已按桌面 App 模式接入统一应用注册，继承 `960×640` 默认窗口和 `760×520` 最小窗口；三套版本化预设、Slot 编辑、精确尺寸画布、PNG/MP4 Job/Asset 导出闭环已完成本地烟测。
 > - Electron 生产打包基础链路已打通：renderer/API runtime 入包、`userData` 工作区与 SQLite 默认路径、macOS arm64 `electron-builder --dir` 和包内 `/api/health` 烟测已通过；发布侧仍待签名、公证与完整安装包验收。
 > - Phase 6A-C PathGrant 管道已落地：读/写/目录读授权、`inputGrantId` / `outputGrantId` 任务扩展、转码/PSD 外部导入导出和纯 Web 降级已接入；下一步继续做桌面端体验与边界验收。

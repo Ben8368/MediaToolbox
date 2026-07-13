@@ -11,13 +11,16 @@ import type {
 import { aspectRatioOptions, previewRuntimeUrl, resolutionOptions, resizeExportSettings } from './model'
 import { WEB_COMPOSER_CHANNEL, type WebComposerPreviewUpdateMessage } from './previewMessages'
 
-export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, ready, onSettingsChange }: {
+export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, ready, onSettingsChange, busy, onExport, onReset }: {
   iframeRef: RefObject<HTMLIFrameElement>
   presetId: WebComposerPresetId
   state: WebComposerPresetState
   settings: WebComposerExportSettings
   ready: boolean
   onSettingsChange: (settings: WebComposerExportSettings) => void
+  busy: boolean
+  onExport: (kind: 'png' | 'webm') => void
+  onReset: () => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
@@ -83,7 +86,11 @@ export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, 
           </label>
           <span className="wc-export-dimensions">{settings.width} × {settings.height}</span>
         </div>
-        <span className="wc-template-lock">模板 v1 已锁定</span>
+        <div className="wc-preview-actions" aria-label="导出操作">
+          <button type="button" disabled={busy} onClick={() => onExport('png')}>导出 PNG</button>
+          <button type="button" disabled={busy} onClick={() => onExport('webm')}>导出 MP4</button>
+          <button type="button" className="wc-preview-actions__reset" disabled={busy} onClick={onReset}>恢复默认</button>
+        </div>
       </div>
       <div className="wc-preview-viewport" ref={viewportRef}>
         <div className="wc-preview-box" style={{ width: settings.width * scale, height: settings.height * scale }}>

@@ -33,10 +33,7 @@ export function WebComposerApp() {
         <WebComposerInspector
           preset={activePreset}
           state={activeState}
-          busy={exporter.busy}
           onStateChange={updateActiveState}
-          onExport={(kind) => void exporter.exportComposition(kind, activePreset.id, exportSettings)}
-          onReset={resetActivePreset}
         />
         <WebComposerPreviewStage
           iframeRef={iframeRef}
@@ -45,6 +42,9 @@ export function WebComposerApp() {
           settings={exportSettings}
           ready={exporter.ready}
           onSettingsChange={setExportSettings}
+          busy={exporter.busy}
+          onExport={(kind) => void exporter.exportComposition(kind, activePreset.id, exportSettings)}
+          onReset={resetActivePreset}
         />
       </div>
       <footer className="wc-statusbar">
