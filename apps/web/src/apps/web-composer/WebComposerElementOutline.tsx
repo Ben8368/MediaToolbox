@@ -17,12 +17,14 @@ export function WebComposerElementOutline({
   state,
   selectedSlotId,
   onSelectSlot,
+  onSelectCanvas,
   onRestoreSlot,
 }: {
   slots: readonly WebComposerSlotManifest[]
   state: WebComposerPresetState
   selectedSlotId: string | null
   onSelectSlot: (slotId: string) => void
+  onSelectCanvas: () => void
   onRestoreSlot: (slotId: string) => void
 }) {
   const titleId = useId()
@@ -43,25 +45,42 @@ export function WebComposerElementOutline({
     return [...grouped.entries()]
   }, [normalizedQuery, slots, state.slots])
 
-  const resultCount = groups.reduce((total, [, groupSlots]) => total + groupSlots.length, 0)
+  const canvasMatches = !normalizedQuery || '画布 画布主题 theme canvas'.includes(normalizedQuery)
+  const resultCount = groups.reduce((total, [, groupSlots]) => total + groupSlots.length, canvasMatches ? 1 : 0)
 
   return (
     <section className="wc-element-outline" aria-labelledby={titleId}>
       <div className="wc-context-heading">
-        <strong id={titleId}>元素</strong>
-        <span>{slots.length} 个 Slot</span>
+        <strong id={titleId}>编辑对象</strong>
+        <span>{slots.length + 1} 项</span>
       </div>
       <label className="wc-outline-search" htmlFor={searchId}>
-        <span className="wc-visually-hidden">搜索可编辑元素</span>
+        <span className="wc-visually-hidden">搜索可编辑对象</span>
         <input
           id={searchId}
           type="search"
           value={query}
-          placeholder="搜索元素…"
+          placeholder="搜索编辑对象…"
           onChange={(event) => setQuery(event.currentTarget.value)}
         />
       </label>
-      <div className="wc-outline-groups" aria-label="可编辑元素列表">
+      <div className="wc-outline-groups" aria-label="可编辑对象列表">
+        {canvasMatches && (
+          <section className="wc-outline-group" aria-label="画布">
+            <h3>画布</h3>
+            <div className="wc-outline-row">
+              <button
+                type="button"
+                className="wc-outline-select"
+                aria-pressed={selectedSlotId === null}
+                onClick={onSelectCanvas}
+              >
+                <span className="wc-outline-kind" aria-hidden="true">主题</span>
+                <span className="wc-outline-label">画布主题</span>
+              </button>
+            </div>
+          </section>
+        )}
         {groups.map(([groupName, groupSlots]) => (
           <section className="wc-outline-group" key={groupName} aria-label={groupName}>
             <h3>{groupName}</h3>

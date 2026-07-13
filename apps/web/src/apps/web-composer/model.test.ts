@@ -14,8 +14,8 @@ describe('web composer model', () => {
     expect(resizeExportSettings(current, { aspectRatio: '1:1', resolution: '720p' })).toMatchObject({
       width: 720,
       height: 720,
-      fps: 12,
-      durationSeconds: 4,
+      fps: 30,
+      durationSeconds: 10,
     })
   })
 

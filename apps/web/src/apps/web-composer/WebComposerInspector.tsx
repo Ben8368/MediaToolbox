@@ -46,6 +46,7 @@ export function WebComposerInspector({
         state={state}
         selectedSlotId={selectedSlotId}
         onSelectSlot={onSelectSlot}
+        onSelectCanvas={() => onSelectSlot(null)}
         onRestoreSlot={(slotId) => onStateChange(setSlotVisibility(state, slotId, true))}
       />
 
