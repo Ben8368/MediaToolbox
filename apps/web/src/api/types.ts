@@ -23,6 +23,7 @@ import type {
   TranscodeCommandPreviewResponse,
   TrashListResponse,
   UnreadNotificationResponse,
+  WebComposerCaptureMetadata,
   WorkspaceResponse,
 } from '@mediatoolbox/contracts'
 
@@ -70,6 +71,7 @@ export interface MediaToolboxApi {
   getFetchTaskFileUrl(taskId: string, path: string): string
 
   listJobs(): Promise<JobListResponse>
+  getJob(jobId: string): Promise<{ ok: boolean; job?: JobRecord }>
   fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
   cancelJob(jobId: string): Promise<OkResult>
@@ -79,6 +81,8 @@ export interface MediaToolboxApi {
   getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse>
   updateWorkOrder(workOrder: WorkOrder): Promise<OkResult>
   applyWorkOrder(workOrderId: string, outputPath?: string, outputGrantId?: string): Promise<WorkOrderApplyResponse>
+  submitWebComposerPng(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
+  submitWebComposerVideo(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>

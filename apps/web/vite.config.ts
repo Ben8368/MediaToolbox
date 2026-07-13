@@ -24,6 +24,12 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        webComposerPreview: path.resolve(__dirname, 'web-composer-preview.html'),
+      },
+    },
   },
   test: {
     environment: 'node',
