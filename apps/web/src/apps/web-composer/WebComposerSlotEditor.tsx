@@ -11,6 +11,7 @@ import type {
 import { filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
 import type { WebComposerSlotRect } from './previewMessages'
 import { webComposerIconLabels } from './WebComposerIcon'
+import { fontWeightLabel, getFontOptions, getFontSizeOptions } from './typographyOptions'
 import {
   clampSlotNumber,
   setSlotActiveKind,
@@ -58,6 +59,31 @@ function NullableNumberField({
           onChange(rawValue === '' ? null : clampSlotNumber(Number(rawValue), control))
         }}
       />
+    </label>
+  )
+}
+
+function NullableNumberSelect({
+  label,
+  value,
+  control,
+  onChange,
+}: {
+  label: string
+  value: number | null
+  control: WebComposerNumberControl
+  onChange: (value: number | null) => void
+}) {
+  return (
+    <label className="wc-context-field">
+      <span>{label}</span>
+      <select
+        value={value ?? ''}
+        onChange={(event) => onChange(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}
+      >
+        <option value="">继承预设</option>
+        {getFontSizeOptions(control, value).map((size) => <option key={size} value={size}>{size} px</option>)}
+      </select>
     </label>
   )
 }
@@ -207,18 +233,22 @@ export function WebComposerSlotEditor({
           {textEditor.fontFamily && (
             <label className="wc-context-field">
               <span>字体</span>
-              <input
+              <select
                 value={value.text.fontFamily ?? ''}
-                placeholder={slot.fontRole === 'heading' ? '继承标题字体' : '继承正文字体'}
                 onChange={(event) => onStateChange(updateSlotText(state, slot.id, {
                   fontFamily: event.currentTarget.value || null,
                 }))}
-              />
+              >
+                <option value="">{slot.fontRole === 'heading' ? '继承标题字体' : '继承正文字体'}</option>
+                {getFontOptions(value.text.fontFamily).map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </label>
           )}
           <div className="wc-context-grid wc-context-grid--two">
             {textEditor.fontSize && (
-              <NullableNumberField
+              <NullableNumberSelect
                 label="设计字号"
                 value={value.text.fontSize}
                 control={textEditor.fontSize}
@@ -237,7 +267,7 @@ export function WebComposerSlotEditor({
                   }))}
                 >
                   <option value="">继承预设</option>
-                  {textEditor.fontWeight.map((weight) => <option key={weight} value={weight}>{weight}</option>)}
+                  {textEditor.fontWeight.map((weight) => <option key={weight} value={weight}>{fontWeightLabel(weight)}</option>)}
                 </select>
               </label>
             )}

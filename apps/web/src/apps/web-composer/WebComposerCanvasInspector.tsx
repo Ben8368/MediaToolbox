@@ -1,6 +1,8 @@
 import { useId } from 'react'
 import type { WebComposerPresetState } from '@mediatoolbox/contracts'
 
+import { getFontOptions } from './typographyOptions'
+
 export function WebComposerCanvasInspector({
   state,
   onStateChange,
@@ -20,17 +22,25 @@ export function WebComposerCanvasInspector({
       </div>
       <label className="wc-context-field">
         <span>标题字体</span>
-        <input
+        <select
           value={state.theme.headingFont}
           onChange={(event) => updateTheme({ headingFont: event.currentTarget.value })}
-        />
+        >
+          {getFontOptions(state.theme.headingFont).map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
       </label>
       <label className="wc-context-field">
         <span>正文字体</span>
-        <input
+        <select
           value={state.theme.bodyFont}
           onChange={(event) => updateTheme({ bodyFont: event.currentTarget.value })}
-        />
+        >
+          {getFontOptions(state.theme.bodyFont).map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
       </label>
       <div className="wc-context-grid wc-context-grid--two">
         <label className="wc-context-field">

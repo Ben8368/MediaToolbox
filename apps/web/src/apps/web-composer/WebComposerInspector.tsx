@@ -41,40 +41,42 @@ export function WebComposerInspector({
       storageKey="web-composer"
       aria-label="预设上下文编辑器"
     >
-      <WebComposerElementOutline
-        slots={preset.slots}
-        state={state}
-        selectedSlotId={selectedSlotId}
-        onSelectSlot={onSelectSlot}
-        onSelectCanvas={() => onSelectSlot(null)}
-        onRestoreSlot={(slotId) => onStateChange(setSlotVisibility(state, slotId, true))}
-      />
+      <div className="wc-context-panel">
+        <WebComposerElementOutline
+          slots={preset.slots}
+          state={state}
+          selectedSlotId={selectedSlotId}
+          onSelectSlot={onSelectSlot}
+          onSelectCanvas={() => onSelectSlot(null)}
+          onRestoreSlot={(slotId) => onStateChange(setSlotVisibility(state, slotId, true))}
+        />
 
-      <div className="wc-context-content">
-        {selectedSlot && selectedValue ? (
-          <>
-            <button
-              type="button"
-              className="wc-context-back"
-              onClick={() => onSelectSlot(null)}
-            >
-              ← 返回画布主题
-            </button>
-            <WebComposerSlotEditor
-              key={selectedSlot.id}
-              slot={selectedSlot}
-              value={selectedValue}
+        <div className="wc-context-content">
+          {selectedSlot && selectedValue ? (
+            <>
+              <button
+                type="button"
+                className="wc-context-back"
+                onClick={() => onSelectSlot(null)}
+              >
+                ← 返回画布主题
+              </button>
+              <WebComposerSlotEditor
+                key={selectedSlot.id}
+                slot={selectedSlot}
+                value={selectedValue}
+                state={state}
+                metrics={metrics}
+                onStateChange={onStateChange}
+              />
+            </>
+          ) : (
+            <WebComposerCanvasInspector
               state={state}
-              metrics={metrics}
               onStateChange={onStateChange}
             />
-          </>
-        ) : (
-          <WebComposerCanvasInspector
-            state={state}
-            onStateChange={onStateChange}
-          />
-        )}
+          )}
+        </div>
       </div>
       <p className="wc-visually-hidden" aria-live="polite">{selectionAnnouncement}</p>
     </ResizableAppSidebar>
