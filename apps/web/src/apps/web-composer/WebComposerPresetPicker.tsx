@@ -31,6 +31,7 @@ export function WebComposerPresetPicker({ activePresetId, onSelect }: {
       <button
         type="button"
         className="wc-preset-picker__trigger"
+        aria-label={`选择预设：${activePreset.name}`}
         aria-expanded={open}
         aria-controls={menuId}
         aria-haspopup="menu"
@@ -39,7 +40,6 @@ export function WebComposerPresetPicker({ activePresetId, onSelect }: {
         }}
         onClick={() => setOpen((current) => !current)}
       >
-        <span className="wc-preset-picker__label">预设</span>
         <strong>{activePreset.name}</strong>
         <span className="wc-preset-picker__chevron" aria-hidden="true" />
       </button>
