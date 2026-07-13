@@ -75,15 +75,10 @@ function PresetThumbnail({ preset }: { preset: PresetDefinition }) {
     )
   }, [ready, scale, sessionId, expectedOrigin, preset])
 
-  const thumbH = containerW > 0
-    ? Math.round(preset.designSize.height * scale)
-    : undefined
-
   return (
     <div
       ref={containerRef}
       className="wc-preset-thumb"
-      style={thumbH !== undefined ? { height: thumbH } : undefined}
     >
       {scale > 0 && (
         <iframe
