@@ -60,13 +60,15 @@
 
 ## Web Composer 路径
 
-1. 从桌面图标打开 `web-composer`，确认外框继承全局 `960×640` 默认尺寸和 `760×520` 最小尺寸；最小尺寸下预设、画布和属性三栏仍可用，属性区独立滚动。
-2. 修改预设 manifest 声明的文案、图片/视频、字体和颜色 slot，确认隔离 iframe 即时更新；未声明的预设 DOM、样式和动画不可编辑。
-3. 切换 `16:9`、`4:3`、`1:1`、`9:16` 与分辨率，确认 iframe 的真实像素尺寸随设置变化，外层窗口只改变显示缩放。
-4. `POST /api/web-composer/exports/png` 返回 `web.render.image` job，成功后在 `/Workspace/Exports` 创建 PNG asset；错误签名、未知预设或超出 4K 总像素返回 400。
-5. `POST /api/web-composer/exports/video` 返回 `web.render.video` job，WebM 捕获经 worker 输出 H.264、`yuv420p`、faststart MP4；取消与失败状态通过统一 jobs 可读。
-6. 默认远程字体/媒体不可用、捕获超时、浏览器不支持 MediaRecorder 或 ffmpeg 缺失时，工作台显示可读错误，不写入假成功 asset。
-7. 预设源码或 CSS 被意外修改时，版本完整性测试失败；有意结构变更必须升级预设版本并更新来源 SHA/完整性锁。
+1. 从桌面图标打开 `web-composer`，确认外框继承全局 `960×640` 默认尺寸和 `760×520` 最小尺寸；最小尺寸下预设、画布和左侧上下文 Inspector 仍可用，元素大纲与属性区独立滚动。
+2. 在编辑模式依次点击预览中的文案、Logo、图标和背景，确认左栏切换到对应 Slot，并只显示 manifest 声明的文案、字体、设计字号、字重、颜色、Icon/图片/媒体替换、X/Y 偏移和显隐能力。
+3. 隐藏一个 Slot，确认导出画布中不可见但仍可从元素大纲搜索、选择并恢复；切换到交互预览模式后，点击不再改变选择，预设原有按钮、链接和动画交互可用。
+4. 切换三套预设，确认选中状态不会跨预设残留；多开工作台时，选择、坐标和捕获消息按 source、origin、session、预设 ID/版本隔离。
+5. 切换 `16:9`、`4:3`、`1:1`、`9:16` 与分辨率，确认 iframe 的真实像素尺寸随设置变化，外层窗口只改变显示缩放，设计字号与偏移按画布比例呈现。
+6. `POST /api/web-composer/exports/png` 返回 `web.render.image` job，成功后在 `/Workspace/Exports` 创建 PNG asset；选择框/Slot 标签不进入导出。错误签名、旧版/未知预设元组或超出 4K 总像素返回 400。
+7. `POST /api/web-composer/exports/video` 返回 `web.render.video` job，WebM 捕获经 worker 输出 H.264、`yuv420p`、faststart MP4；取消与失败状态通过统一 jobs 可读。
+8. 默认远程字体/媒体不可用、捕获超时、浏览器不支持 MediaRecorder 或 ffmpeg 缺失时，工作台显示可读错误，不写入假成功 asset。
+9. 预设源码或 CSS 被意外修改、manifest Slot 与默认状态/DOM 绑定不一致时测试失败；有意结构变更必须升级预设版本并更新来源 SHA/完整性锁。
 
 ## 系统状态路径
 

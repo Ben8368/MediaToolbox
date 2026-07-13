@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import type { WebComposerExportSettings, WebComposerPresetId } from '@mediatoolbox/contracts'
+import type { WebComposerExportSettings, WebComposerPresetId, WebComposerPresetVersion } from '@mediatoolbox/contracts'
 
 import { cancelJob, fetchAssets, getJob, submitWebComposerPng, submitWebComposerVideo } from '@/api'
 import {
-  isWebComposerPreviewMessage,
+  getWebComposerMessageTargetOrigin,
+  isWebComposerMessageOriginAllowed,
+  isWebComposerPreviewOutboundMessage,
   WEB_COMPOSER_CHANNEL,
   type WebComposerPreviewCaptureMessage,
 } from './previewMessages'
@@ -20,7 +22,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
 
-export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
+export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>, sessionId: string) {
   const pendingRef = useRef<PendingCapture | null>(null)
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -28,13 +30,19 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
   const [activeJobId, setActiveJobId] = useState<string | null>(null)
 
   useEffect(() => {
+    setReady(false)
     const onMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow || !isWebComposerPreviewMessage(event.data)) return
+      if (
+        event.source !== iframeRef.current?.contentWindow
+        || !isWebComposerMessageOriginAllowed(event.origin, window.location.origin)
+        || !isWebComposerPreviewOutboundMessage(event.data)
+        || event.data.sessionId !== sessionId
+      ) return
       if (event.data.type === 'ready') {
         setReady(true)
         return
       }
-      if (event.data.type === 'update' || event.data.type === 'capture') return
+      if (event.data.type === 'slot-selected' || event.data.type === 'slot-metrics') return
       const pending = pendingRef.current
       if (!pending || event.data.requestId !== pending.requestId) return
       if (event.data.type === 'capture-progress') {
@@ -51,7 +59,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [iframeRef])
+  }, [iframeRef, sessionId])
 
   const requestCapture = useCallback((kind: 'png' | 'webm', settings: WebComposerExportSettings) => {
     if (!ready || !iframeRef.current?.contentWindow) return Promise.reject(new Error('预设画布尚未准备完成。'))
@@ -65,14 +73,15 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
       pendingRef.current = { requestId, resolve, reject, timer }
       const message: WebComposerPreviewCaptureMessage = {
         channel: WEB_COMPOSER_CHANNEL,
+        sessionId,
         type: 'capture',
         requestId,
         kind,
         settings,
       }
-      iframeRef.current?.contentWindow?.postMessage(message, '*')
+      iframeRef.current?.contentWindow?.postMessage(message, getWebComposerMessageTargetOrigin(window.location.origin))
     })
-  }, [iframeRef, ready])
+  }, [iframeRef, ready, sessionId])
 
   const waitForJob = useCallback(async (jobId: string) => {
     for (let attempt = 0; attempt < 480; attempt += 1) {
@@ -91,6 +100,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
   const exportComposition = useCallback(async (
     kind: 'png' | 'webm',
     presetId: WebComposerPresetId,
+    presetVersion: WebComposerPresetVersion,
     settings: WebComposerExportSettings,
   ) => {
     if (busy) return
@@ -102,7 +112,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>) {
       setStatus('捕获完成，正在提交统一导出任务…')
       const metadata = {
         presetId,
-        presetVersion: 1 as const,
+        presetVersion,
         width: settings.width,
         height: settings.height,
         ...(kind === 'webm' ? { fps: settings.fps, durationSeconds: settings.durationSeconds } : {}),

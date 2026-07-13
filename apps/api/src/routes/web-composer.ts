@@ -1,6 +1,10 @@
 import type { FastifyInstance } from 'fastify'
 import { createJobRecord } from '@mediatoolbox/job-core'
-import type { JobRecord, WebComposerPresetId } from '@mediatoolbox/contracts'
+import {
+  getWebComposerPresetReference,
+  type JobRecord,
+  type WebComposerPresetId,
+} from '@mediatoolbox/contracts'
 
 import type { ApiState } from '../state.js'
 import { toPhysicalWorkspacePath } from '../workspace-files.js'
@@ -8,7 +12,6 @@ import { executeWebComposerCapture } from '../web-composer-executor.js'
 
 const PNG_LIMIT = 50 * 1024 * 1024
 const WEBM_LIMIT = 200 * 1024 * 1024
-const PRESET_IDS = new Set<WebComposerPresetId>(['lumora', 'vaultshield', 'viktor'])
 
 type ExportQuery = {
   presetId?: string
@@ -34,14 +37,14 @@ function parseInteger(value: string | undefined, name: string, min: number, max:
 }
 
 function parseMetadata(query: ExportQuery, video: boolean) {
-  if (!PRESET_IDS.has(query.presetId as WebComposerPresetId)) badRequest('未知的网页合成预设。')
-  const presetVersion = parseInteger(query.presetVersion, 'presetVersion', 1, 1)
+  const presetVersion = parseInteger(query.presetVersion, 'presetVersion', 1, Number.MAX_SAFE_INTEGER)
+  const presetReference = getWebComposerPresetReference(query.presetId, presetVersion)
+  if (!presetReference) badRequest('未知或不受支持的网页合成预设版本。')
   const width = parseInteger(query.width, 'width', 320, 3840)
   const height = parseInteger(query.height, 'height', 320, 3840)
   if (width * height > 8_294_400) badRequest('输出画布不能超过 4K 像素总量。')
   return {
-    presetId: query.presetId as WebComposerPresetId,
-    presetVersion: presetVersion as 1,
+    ...presetReference,
     width,
     height,
     ...(video ? {

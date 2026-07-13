@@ -19,7 +19,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - 第三方工具必须通过 adapter 包装，命令参数构建与进程执行分开。
 - 所有长任务进入统一 Job 模型，支持进度、日志、取消、失败重试和恢复。
 - PSD 能力以模版 manifest 为中心，高保真编辑通过 Photoshop adapter 实现。
-- Web Composer 以版本化预设为中心；编辑器只写入预设声明的 slot，预设 DOM、样式和动画源码保持只读并由完整性测试锁定。
+- Web Composer 以版本化 Slot v2 预设为中心；编辑器只写入 manifest 声明的 slot 与主题变量，预设 DOM、样式和动画源码保持只读并由完整性测试锁定。
 - 浏览器网络能力由 Electron 主进程承载，其他 app 只能通过受控 API / IPC 调用，不直接读取 cookie、session 或本地文件。
 
 ## 浏览器网络能力
@@ -42,17 +42,27 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - 下载：视频、音频、字幕下载底层封装 `yt-dlp`；普通网页资源下载接入 Browser Network adapter 后再汇入下载 app 双通道策略。
 - 转码：按预设调用 `ffmpeg`。
 - PS：PSD 模版检查、slot 替换、批量导出，复杂场景接 Photoshop 自动化。
-- Web Composer：在锁定网页预设上编辑文案、图片/视频和颜色，按目标比例与分辨率导出 PNG 或 MP4。
+- Web Composer：在锁定网页预设上点击选择文案、Logo、图标或背景，由左侧上下文 Inspector 编辑声明的内容与样式能力，并按目标比例与分辨率导出 PNG 或 MP4。
 - 任务中心：统一任务队列、日志和历史。
 
-Web Composer 使用独立同源 iframe 承载预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成，API 校验捕获元数据与文件签名，MP4 编码交给 `web-render-worker` 和 ffmpeg。输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。详见 [ADR/0005-web-composer-versioned-presets.md](ADR/0005-web-composer-versioned-presets.md)。
+Web Composer 使用独立同源 iframe 承载浏览器原生预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成，API 校验捕获元数据与文件签名，MP4 编码交给 `web-render-worker` 和 ffmpeg。输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。
+
+Slot v2 与预览交互边界：
+
+- `WebComposerPresetManifest.slots` 声明稳定 Slot ID、分组、可切换内容类型、可用编辑器、设计坐标偏移和显隐能力；`WebComposerPresetState.slots` 保存各 Slot 的候选内容、`activeKind`、`visible` 与偏移值，主题变量独立保存在 `theme`。
+- 预设组件只为 manifest 中的 Slot 提供明确的 `data-wc-slot` 绑定；通用 Inspector 按 manifest 动态生成控件，不按预设 ID 编写分支，也不推断或开放任意 DOM。新增预设通过新增版本化 manifest、默认状态与显式绑定接入。
+- 编辑模式下，iframe 将命中的 Slot 选择和设计坐标回传给工作台，左侧上下文 Inspector 仅展示当前元素能力；元素大纲提供搜索、分组和隐藏元素恢复入口。交互预览模式保留预设原有链接、按钮和动画行为。
+- 每个工作台实例生成独立 `sessionId`。父窗口与 iframe 的消息同时校验 source、origin、session、预设 ID 与版本，避免多窗口、多 iframe 或旧预设消息串扰。
+- hover/selection overlay 位于 capture root 之外并显式排除捕获；导出时捕获层只包含预设内容，选择框、Slot 标签和 Inspector 状态不得进入 PNG 或视频。
+
+详见 [ADR/0005-web-composer-versioned-presets.md](ADR/0005-web-composer-versioned-presets.md)。
 
 ## 数据模型
 
 - `AssetRecord`：视频、音频、字幕、图片、PSD、文件夹和导出结果。
 - `JobRecord`：下载、转码、网页合成、PSD 批处理等长任务。
 - `PsdTemplateManifest`：PSD 模版、图层 slot、画布和导出约束。
-- `WebComposerPresetManifest` / `WebComposerPresetState`：版本化网页预设、可编辑 slot 与导出设置。
+- `WebComposerPresetManifest` / `WebComposerPresetState`：版本化 Slot v2 网页预设、类型化编辑能力、候选内容、显隐/设计坐标状态与主题变量。
 
 共享类型位于 `packages/contracts`，任务状态机位于 `packages/job-core`。
 

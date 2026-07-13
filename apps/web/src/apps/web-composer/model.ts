@@ -53,10 +53,17 @@ export function resizeExportSettings(
   return { ...current, aspectRatio, resolution, ...targetSize(aspectRatio, resolution) }
 }
 
-export function createInitialPresetStates(): Record<WebComposerPresetId, WebComposerPresetState> {
-  return Object.fromEntries(presets.map((preset) => [preset.id, clonePresetState(preset.defaults)])) as Record<WebComposerPresetId, WebComposerPresetState>
+export function createInitialPresetStates(): Partial<Record<WebComposerPresetId, WebComposerPresetState>> {
+  const firstPreset = presets[0]
+  return { [firstPreset.id]: clonePresetState(firstPreset.defaults) }
 }
 
-export function previewRuntimeUrl() {
-  return new URL('web-composer-preview.html', document.baseURI).href
+export function createPreviewSessionId() {
+  return globalThis.crypto?.randomUUID?.() ?? `wc-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+}
+
+export function previewRuntimeUrl(sessionId: string) {
+  const url = new URL('web-composer-preview.html', document.baseURI)
+  url.searchParams.set('session', sessionId)
+  return url.href
 }

@@ -2,21 +2,11 @@ import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { Variants } from 'framer-motion'
-import { ArrowRightCircle, Fingerprint, LockKeyhole, Menu, X, Zap } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 
-import { MediaBackground } from './shared'
+import { MediaBackground, PresetSlotContent, slotElementProps } from './shared'
+import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
-
-function VaultLogo() {
-  return (
-    <svg width="32" height="32" fill="none" overflow="visible" viewBox="0 0 256 256" aria-hidden="true">
-      <path
-        d="M64 128h.5L32 95 0 64V0h64l64 64v.5L161 32l31-32h64v64l-64 64h-64v64l-32 31-32.5 33H0v-64l64-64Zm192 64-32 31-32.5 33H128v-64l64-64h64v64Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 28 },
@@ -27,41 +17,42 @@ const fadeUp: Variants = {
   })
 };
 
-export function VaultShieldPreset({ state }: { state: PresetState }) {
+const navItems = ['Vault', 'Plans', 'Install', 'News', 'Help'].map((label, index) => ({ id: `nav.${index}`, label }))
+
+export function VaultShieldPreset({ state, viewport }: { state: PresetState; viewport: PresetViewport }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const navItems = ["Vault", "Plans", "Install", "News", "Help"];
 
   return (
     <main
       className="vault-preset preset-canvas"
       style={
         {
-          "--vault-text": state.textColor,
-          "--vault-accent": state.accentColor,
-          "--font-heading": state.headingFont,
-          "--font-body": state.bodyFont
+          "--vault-text": state.theme.textColor,
+          "--vault-accent": state.theme.accentColor,
+          "--font-heading": state.theme.headingFont,
+          "--font-body": state.theme.bodyFont
         } as CSSProperties
       }
     >
-      <MediaBackground state={state} />
+      <MediaBackground state={state} viewport={viewport} />
       <header className="vault-nav" aria-label="VaultShield navigation">
         <div className="vault-nav-inner">
-          <a className="vault-logo" href="#" aria-label="VaultShield home">
-            <VaultLogo />
+          <a className="vault-logo" href="#" aria-label="VaultShield home" {...slotElementProps(state, 'brand.logo', viewport)}>
+            <PresetSlotContent state={state} slotId="brand.logo" viewport={viewport} />
           </a>
           <nav className="vault-nav-links" aria-label="Primary navigation">
             {navItems.map((item) => (
-              <a key={item} href="#">
-                {item}
+              <a key={item.id} href="#" {...slotElementProps(state, item.id, viewport)}>
+                <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
               </a>
             ))}
           </nav>
           <div className="vault-actions">
-            <a className="vault-primary" href="#">
-              Start For Free
+            <a className="vault-primary" href="#" {...slotElementProps(state, 'nav.primary', viewport)}>
+              <PresetSlotContent state={state} slotId="nav.primary" viewport={viewport} />
             </a>
-            <a className="vault-login" href="#">
-              Sign In
+            <a className="vault-login" href="#" {...slotElementProps(state, 'nav.login', viewport)}>
+              <PresetSlotContent state={state} slotId="nav.login" viewport={viewport} />
             </a>
           </div>
           <button
@@ -94,7 +85,9 @@ export function VaultShieldPreset({ state }: { state: PresetState }) {
               transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             >
               <div className="vault-sheet-header">
-                <VaultLogo />
+                <span className="vault-logo" {...slotElementProps(state, 'brand.logo', viewport)}>
+                  <PresetSlotContent state={state} slotId="brand.logo" viewport={viewport} />
+                </span>
                 <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
                   <X />
                 </button>
@@ -102,23 +95,24 @@ export function VaultShieldPreset({ state }: { state: PresetState }) {
               <nav className="vault-sheet-links" aria-label="Mobile navigation">
                 {navItems.map((item, index) => (
                   <motion.a
-                    key={item}
+                    key={item.id}
                     href="#"
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.18 + index * 0.07 }}
                     onClick={() => setMenuOpen(false)}
+                    {...slotElementProps(state, item.id, viewport)}
                   >
-                    {item}
+                    <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
                   </motion.a>
                 ))}
               </nav>
               <div className="vault-sheet-actions">
-                <a className="vault-primary" href="#">
-                  Start For Free
+                <a className="vault-primary" href="#" {...slotElementProps(state, 'nav.primary', viewport)}>
+                  <PresetSlotContent state={state} slotId="nav.primary" viewport={viewport} />
                 </a>
-                <a className="vault-login" href="#">
-                  Sign In
+                <a className="vault-login" href="#" {...slotElementProps(state, 'nav.login', viewport)}>
+                  <PresetSlotContent state={state} slotId="nav.login" viewport={viewport} />
                 </a>
               </div>
             </motion.aside>
@@ -129,14 +123,27 @@ export function VaultShieldPreset({ state }: { state: PresetState }) {
       <section className="vault-hero">
         <div className="vault-copy">
           <motion.h1 variants={fadeUp} custom={0} initial="hidden" animate="visible">
-            <Zap className="vault-inline-icon" />
-            {state.texts.headingStart} <span>{state.texts.headingMiddle}</span>
-            <LockKeyhole className="vault-inline-icon" />
-            {state.texts.headingEnd}
-            <Fingerprint className="vault-inline-icon" />
+            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.zap', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.icon.zap" viewport={viewport} iconClassName="vault-inline-icon" />
+            </span>
+            <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.start', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.heading.start" viewport={viewport} />
+            </span>{' '}
+            <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.middle', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.heading.middle" viewport={viewport} />
+            </span>
+            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.lock', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.icon.lock" viewport={viewport} iconClassName="vault-inline-icon" />
+            </span>
+            <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.end', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.heading.end" viewport={viewport} />
+            </span>
+            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.fingerprint', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.icon.fingerprint" viewport={viewport} iconClassName="vault-inline-icon" />
+            </span>
           </motion.h1>
-          <motion.p variants={fadeUp} custom={1} initial="hidden" animate="visible">
-            {state.texts.subtext}
+          <motion.p variants={fadeUp} custom={1} initial="hidden" animate="visible" {...slotElementProps(state, 'hero.subtext', viewport)}>
+            <PresetSlotContent state={state} slotId="hero.subtext" viewport={viewport} />
           </motion.p>
           <motion.button
             className="vault-cta"
@@ -147,9 +154,12 @@ export function VaultShieldPreset({ state }: { state: PresetState }) {
             animate="visible"
             whileHover={{ scale: 1.04, filter: "brightness(1.1)" }}
             whileTap={{ scale: 0.96 }}
+            {...slotElementProps(state, 'hero.cta', viewport)}
           >
-            <span>{state.texts.cta}</span>
-            <ArrowRightCircle size={20} strokeWidth={2.25} />
+            <span><PresetSlotContent state={state} slotId="hero.cta" viewport={viewport} /></span>
+            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.cta.icon', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.cta.icon" viewport={viewport} />
+            </span>
           </motion.button>
         </div>
       </section>

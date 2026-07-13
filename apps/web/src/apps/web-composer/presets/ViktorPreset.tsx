@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Menu, X } from 'lucide-react'
 
-import { getMediaProps } from './shared'
+import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, slotElementProps } from './shared'
+import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
 
 export const viktorVideos = [
@@ -35,23 +36,26 @@ function useClock() {
   return `CUP ${time}`;
 }
 
-export function ViktorPreset({ state }: { state: PresetState }) {
+const navItems = ['Works', 'Services', 'About', 'Contact'].map((label, index) => ({ id: `nav.${index}`, label }))
+
+export function ViktorPreset({ state, viewport }: { state: PresetState; viewport: PresetViewport }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const clock = useClock();
-  const navItems = ["Works", "Services", "About", "Contact"];
-  const accent = activeIndex === 0 ? state.accentColor : state.textColor;
+  const background = getMedia(state);
+  const nameSlot = getSlot(state, 'hero.name');
+  const accent = activeIndex === 0 ? state.theme.accentColor : state.theme.textColor;
   const dotGlow = activeIndex === 0 ? "rgba(245, 152, 242, 0.8)" : "rgba(255,255,255,0.76)";
 
   return (
     <main
       className="viktor-preset preset-canvas"
-      style={{ "--viktor-accent": accent, "--viktor-glow": dotGlow, fontFamily: state.bodyFont } as CSSProperties}
+      style={{ "--viktor-accent": accent, "--viktor-glow": dotGlow, fontFamily: state.theme.bodyFont } as CSSProperties}
     >
-      <div className="viktor-bg-stack" aria-hidden="true">
+      <div className="viktor-bg-stack" aria-label="背景素材" {...slotElementProps(state, 'background', viewport)}>
         {viktorVideos.map((video, index) => {
-          const source = state.backgroundUrl && index === activeIndex ? state.backgroundUrl : video.src;
-          return state.backgroundKind === "image" && index === activeIndex ? (
+          const source = background?.src && index === activeIndex ? background.src : video.src;
+          return background?.kind === "image" && index === activeIndex ? (
             <img
               key={video.src}
               className={`viktor-bg-layer ${activeIndex === index ? "is-active" : ""}`}
@@ -79,9 +83,9 @@ export function ViktorPreset({ state }: { state: PresetState }) {
         <div className="viktor-header-inner">
           <nav className="viktor-desktop-nav" aria-label="Primary navigation">
             {navItems.map((item, index) => (
-              <a className="nav-link-underline" key={item} href={`#${item.toLowerCase()}`}>
+              <a className="nav-link-underline" key={item.id} href={`#${item.label.toLowerCase()}`} {...slotElementProps(state, item.id, viewport)}>
                 <span>{String(index + 1).padStart(2, "0")} /</span>
-                {item}
+                <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
               </a>
             ))}
           </nav>
@@ -95,8 +99,8 @@ export function ViktorPreset({ state }: { state: PresetState }) {
             {menuOpen ? <X /> : <Menu />}
           </button>
           <div className="viktor-contact">
-            <a className="nav-link-underline" href="mailto:Davies@gmail.com">
-              Davies@gmail.com
+            <a className="nav-link-underline" href={`mailto:${getText(state, 'contact.email')}`} {...slotElementProps(state, 'contact.email', viewport)}>
+              <PresetSlotContent state={state} slotId="contact.email" viewport={viewport} />
             </a>
             <time aria-label="Current time">{clock}</time>
           </div>
@@ -104,12 +108,14 @@ export function ViktorPreset({ state }: { state: PresetState }) {
         <nav className={`viktor-mobile-nav ${menuOpen ? "is-open" : ""}`} aria-label="Mobile navigation">
           <div>
             {navItems.map((item, index) => (
-              <a key={item} href={`#${item.toLowerCase()}`} onClick={() => setMenuOpen(false)}>
+              <a key={item.id} href={`#${item.label.toLowerCase()}`} onClick={() => setMenuOpen(false)} {...slotElementProps(state, item.id, viewport)}>
                 <span>{String(index + 1).padStart(2, "0")} /</span>
-                {item}
+                <PresetSlotContent state={state} slotId={item.id} viewport={viewport} />
               </a>
             ))}
-            <a href="mailto:Davies@gmail.com">Davies@gmail.com</a>
+            <a href={`mailto:${getText(state, 'contact.email')}`} {...slotElementProps(state, 'contact.email', viewport)}>
+              <PresetSlotContent state={state} slotId="contact.email" viewport={viewport} />
+            </a>
           </div>
         </nav>
       </header>
@@ -124,25 +130,28 @@ export function ViktorPreset({ state }: { state: PresetState }) {
                 className={activeIndex === index ? "is-active" : ""}
                 aria-pressed={activeIndex === index}
                 onClick={() => setActiveIndex(index)}
+                {...slotElementProps(state, `switch.${index}`, viewport)}
               >
-                {String(index + 1).padStart(2, "0")} / {video.label}
+                {String(index + 1).padStart(2, "0")} / <PresetSlotContent state={state} slotId={`switch.${index}`} viewport={viewport} />
               </button>
             ))}
           </div>
-          <div className="viktor-status" role="status" aria-label="Availability status">
+          <div className="viktor-status" role="status" aria-label="Availability status" {...slotElementProps(state, 'hero.status', viewport)}>
             <span />
-            {state.texts.status}
+            <PresetSlotContent state={state} slotId="hero.status" viewport={viewport} />
           </div>
         </div>
         <div className="viktor-bottom">
-          <h1 style={{ fontFamily: state.headingFont }}>
-            {state.texts.name}
-            <span>.</span>
+          <h1 {...slotElementProps(state, 'hero.name', viewport, { fontFamily: state.theme.headingFont })}>
+            <PresetSlotContent state={state} slotId="hero.name" viewport={viewport} />
+            {nameSlot?.activeKind === 'text' && <span>.</span>}
           </h1>
           <div className="viktor-copy">
-            <p>{state.texts.subtext}</p>
-            <a className="viktor-project-button" href="#contact">
-              <span>{state.texts.cta}</span>
+            <p {...slotElementProps(state, 'hero.subtext', viewport)}>
+              <PresetSlotContent state={state} slotId="hero.subtext" viewport={viewport} />
+            </p>
+            <a className="viktor-project-button" href="#contact" {...slotElementProps(state, 'hero.cta', viewport)}>
+              <span><PresetSlotContent state={state} slotId="hero.cta" viewport={viewport} /></span>
             </a>
           </div>
         </div>
