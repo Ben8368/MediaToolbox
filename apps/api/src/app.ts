@@ -11,6 +11,7 @@ import { registerPsdRoutes } from './routes/psd.js'
 import { registerPathGrantRoutes } from './routes/path-grants.js'
 import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
+import { registerWebComposerRoutes } from './routes/web-composer.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
@@ -61,6 +62,7 @@ export async function buildApiServer() {
   registerTranscodeRoutes(app, state)
   registerPsdRoutes(app, state)
   registerPathGrantRoutes(app, state)
+  registerWebComposerRoutes(app, state)
 
   return app
 }
