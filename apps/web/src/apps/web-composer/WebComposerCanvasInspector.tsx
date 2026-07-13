@@ -1,7 +1,38 @@
-import { useId } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { WebComposerPresetState } from '@mediatoolbox/contracts'
 
+import { listSystemFonts } from '@/api'
 import { getFontOptions } from './typographyOptions'
+
+type FontOption = { label: string; value: string }
+
+function useSystemFontOptions(): FontOption[] {
+  const [systemFonts, setSystemFonts] = useState<FontOption[]>([])
+  useEffect(() => {
+    listSystemFonts()
+      .then((res) => {
+        if (!res.fonts?.length) return
+        const seen = new Set<string>()
+        const opts: FontOption[] = []
+        for (const f of res.fonts) {
+          if (seen.has(f.family)) continue
+          seen.add(f.family)
+          opts.push({ label: f.family, value: `'${f.family}', sans-serif` })
+        }
+        setSystemFonts(opts)
+      })
+      .catch(() => {})
+  }, [])
+  return systemFonts
+}
+
+function mergedFontOptions(builtIn: readonly FontOption[], system: FontOption[], currentValue: string | null): FontOption[] {
+  const allValues = new Set(builtIn.map((o) => o.value))
+  const extra = system.filter((o) => !allValues.has(o.value))
+  const base = [...builtIn, ...extra]
+  if (!currentValue || base.some((o) => o.value === currentValue)) return base
+  return [{ label: '当前自定义字体', value: currentValue }, ...base]
+}
 
 export function WebComposerCanvasInspector({
   state,
@@ -11,9 +42,13 @@ export function WebComposerCanvasInspector({
   onStateChange: (state: WebComposerPresetState) => void
 }) {
   const titleId = useId()
+  const systemFonts = useSystemFontOptions()
   const updateTheme = (patch: Partial<WebComposerPresetState['theme']>) => {
     onStateChange({ ...state, theme: { ...state.theme, ...patch } })
   }
+
+  const headingFontOpts = mergedFontOptions(getFontOptions(state.theme.headingFont), systemFonts, state.theme.headingFont)
+  const bodyFontOpts = mergedFontOptions(getFontOptions(state.theme.bodyFont), systemFonts, state.theme.bodyFont)
 
   return (
     <section className="wc-context-section" aria-labelledby={titleId}>
@@ -26,7 +61,7 @@ export function WebComposerCanvasInspector({
           value={state.theme.headingFont}
           onChange={(event) => updateTheme({ headingFont: event.currentTarget.value })}
         >
-          {getFontOptions(state.theme.headingFont).map((option) => (
+          {headingFontOpts.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
@@ -37,7 +72,7 @@ export function WebComposerCanvasInspector({
           value={state.theme.bodyFont}
           onChange={(event) => updateTheme({ bodyFont: event.currentTarget.value })}
         >
-          {getFontOptions(state.theme.bodyFont).map((option) => (
+          {bodyFontOpts.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>

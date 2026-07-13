@@ -5,6 +5,7 @@ import type {
   DiskListResponse,
   DirectoryListResponse,
   DownloadStrategyResponse,
+  FontsListResponse,
   JobRecord,
   LogListResponse,
   LogMetadataResponse,
@@ -83,6 +84,8 @@ export interface MediaToolboxApi {
   applyWorkOrder(workOrderId: string, outputPath?: string, outputGrantId?: string): Promise<WorkOrderApplyResponse>
   submitWebComposerPng(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
   submitWebComposerVideo(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
+
+  listSystemFonts(): Promise<FontsListResponse>
 
   getWorkspace(): Promise<WorkspaceResponse>
   fetchFilebrowserDisks(): Promise<DiskListResponse>
