@@ -22,6 +22,7 @@
     "@mediatoolbox/psd-worker": "0.1.0",
     "@mediatoolbox/shared": "0.1.0",
     "@mediatoolbox/transcode-worker": "0.1.0",
+    "@mediatoolbox/web-render-worker": "0.1.0",
     "fastify": "^5.2.1"
   },
   "devDependencies": {

@@ -1,4 +1,6 @@
-export type WorkbenchAppId = 'browser' | 'file-manager' | 'fetcher' | 'transcode' | 'ps' | 'settings' | 'logs'
+export type WorkbenchAppId = 'browser' | 'file-manager' | 'fetcher' | 'transcode' | 'ps' | 'web-composer' | 'settings' | 'logs'
+
+export * from './web-composer.js'
 
 export type OkResult = {
   ok: boolean
@@ -15,7 +17,16 @@ export type AppsResponse = {
   apps: WorkbenchApp[]
 }
 
-export type JobKind = 'download.video' | 'download.audio' | 'download.subtitle' | 'browser.download' | 'browser.request' | 'media.transcode' | 'psd.apply'
+export type JobKind =
+  | 'download.video'
+  | 'download.audio'
+  | 'download.subtitle'
+  | 'browser.download'
+  | 'browser.request'
+  | 'media.transcode'
+  | 'psd.apply'
+  | 'web.render.image'
+  | 'web.render.video'
 
 export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'retrying' | 'canceled'
 
