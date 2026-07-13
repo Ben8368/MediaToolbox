@@ -357,7 +357,14 @@ button {
   height: 100%;
   object-fit: cover;
   opacity: 0;
+}
+
+.lumora-bg-layer {
   transition: opacity 1000ms ease-in-out;
+}
+
+.viktor-bg-layer {
+  transition: opacity 1200ms ease-in-out;
 }
 
 .lumora-bg-layer.is-active,

@@ -24,6 +24,8 @@ export const lumoraVideos = [
   }
 ];
 
+const trainOverlaySrc = "/static/web-composer/lumora-train-overlay.png";
+
 const navItems = [
   { id: 'nav.how', fallback: 'How It Works' },
   { id: 'nav.features', fallback: 'Features' },
@@ -80,10 +82,9 @@ export function LumoraPreset({ state, viewport }: { state: PresetState; viewport
       </div>
       <img
         className="lumora-train-overlay"
-        src="https://soft-zoom-63098134.figma.site/_assets/v11/0b4a435b2df2747593c43d7a1c9b4578f7d8d90c.png"
+        src={trainOverlaySrc}
         alt=""
         aria-hidden="true"
-        crossOrigin="anonymous"
       />
 
       <div className="lumora-content">

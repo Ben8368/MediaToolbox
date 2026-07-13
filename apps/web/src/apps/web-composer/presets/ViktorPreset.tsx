@@ -21,6 +21,45 @@ export const viktorVideos = [
   }
 ];
 
+function usePreloadedVideoSources() {
+  const [sources, setSources] = useState(() => viktorVideos.map((video) => video.src));
+
+  useEffect(() => {
+    let disposed = false;
+    const controllers = viktorVideos.map(() => new AbortController());
+    const objectUrls: string[] = [];
+
+    void Promise.all(viktorVideos.map(async (video, index) => {
+      try {
+        const response = await fetch(video.src, { signal: controllers[index].signal });
+        if (!response.ok) throw new Error(`Video preload failed: ${response.status}`);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        objectUrls.push(objectUrl);
+        return objectUrl;
+      } catch {
+        return video.src;
+      }
+    })).then((nextSources) => {
+      if (disposed) {
+        nextSources.forEach((source) => {
+          if (source.startsWith('blob:')) URL.revokeObjectURL(source);
+        });
+        return;
+      }
+      setSources(nextSources);
+    });
+
+    return () => {
+      disposed = true;
+      controllers.forEach((controller) => controller.abort());
+      objectUrls.forEach((source) => URL.revokeObjectURL(source));
+    };
+  }, []);
+
+  return sources;
+}
+
 function useClock() {
   const formatter = useMemo(
     () => new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
@@ -41,6 +80,7 @@ const navItems = ['Works', 'Services', 'About', 'Contact'].map((label, index) =>
 export function ViktorPreset({ state, viewport }: { state: PresetState; viewport: PresetViewport }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const videoSources = usePreloadedVideoSources();
   const clock = useClock();
   const background = getMedia(state);
   const nameSlot = getSlot(state, 'hero.name');
@@ -54,7 +94,7 @@ export function ViktorPreset({ state, viewport }: { state: PresetState; viewport
     >
       <div className="viktor-bg-stack" aria-label="背景素材" {...slotElementProps(state, 'background', viewport)}>
         {viktorVideos.map((video, index) => {
-          const source = background?.src && index === activeIndex ? background.src : video.src;
+          const source = background?.src && index === activeIndex ? background.src : videoSources[index] ?? video.src;
           return background?.kind === "image" && index === activeIndex ? (
             <img
               key={video.src}
