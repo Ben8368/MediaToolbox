@@ -58,6 +58,16 @@
 6. 客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键不会影响服务端输出路径。
 7. `POST /api/psd/manifests/save` 和 `GET /api/psd/manifests/load` 能完成 manifest sidecar 保存/加载往返。
 
+## Web Composer 路径
+
+1. 从桌面图标打开 `web-composer`，确认外框继承全局 `960×640` 默认尺寸和 `760×520` 最小尺寸；最小尺寸下预设、画布和属性三栏仍可用，属性区独立滚动。
+2. 修改预设 manifest 声明的文案、图片/视频、字体和颜色 slot，确认隔离 iframe 即时更新；未声明的预设 DOM、样式和动画不可编辑。
+3. 切换 `16:9`、`4:3`、`1:1`、`9:16` 与分辨率，确认 iframe 的真实像素尺寸随设置变化，外层窗口只改变显示缩放。
+4. `POST /api/web-composer/exports/png` 返回 `web.render.image` job，成功后在 `/Workspace/Exports` 创建 PNG asset；错误签名、未知预设或超出 4K 总像素返回 400。
+5. `POST /api/web-composer/exports/video` 返回 `web.render.video` job，WebM 捕获经 worker 输出 H.264、`yuv420p`、faststart MP4；取消与失败状态通过统一 jobs 可读。
+6. 默认远程字体/媒体不可用、捕获超时、浏览器不支持 MediaRecorder 或 ffmpeg 缺失时，工作台显示可读错误，不写入假成功 asset。
+7. 预设源码或 CSS 被意外修改时，版本完整性测试失败；有意结构变更必须升级预设版本并更新来源 SHA/完整性锁。
+
 ## 系统状态路径
 
 1. `GET /api/system/metrics` 的 CPU / 内存 / GPU 值能在右侧状态面板刷新。
@@ -78,3 +88,5 @@
 ## 验收记录
 
 联调完成后，在 `CONTEXT.md` 中记录本地 API 地址、验收日期、阻断项和剩余黄灯。
+
+- 2026-07-13：本地备用端口完成 Web Composer beta 烟测。桌面入口、`960×640` 默认窗口、`760×520` 最小窗口、文案 Slot、`4:3` 的 `1440×1080` 画布均通过；PNG 成功写入 Exports；1 秒 MP4 经 ffprobe 确认为 H.264、`1920×1080`、`yuv420p`、时长 `1.000000` 秒；控制台无运行错误。4K/15 秒与默认远程素材离线场景仍列为压力/体验黄灯。
