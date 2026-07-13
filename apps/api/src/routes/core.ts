@@ -15,6 +15,7 @@ export function registerCoreRoutes(app: FastifyInstance) {
       { id: 'fetcher', title: '下载', kind: 'workbench' },
       { id: 'transcode', title: '转码', kind: 'workbench' },
       { id: 'ps', title: 'PS', kind: 'workbench' },
+      { id: 'web-composer', title: '网页合成工作台', kind: 'workbench' },
       { id: 'settings', title: '设置', kind: 'system' },
       { id: 'logs', title: '日志', kind: 'system' },
     ],
