@@ -69,17 +69,10 @@ export function WebComposerInspector({
             />
           </>
         ) : (
-          <>
-            <div className="wc-context-empty">
-              <strong>点击画布元素开始编辑</strong>
-              <span>可选择文案、Logo、图标或背景；隐藏元素可从上方元素列表恢复。</span>
-            </div>
-            <WebComposerCanvasInspector
-              presetName={preset.name}
-              state={state}
-              onStateChange={onStateChange}
-            />
-          </>
+          <WebComposerCanvasInspector
+            state={state}
+            onStateChange={onStateChange}
+          />
         )}
       </div>
       <p className="wc-visually-hidden" aria-live="polite">{selectionAnnouncement}</p>

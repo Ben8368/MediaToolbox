@@ -122,33 +122,32 @@ export function WebComposerPreviewStage({
     <main className="wc-preview-panel">
       <div className="wc-preview-toolbar">
         <div className="wc-export-settings" aria-label="导出设置">
-          <label>
-            <span>比例</span>
+          <label aria-label="画布比例">
             <select
+              aria-label="画布比例"
               value={settings.aspectRatio}
               onChange={(event) => onSettingsChange(resizeExportSettings(settings, { aspectRatio: event.target.value as WebComposerAspectRatio }))}
             >
               {aspectRatioOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
-          <label>
-            <span>分辨率</span>
+          <label aria-label="导出分辨率">
             <select
+              aria-label="导出分辨率"
               value={settings.resolution}
               onChange={(event) => onSettingsChange(resizeExportSettings(settings, { resolution: event.target.value as WebComposerExportResolution }))}
             >
               {resolutionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
-          <label>
-            <span>帧率</span>
-            <input type="number" min={1} max={30} value={settings.fps} onChange={(event) => onSettingsChange({ ...settings, fps: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} />
+          <label className="wc-export-number" aria-label="帧率">
+            <input aria-label="帧率" type="number" min={1} max={30} value={settings.fps} onChange={(event) => onSettingsChange({ ...settings, fps: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} />
+            <span aria-hidden="true">fps</span>
           </label>
-          <label>
-            <span>时长</span>
-            <input type="number" min={1} max={15} value={settings.durationSeconds} onChange={(event) => onSettingsChange({ ...settings, durationSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) })} />
+          <label className="wc-export-number" aria-label="时长（秒）">
+            <input aria-label="时长（秒）" type="number" min={1} max={15} value={settings.durationSeconds} onChange={(event) => onSettingsChange({ ...settings, durationSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) })} />
+            <span aria-hidden="true">秒</span>
           </label>
-          <span className="wc-export-dimensions">{settings.width} × {settings.height}</span>
         </div>
         <div className="wc-preview-actions" aria-label="预览与导出操作">
           <div className="wc-mode-toggle" aria-label="画布模式">

@@ -2,11 +2,9 @@ import { useId } from 'react'
 import type { WebComposerPresetState } from '@mediatoolbox/contracts'
 
 export function WebComposerCanvasInspector({
-  presetName,
   state,
   onStateChange,
 }: {
-  presetName: string
   state: WebComposerPresetState
   onStateChange: (state: WebComposerPresetState) => void
 }) {
@@ -19,7 +17,6 @@ export function WebComposerCanvasInspector({
     <section className="wc-context-section" aria-labelledby={titleId}>
       <div className="wc-context-heading">
         <strong id={titleId}>画布主题</strong>
-        <span>全局变量</span>
       </div>
       <label className="wc-context-field">
         <span>标题字体</span>
@@ -58,10 +55,6 @@ export function WebComposerCanvasInspector({
             <output>{state.theme.textColor}</output>
           </span>
         </label>
-      </div>
-      <div className="wc-context-lock-note">
-        <strong>{presetName} · 预设已锁定</strong>
-        <span>这里只修改预设声明的主题变量，不改变页面结构与动画。</span>
       </div>
     </section>
   )
