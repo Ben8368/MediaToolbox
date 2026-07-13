@@ -2,6 +2,7 @@
 import { WINDOW_CHROME } from '@/appPresentation'
 import { getApiRuntimePresentation } from '@/api/runtime'
 import { getAppIcon } from '@/icon-library'
+import { WindowHeaderPortalContext } from '@/windowHeaderPortal'
 
 type WindowStatus = {
   tone: 'online' | 'offline' | 'pending'
@@ -43,6 +44,7 @@ export function DesktopWindow({
   onFocus: (id: string) => void; onDrag: (id: string, x: number, y: number) => void;
   onResize: (id: string, width: number, height: number) => void;
 }) {
+  const [headerPortalTarget, setHeaderPortalTarget] = useState<HTMLDivElement | null>(null)
   const dragS = useRef({ cx: 0, cy: 0, wx: 0, wy: 0 })
   const resizeS = useRef({ cx: 0, cy: 0, ww: 0, wh: 0, wx: 0, wy: 0, dir: '' })
 
@@ -143,42 +145,46 @@ export function DesktopWindow({
   const activeIcon = getAppIcon(appType ?? '')
 
   return (
-    <div
-      className={`mt-window ${isActive ? 'mt-window--active' : ''} ${isMaximized ? 'mt-window--maximized' : ''}`}
-      style={{ width: w, height: h, left, top, zIndex }}
-      onMouseDown={() => onFocus(windowId)}
-    >
-      <div className="mt-window-header" onMouseDown={startDrag} onDoubleClick={() => onMaximize(windowId)}>
-        <div className="mt-window-brand">
-          {activeIcon && <img src={activeIcon} alt="" />}
-          <strong>{title}</strong>
+    <WindowHeaderPortalContext.Provider value={headerPortalTarget}>
+      <div
+        className={`mt-window ${isActive ? 'mt-window--active' : ''} ${isMaximized ? 'mt-window--maximized' : ''}`}
+        style={{ width: w, height: h, left, top, zIndex }}
+        onMouseDown={() => onFocus(windowId)}
+      >
+        <div className="mt-window-header" onMouseDown={startDrag} onDoubleClick={() => onMaximize(windowId)}>
+          <div className="mt-window-brand">
+            {activeIcon && <img src={activeIcon} alt="" />}
+            <strong>{title}</strong>
+          </div>
+          <div className="mt-window-controls wc">
+            {appType === 'web-composer'
+              ? <div className="mt-window-header-portal" ref={setHeaderPortalTarget} />
+              : <WindowStatusBadge appType={appType} />}
+            <button className="mt-window-btn mt-window-btn--min" title="最小化" onClick={(e) => { e.stopPropagation(); onMinimize(windowId) }}>
+              <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
+            </button>
+            <button className="mt-window-btn mt-window-btn--max" title="最大化" onClick={(e) => { e.stopPropagation(); onMaximize(windowId) }}>
+              <svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="14" rx="1.5" /></svg>
+            </button>
+            <button className="mt-window-btn mt-window-btn--close" title="关闭" onClick={(e) => { e.stopPropagation(); onClose(windowId) }}>
+              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          </div>
         </div>
-        <div className="mt-window-controls wc">
-          <WindowStatusBadge appType={appType} />
-          <button className="mt-window-btn mt-window-btn--min" title="最小化" onClick={(e) => { e.stopPropagation(); onMinimize(windowId) }}>
-            <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
-          </button>
-          <button className="mt-window-btn mt-window-btn--max" title="最大化" onClick={(e) => { e.stopPropagation(); onMaximize(windowId) }}>
-            <svg viewBox="0 0 24 24"><rect x="6" y="5" width="12" height="14" rx="1.5" /></svg>
-          </button>
-          <button className="mt-window-btn mt-window-btn--close" title="关闭" onClick={(e) => { e.stopPropagation(); onClose(windowId) }}>
-            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
-          </button>
-        </div>
+        <div className="mt-window-body">{children}</div>
+        {!isMaximized && (
+          <>
+            <div className="mt-resize-handle mt-resize-n" onMouseDown={(e) => startResize(e, 'n')} />
+            <div className="mt-resize-handle mt-resize-s" onMouseDown={(e) => startResize(e, 's')} />
+            <div className="mt-resize-handle mt-resize-w" onMouseDown={(e) => startResize(e, 'w')} />
+            <div className="mt-resize-handle mt-resize-e" onMouseDown={(e) => startResize(e, 'e')} />
+            <div className="mt-resize-handle mt-resize-nw" onMouseDown={(e) => startResize(e, 'nw')} />
+            <div className="mt-resize-handle mt-resize-ne" onMouseDown={(e) => startResize(e, 'ne')} />
+            <div className="mt-resize-handle mt-resize-sw" onMouseDown={(e) => startResize(e, 'sw')} />
+            <div className="mt-resize-handle mt-resize-se" onMouseDown={(e) => startResize(e, 'se')} />
+          </>
+        )}
       </div>
-      <div className="mt-window-body">{children}</div>
-      {!isMaximized && (
-        <>
-          <div className="mt-resize-handle mt-resize-n" onMouseDown={(e) => startResize(e, 'n')} />
-          <div className="mt-resize-handle mt-resize-s" onMouseDown={(e) => startResize(e, 's')} />
-          <div className="mt-resize-handle mt-resize-w" onMouseDown={(e) => startResize(e, 'w')} />
-          <div className="mt-resize-handle mt-resize-e" onMouseDown={(e) => startResize(e, 'e')} />
-          <div className="mt-resize-handle mt-resize-nw" onMouseDown={(e) => startResize(e, 'nw')} />
-          <div className="mt-resize-handle mt-resize-ne" onMouseDown={(e) => startResize(e, 'ne')} />
-          <div className="mt-resize-handle mt-resize-sw" onMouseDown={(e) => startResize(e, 'sw')} />
-          <div className="mt-resize-handle mt-resize-se" onMouseDown={(e) => startResize(e, 'se')} />
-        </>
-      )}
-    </div>
+    </WindowHeaderPortalContext.Provider>
   )
 }

@@ -76,6 +76,11 @@
   margin-left: auto;
 }
 
+.mt-window-header-portal {
+  display: flex;
+  min-width: 0;
+}
+
 .mt-window-status {
   display: inline-flex;
   align-items: center;
