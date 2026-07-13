@@ -43,7 +43,7 @@
 - Electron 完整安装包发布体验（签名、公证、跨平台安装包验收；基础生产打包链路已接入）
 - PSD 真实 Photoshop 本机联调、image / smart-object slot 渲染和复杂 batchPlay
 - 更完整的项目上传流量采集（非浏览器请求体场景）
-- Web Composer 默认远程预设素材与 4K/长时 MP4 的桌面端压力验收
+- Web Composer 4K/长时 MP4 的桌面端压力验收
 
 ## 4. 验收标准
 

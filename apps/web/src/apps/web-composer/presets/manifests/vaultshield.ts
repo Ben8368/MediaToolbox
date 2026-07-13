@@ -7,7 +7,7 @@ const slots = collectSlots([
     id: 'background',
     label: '背景素材',
     group: '画布',
-    src: 'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260518_003132_8b7edcb6-c64d-4a52-a9ca-879942e122ad.mp4',
+    src: '/static/web-composer/videos/vaultshield-hero.mp4',
   }),
   iconSlot({ id: 'brand.logo', label: 'Logo', group: '页头', iconId: 'vault-logo', allowImage: true }),
   ...['Vault', 'Plans', 'Install', 'News', 'Help'].map((value, index) => textSlot({

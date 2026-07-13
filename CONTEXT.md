@@ -4,6 +4,7 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-13
+> - Web Composer 三套默认预设的字体、视频和 Lumora 火车窗前景图已本地化到 `apps/web/public/static/web-composer/`，预览页与默认 manifest 不再依赖远程素材加载。
 > - Web Composer 排版控件改为下拉选择字体、设计字号与可读字重，编辑对象大纲和属性区收进同一连续面板；顶部参数与操作控件统一为 30px 高，预设选择器进一步收至 96px。
 > - Web Composer 侧栏已将“画布主题”并入“编辑对象”大纲，与元素共用搜索和选择入口；窗口标题栏预设选择器进一步收窄，视频导出默认值调整为 30 fps / 10 秒。
 > - Web Composer 已升级为 Slot v2 的“预览区点选、左侧上下文编辑”工作流：三套预设提供显式文案/Logo/Icon/背景 Slot，支持字体、设计字号、字重、颜色、内容类型替换、X/Y 偏移和显隐；元素大纲支持搜索、分组与隐藏恢复，编辑/交互预览模式分离。
@@ -43,7 +44,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
 - Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
-- Web Composer 默认预设仍引用远程字体/视频；离线资源包和 4K/15 秒长时视频压力验收待补齐。
+- Web Composer 默认预设素材已本地化；4K/15 秒长时视频压力验收待补齐。
 - Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
 
 **已迁移至技术债追踪：**
@@ -56,7 +57,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 下一步
 
-1. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换、4K/15 秒压力路径，并规划远程字体/视频的版本化本地资源包。
+1. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
 2. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
 3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
 4. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
