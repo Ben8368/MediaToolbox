@@ -51,7 +51,7 @@
   --wc-picker-text: rgba(248,250,252,.94);
   --wc-picker-muted: rgba(226,232,240,.68);
   position: relative;
-  width: min(150px, 20vw);
+  width: min(124px, 18vw);
   margin-right: 2px;
 }
 
@@ -128,7 +128,9 @@
 .wc-export-settings select:focus,
 .wc-export-settings input:focus { border-color: rgba(77,171,255,.58); box-shadow: 0 0 0 2px rgba(77,171,255,.12); }
 .wc-export-number { position: relative; }
-.wc-export-number input { padding-right: 22px; text-align: center; }
+.wc-export-number input { appearance: textfield; padding: 0 22px 0 7px; text-align: left; }
+.wc-export-number input::-webkit-inner-spin-button,
+.wc-export-number input::-webkit-outer-spin-button { margin: 0; appearance: none; }
 .wc-export-number span { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); color: rgba(226,232,240,.5) !important; font-size: 8.5px !important; pointer-events: none; }
 
 .wc-preview-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
@@ -263,7 +265,7 @@
   .wc-workspace { grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr); }
   .wc-inspector { padding: 7px; }
   .wc-inspector-section { padding: 8px; }
-  .wc-preset-picker { width: min(142px, 22vw); }
+  .wc-preset-picker { width: min(118px, 20vw); }
   .wc-export-settings { gap: 5px; }
   .wc-preview-actions button { padding: 0 5px; }
 }

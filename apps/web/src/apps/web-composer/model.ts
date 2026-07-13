@@ -39,8 +39,8 @@ export function createExportSettings(
     aspectRatio,
     resolution,
     ...targetSize(aspectRatio, resolution),
-    fps: 12,
-    durationSeconds: 4,
+    fps: 30,
+    durationSeconds: 10,
   }
 }
 
