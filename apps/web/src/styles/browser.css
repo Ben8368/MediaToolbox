@@ -1,6 +1,6 @@
 .browser-app {
   display: grid;
-  grid-template-columns: 164px minmax(0, 1fr);
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -595,7 +595,7 @@
 
 @media (max-width: 800px) {
   .browser-app {
-    grid-template-columns: 148px minmax(0, 1fr);
+    grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   }
 
   .browser-commandbar,
@@ -610,6 +610,10 @@
   }
 
   .browser-sidebar {
+    display: none;
+  }
+
+  .browser-app > .app-sidebar-resize-handle {
     display: none;
   }
 

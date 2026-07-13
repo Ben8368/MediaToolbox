@@ -8,6 +8,7 @@ import {
 import type { AssetRecord } from '@/api/types'
 import type { DiskInfo } from '@/apps/file-manager/types'
 import { displayDiskName, formatSize, isPathOnDisk } from '@/apps/file-manager/utils'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 
 type FileManagerSidebarProps = {
   activeSection: 'local' | 'trash'
@@ -31,7 +32,7 @@ export function FileManagerSidebar({
   onSelectDisk,
 }: FileManagerSidebarProps) {
   return (
-    <aside className="fm-sidebar">
+    <ResizableAppSidebar className="fm-sidebar" storageKey="file-manager">
       <nav className="fm-nav">
         <SidebarButton active={activeSection === 'local'} icon={<ChevronIcon />} label="我的文件" onClick={onOpenLocal} />
         {assets.length > 0 && (
@@ -61,6 +62,6 @@ export function FileManagerSidebar({
         <SidebarButton active={activeSection === 'trash'} icon={<TrashIcon />} label="回收站" onClick={onOpenTrash} />
       </nav>
       <button type="button" className="fm-settings"><SettingsIcon />设置</button>
-    </aside>
+    </ResizableAppSidebar>
   )
 }

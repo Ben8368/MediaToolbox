@@ -3,6 +3,7 @@ import { useMemo, type CSSProperties } from 'react'
 import { BrowserTabBar } from '@/apps/browser/BrowserTabBar'
 import { HOME_URL, downloadStatusText } from '@/apps/browser/helpers'
 import { useBrowserTabs } from '@/apps/browser/useBrowserTabs'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import { useWindowStore } from '@/windowStore'
 
 export function BrowserApp() {
@@ -42,7 +43,7 @@ export function BrowserApp() {
 
   return (
     <div className="browser-app">
-      <aside className="browser-sidebar">
+      <ResizableAppSidebar className="browser-sidebar" storageKey="browser">
         <div className="browser-type-list">
           <button className="browser-type browser-type--active" type="button" style={{ '--browser-accent': '#7cc4ff' } as CSSProperties}>
             <span className="browser-type__icon">WWW</span>
@@ -80,7 +81,7 @@ export function BrowserApp() {
             ))}
           </div>
         </div>
-      </aside>
+      </ResizableAppSidebar>
 
       <section className="browser-panel">
         <BrowserTabBar

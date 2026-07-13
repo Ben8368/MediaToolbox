@@ -12,7 +12,7 @@
 
 @container (max-width: 760px) {
   .fm-app {
-    grid-template-columns: 132px minmax(0, 1fr);
+    grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   }
 
   .fm-nav {
