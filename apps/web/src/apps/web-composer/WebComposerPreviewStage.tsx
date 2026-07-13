@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import type { WebComposerExportSettings, WebComposerPresetId, WebComposerPresetState } from '@mediatoolbox/contracts'
+import type {
+  WebComposerAspectRatio,
+  WebComposerExportResolution,
+  WebComposerExportSettings,
+  WebComposerPresetId,
+  WebComposerPresetState,
+} from '@mediatoolbox/contracts'
 
-import { previewRuntimeUrl } from './model'
+import { aspectRatioOptions, previewRuntimeUrl, resolutionOptions, resizeExportSettings } from './model'
 import { WEB_COMPOSER_CHANNEL, type WebComposerPreviewUpdateMessage } from './previewMessages'
 
-export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, ready }: {
+export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, ready, onSettingsChange }: {
   iframeRef: RefObject<HTMLIFrameElement>
   presetId: WebComposerPresetId
   state: WebComposerPresetState
   settings: WebComposerExportSettings
   ready: boolean
+  onSettingsChange: (settings: WebComposerExportSettings) => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
@@ -47,9 +54,34 @@ export function WebComposerPreviewStage({ iframeRef, presetId, state, settings, 
   return (
     <main className="wc-preview-panel">
       <div className="wc-preview-toolbar">
-        <div>
-          <strong>{settings.width} × {settings.height}</strong>
-          <span>{settings.aspectRatio} · {settings.resolution}</span>
+        <div className="wc-export-settings" aria-label="导出设置">
+          <label>
+            <span>比例</span>
+            <select
+              value={settings.aspectRatio}
+              onChange={(event) => onSettingsChange(resizeExportSettings(settings, { aspectRatio: event.target.value as WebComposerAspectRatio }))}
+            >
+              {aspectRatioOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>分辨率</span>
+            <select
+              value={settings.resolution}
+              onChange={(event) => onSettingsChange(resizeExportSettings(settings, { resolution: event.target.value as WebComposerExportResolution }))}
+            >
+              {resolutionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>帧率</span>
+            <input type="number" min={1} max={30} value={settings.fps} onChange={(event) => onSettingsChange({ ...settings, fps: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} />
+          </label>
+          <label>
+            <span>时长</span>
+            <input type="number" min={1} max={15} value={settings.durationSeconds} onChange={(event) => onSettingsChange({ ...settings, durationSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) })} />
+          </label>
+          <span className="wc-export-dimensions">{settings.width} × {settings.height}</span>
         </div>
         <span className="wc-template-lock">模板 v1 已锁定</span>
       </div>

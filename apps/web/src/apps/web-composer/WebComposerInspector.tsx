@@ -1,33 +1,25 @@
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 import type {
-  WebComposerAspectRatio,
-  WebComposerExportResolution,
-  WebComposerExportSettings,
   WebComposerPresetState,
 } from '@mediatoolbox/contracts'
 
 import { filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
-import { aspectRatioOptions, resolutionOptions, resizeExportSettings } from './model'
 import type { PresetDefinition } from './presets/types'
 
 export function WebComposerInspector({
   preset,
   state,
-  settings,
   busy,
   onStateChange,
-  onSettingsChange,
   onExport,
   onReset,
 }: {
   preset: PresetDefinition
   state: WebComposerPresetState
-  settings: WebComposerExportSettings
   busy: boolean
   onStateChange: (state: WebComposerPresetState) => void
-  onSettingsChange: (settings: WebComposerExportSettings) => void
   onExport: (kind: 'png' | 'webm') => void
   onReset: () => void
 }) {
@@ -58,6 +50,7 @@ export function WebComposerInspector({
 
   return (
     <ResizableAppSidebar className="wc-inspector" storageKey="web-composer" aria-label="预设属性编辑器">
+      <div className="wc-inspector-content">
       <section className="wc-inspector-section">
         <header><strong>文案</strong><span>{preset.fields.length} 个 Slot</span></header>
         {preset.fields.map((field) => (
@@ -122,43 +115,15 @@ export function WebComposerInspector({
         </label>
         {uploadStatus && <p className="wc-inline-status">{uploadStatus}</p>}
       </section>
+      </div>
 
-      <section className="wc-inspector-section">
-        <header><strong>导出设置</strong><span>{settings.width} × {settings.height}</span></header>
-        <div className="wc-two-column">
-          <label className="wc-field">
-            <span>比例</span>
-            <select
-              value={settings.aspectRatio}
-              onChange={(event) => onSettingsChange(resizeExportSettings(settings, { aspectRatio: event.target.value as WebComposerAspectRatio }))}
-            >
-              {aspectRatioOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="wc-field">
-            <span>分辨率</span>
-            <select
-              value={settings.resolution}
-              onChange={(event) => onSettingsChange(resizeExportSettings(settings, { resolution: event.target.value as WebComposerExportResolution }))}
-            >
-              {resolutionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="wc-field">
-            <span>帧率</span>
-            <input type="number" min={1} max={30} value={settings.fps} onChange={(event) => onSettingsChange({ ...settings, fps: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} />
-          </label>
-          <label className="wc-field">
-            <span>时长（秒）</span>
-            <input type="number" min={1} max={15} value={settings.durationSeconds} onChange={(event) => onSettingsChange({ ...settings, durationSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) })} />
-          </label>
-        </div>
-        <div className="wc-export-actions">
+      <div className="wc-inspector-actions">
+        <div className="wc-export-actions" aria-label="导出操作">
           <button type="button" disabled={busy} onClick={() => onExport('png')}>导出 PNG</button>
           <button type="button" disabled={busy} onClick={() => onExport('webm')}>导出 MP4</button>
         </div>
         <button className="wc-reset" type="button" disabled={busy} onClick={onReset}>恢复预设默认值</button>
-      </section>
+      </div>
     </ResizableAppSidebar>
   )
 }
