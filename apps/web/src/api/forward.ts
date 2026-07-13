@@ -30,6 +30,8 @@ export const applyWorkOrder = forwardMethod('applyWorkOrder')
 export const submitWebComposerPng = forwardMethod('submitWebComposerPng')
 export const submitWebComposerVideo = forwardMethod('submitWebComposerVideo')
 
+export const listSystemFonts = forwardMethod('listSystemFonts')
+
 export const probeTranscodeSource = forwardMethod('probeTranscodeSource')
 export const previewTranscodeCommand = forwardMethod('previewTranscodeCommand')
 

@@ -11,6 +11,7 @@ import { registerPsdRoutes } from './routes/psd.js'
 import { registerPathGrantRoutes } from './routes/path-grants.js'
 import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
+import { registerFontsRoutes } from './routes/fonts.js'
 import { registerWebComposerRoutes } from './routes/web-composer.js'
 import { createApiState } from './state.js'
 
@@ -60,6 +61,7 @@ export async function buildApiServer() {
   registerLogRoutes(app, state)
   registerJobRoutes(app, state)
   registerTranscodeRoutes(app, state)
+  registerFontsRoutes(app)
   registerPsdRoutes(app, state)
   registerPathGrantRoutes(app, state)
   registerWebComposerRoutes(app, state)

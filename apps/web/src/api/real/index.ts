@@ -1,6 +1,7 @@
 import type { MediaToolboxApi } from '@/api/types'
 
 import * as filesystem from './filesystem'
+import * as fonts from './fonts'
 import * as jobs from './jobs'
 import * as logs from './logs'
 import * as metrics from './metrics'
@@ -13,4 +14,5 @@ export const realApi = {
   ...filesystem,
   ...metrics,
   ...logs,
+  ...fonts,
 } satisfies MediaToolboxApi
