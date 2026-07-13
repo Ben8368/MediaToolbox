@@ -13,7 +13,7 @@ function WindowStatusBadge({ appType }: { appType?: string }) {
   const [status, setStatus] = useState<WindowStatus | null>(null)
 
   useEffect(() => {
-    if (!appType || !['fetcher', 'file-manager', 'transcode'].includes(appType)) {
+    if (!appType || !['fetcher', 'file-manager', 'transcode', 'web-composer'].includes(appType)) {
       setStatus(null)
       return
     }

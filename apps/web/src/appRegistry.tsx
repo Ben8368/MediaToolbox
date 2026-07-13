@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { WorkbenchAppId } from '@mediatoolbox/contracts'
 
 import { BrowserApp } from '@/apps/BrowserApp'
 import { DownloaderApp } from '@/apps/DownloaderApp'
@@ -6,11 +7,12 @@ import { FileManagerApp } from '@/apps/FileManagerApp'
 import { PsdApp } from '@/apps/PsdApp'
 import { SettingsApp } from '@/apps/SettingsApp'
 import { TranscodeApp } from '@/apps/TranscodeApp'
+import { WebComposerApp } from '@/apps/WebComposerApp'
 import { LogViewer } from '@/LogViewer'
 import { APP_ICON_PATHS } from '@/icon-library'
 
 export type RegisteredApp = {
-  id: string
+  id: WorkbenchAppId
   title: string
   label: string
   icon: string
@@ -25,6 +27,7 @@ export const appRegistry: RegisteredApp[] = [
   { id: 'fetcher', label: '下载', title: '下载', icon: APP_ICON_PATHS.fetcher, component: DownloaderApp, status: 'stable' },
   { id: 'transcode', label: '转码', title: '转码', icon: APP_ICON_PATHS.transcode, component: TranscodeApp, status: 'hidden', launcherVisible: false },
   { id: 'ps', label: 'PS', title: 'PS', icon: APP_ICON_PATHS.ps, component: PsdApp, status: 'beta' },
+  { id: 'web-composer', label: '网页合成', title: '网页合成工作台', icon: APP_ICON_PATHS.webComposer, component: WebComposerApp, status: 'beta' },
   { id: 'settings', label: '设置', title: '设置', icon: APP_ICON_PATHS.settings, component: SettingsApp, status: 'beta', launcherVisible: false },
   { id: 'logs', label: '日志', title: '日志', icon: APP_ICON_PATHS.logs, component: LogViewer, status: 'hidden', launcherVisible: false },
 ]
@@ -32,7 +35,7 @@ export const appRegistry: RegisteredApp[] = [
 const appRegistryById = new Map(appRegistry.map((app) => [app.id, app]))
 
 export function getRegisteredApp(appId: string): RegisteredApp | undefined {
-  return appRegistryById.get(appId)
+  return appRegistryById.get(appId as WorkbenchAppId)
 }
 
 export function getAppMetadata(appId: string): Pick<RegisteredApp, 'id' | 'title' | 'label' | 'icon'> | undefined {

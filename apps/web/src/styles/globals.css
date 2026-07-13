@@ -7,6 +7,7 @@
 @import './browser.css';
 @import './transcode.css';
 @import './psd.css';
+@import './web-composer.css';
 
 .settings-app {
   --mt-surface: rgba(15, 18, 26, .78);
