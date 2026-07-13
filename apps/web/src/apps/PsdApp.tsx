@@ -2,6 +2,7 @@ import { useCallback, useState, type FormEvent } from 'react'
 
 import { applyWorkOrder, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
 import { requestReadGrant, requestWriteGrant } from '@/api/real/pathGrants'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import type { WorkOrder, TextLayerRecord, TranslationLanguage } from '@mediatoolbox/contracts'
 
 type ActiveTab = 'scan' | 'workorder' | 'apply' | 'translate'
@@ -139,7 +140,7 @@ export function PsdApp() {
 
   return (
     <div className="psd-app">
-      <aside className="psd-sidebar">
+      <ResizableAppSidebar className="psd-sidebar" storageKey="psd">
         <button
           className={`psd-nav${activeTab === 'scan' ? ' psd-nav--active' : ''}`}
           type="button"
@@ -179,7 +180,7 @@ export function PsdApp() {
           <span>AI 翻译</span>
           <small className="psd-nav__beta">预留</small>
         </button>
-      </aside>
+      </ResizableAppSidebar>
 
       <main className="psd-panel">
         {/* 顶部文件栏 */}

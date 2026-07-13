@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { getApiRuntimePresentation } from '@/api/runtime'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import { useSystemStore } from '@/store'
 
 type LiteSettings = {
@@ -40,7 +41,7 @@ export function SettingsApp() {
 
   return (
     <div className="settings-app">
-      <aside className="settings-sidebar">
+      <ResizableAppSidebar className="settings-sidebar" storageKey="settings">
         <nav className="settings-nav">
           <button type="button" className="settings-nav-item settings-nav-item--active">
             <SettingsIcon />
@@ -55,7 +56,7 @@ export function SettingsApp() {
             <span>服务</span>
           </button>
         </nav>
-      </aside>
+      </ResizableAppSidebar>
 
       <main className="settings-panel">
         <div className="settings-toolbar">

@@ -254,7 +254,7 @@
 
 @media (max-width: 800px) {
   .dl-app {
-    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   }
 
   .dl-form-row {
@@ -284,6 +284,10 @@
   }
 
   .dl-sidebar {
+    display: none;
+  }
+
+  .dl-app > .app-sidebar-resize-handle {
     display: none;
   }
 

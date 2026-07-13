@@ -1,6 +1,7 @@
 import { CATEGORY_MAP } from '@/apps/downloader/constants'
 import { AiIcon, CategoryIcon } from '@/apps/downloader/icons'
 import type { CategoryKey, TaskStats } from '@/apps/downloader/types'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 
 type DownloaderSidebarProps = {
   selectedCategory: CategoryKey
@@ -18,7 +19,7 @@ export function DownloaderSidebar({
   onToggleMiniAi,
 }: DownloaderSidebarProps) {
   return (
-    <aside className="dl-sidebar">
+    <ResizableAppSidebar className="dl-sidebar" storageKey="downloader">
       <nav className="dl-nav">
         {Object.entries(CATEGORY_MAP).map(([key, category]) => (
           <button
@@ -43,6 +44,6 @@ export function DownloaderSidebar({
           <span>AI</span>
         </button>
       </div>
-    </aside>
+    </ResizableAppSidebar>
   )
 }

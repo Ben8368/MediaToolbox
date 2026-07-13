@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource, previewTranscodeCommand } from '@/api'
 import type { JobRecord, TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
 import { requestReadGrant } from '@/api/real/pathGrants'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 
 const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
@@ -223,13 +224,13 @@ export function TranscodeApp() {
 
   return (
     <div className="transcode-app">
-      <aside className="transcode-sidebar">
+      <ResizableAppSidebar className="transcode-sidebar" storageKey="transcode">
         <button className="transcode-nav transcode-nav--active" type="button">
           <span className="transcode-nav__icon">TC</span>
           <span>转码</span>
           <small>{transcodeJobs.length}</small>
         </button>
-      </aside>
+      </ResizableAppSidebar>
 
       <main className="transcode-panel">
         <form className="transcode-form" onSubmit={submit}>

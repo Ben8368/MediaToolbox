@@ -19,7 +19,7 @@
   --mt-text-1: rgba(241, 245, 249, .84);
   --mt-text-2: rgba(203, 213, 225, .68);
   display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   color: var(--mt-text-0);
@@ -193,10 +193,7 @@
 
 @media (max-width: 900px) {
   .settings-app {
-    grid-template-columns: 76px minmax(0, 1fr);
-  }
-  .settings-nav-item span {
-    display: none;
+    grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   }
   .settings-grid,
   .settings-wallpapers {

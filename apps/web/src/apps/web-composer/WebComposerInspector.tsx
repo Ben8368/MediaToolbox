@@ -8,6 +8,7 @@ import type {
 } from '@mediatoolbox/contracts'
 
 import { filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
+import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import { aspectRatioOptions, resolutionOptions, resizeExportSettings } from './model'
 import type { PresetDefinition } from './presets/types'
 
@@ -56,7 +57,7 @@ export function WebComposerInspector({
   }
 
   return (
-    <aside className="wc-inspector" aria-label="预设属性编辑器">
+    <ResizableAppSidebar className="wc-inspector" storageKey="web-composer" aria-label="预设属性编辑器">
       <section className="wc-inspector-section">
         <header><strong>文案</strong><span>{preset.fields.length} 个 Slot</span></header>
         {preset.fields.map((field) => (
@@ -158,6 +159,6 @@ export function WebComposerInspector({
         </div>
         <button className="wc-reset" type="button" disabled={busy} onClick={onReset}>恢复预设默认值</button>
       </section>
-    </aside>
+    </ResizableAppSidebar>
   )
 }

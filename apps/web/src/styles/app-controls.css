@@ -18,6 +18,45 @@
   --app-list-folder-icon-height: 24px;
 }
 
+.app-resizable-sidebar-host {
+  position: relative;
+}
+
+.app-resizable-sidebar {
+  min-width: 0;
+}
+
+.app-sidebar-resize-handle {
+  position: absolute;
+  z-index: 20;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--app-sidebar-width) - 4px);
+  width: 8px;
+  border: 0;
+  outline: none;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.app-sidebar-resize-handle::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: transparent;
+  content: '';
+  transition: background .12s ease, box-shadow .12s ease;
+}
+
+.app-sidebar-resize-handle:hover::before,
+.app-sidebar-resize-handle:focus-visible::before,
+.app-resizable-sidebar--resizing + .app-sidebar-resize-handle::before {
+  background: rgba(77,171,255,.82);
+  box-shadow: 0 0 0 1px rgba(77,171,255,.16), 0 0 10px rgba(77,171,255,.28);
+}
+
 .app-surface {
   display: flex;
   height: 100%;

@@ -13,7 +13,7 @@
 
 .wc-workspace {
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -229,7 +229,7 @@
 @keyframes wcPulse { 50% { opacity: .35; transform: scale(.8); } }
 
 @media (max-width: 840px) {
-  .wc-workspace { grid-template-columns: 258px minmax(0, 1fr); }
+  .wc-workspace { grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr); }
   .wc-inspector { padding: 7px; }
   .wc-inspector-section { padding: 8px; }
   .wc-preset-picker { width: min(210px, 29vw); }
