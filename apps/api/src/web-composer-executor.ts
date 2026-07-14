@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises'
 
-import { canTransitionJob, transitionJob } from '@mediatoolbox/job-core'
 import { persistWebComposerPng, runWebRenderVideoJob } from '@mediatoolbox/web-render-worker'
 import type { JobRecord } from '@mediatoolbox/contracts'
 
+import { updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 
@@ -24,17 +24,6 @@ export function abortWebComposerRender(jobId: string): void {
   activeAbortControllers.delete(jobId)
 }
 
-async function updateJob(
-  state: ApiState,
-  jobId: string,
-  nextStatus: Parameters<typeof transitionJob>[1],
-  extras: Pick<JobRecord, 'progress' | 'errorMessage'> = {},
-) {
-  const current = await state.db.jobs.findById(jobId)
-  if (!current || !canTransitionJob(current.status, nextStatus)) return
-  await state.db.jobs.update({ ...transitionJob(current, nextStatus), ...extras })
-}
-
 async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebComposerCaptureJob) {
   const now = new Date().toISOString()
   await state.db.assets.create({
@@ -51,7 +40,7 @@ async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebCompo
 export async function executeWebComposerCapture(job: JobRecord, capture: WebComposerCaptureJob, state: ApiState): Promise<void> {
   const controller = new AbortController()
   activeAbortControllers.set(job.id, controller)
-  await updateJob(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
+  await updateJobRecord(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
   addLog(state.db, 'INFO', 'web-composer', `开始导出：${job.title}`)
 
   try {
@@ -71,33 +60,33 @@ export async function executeWebComposerCapture(job: JobRecord, capture: WebComp
       }, {
         signal: controller.signal,
         onProgress: (progress) => {
-          void updateJob(state, job.id, 'running', { progress })
+          void updateJobRecord(state, job.id, 'running', { progress })
         },
         onLog: (line, stream) => {
           if (line.trim()) addLog(state.db, stream === 'stderr' ? 'WARNING' : 'INFO', 'web-render', `[${job.id}] ${line}`)
         },
       })
       if (result.status === 'canceled') {
-        await updateJob(state, job.id, 'canceled')
+        await updateJobRecord(state, job.id, 'canceled')
         addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
         return
       }
     }
 
     if (controller.signal.aborted) {
-      await updateJob(state, job.id, 'canceled')
+      await updateJobRecord(state, job.id, 'canceled')
       return
     }
     await addOutputAsset(state, job, capture)
-    await updateJob(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+    await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
     addLog(state.db, 'INFO', 'web-composer', `导出完成：${capture.virtualOutputPath}`)
   } catch (error) {
     if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      await updateJob(state, job.id, 'canceled')
+      await updateJobRecord(state, job.id, 'canceled')
       addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
     } else {
       const message = error instanceof Error ? error.message : String(error)
-      await updateJob(state, job.id, 'failed', { errorMessage: message })
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
       addLog(state.db, 'ERROR', 'web-composer', `导出失败：${job.title} — ${message}`)
     }
   } finally {

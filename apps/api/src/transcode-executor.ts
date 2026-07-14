@@ -1,11 +1,10 @@
 import { runTranscodeWorkerJob, type TranscodeWorkerJob } from '@mediatoolbox/transcode-worker'
 import { FfmpegRunError, FfmpegToolNotFoundError } from '@mediatoolbox/ffmpeg'
-import { transitionJob, canTransitionJob, isTerminalJobStatus } from '@mediatoolbox/job-core'
 import type { JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
-import { revokeGrantsBoundToJob } from './workspace-path.js'
+import { updateJobRecord } from './job-utils.js'
 
 const activeAbortControllers = new Map<string, AbortController>()
 
@@ -17,15 +16,10 @@ export function abortTranscode(jobId: string): void {
 export async function updateTranscodeJob(
   state: ApiState,
   jobId: string,
-  nextStatus: Parameters<typeof transitionJob>[1],
+  nextStatus: Parameters<typeof updateJobRecord>[2],
   progress?: JobRecord['progress'],
 ) {
-  const job = await state.db.jobs.findById(jobId)
-  if (!job) return
-  if (!canTransitionJob(job.status, nextStatus)) return
-  const updated = transitionJob(job, nextStatus)
-  await state.db.jobs.update(progress ? { ...updated, progress } : updated)
-  if (isTerminalJobStatus(nextStatus)) await revokeGrantsBoundToJob(state, jobId)
+  await updateJobRecord(state, jobId, nextStatus, progress ? { progress } : {})
 }
 
 export async function executeTranscode(

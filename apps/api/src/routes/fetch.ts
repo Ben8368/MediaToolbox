@@ -5,7 +5,7 @@ import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStr
 import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
-import { executeDownload, abortDownload, updateJob, scheduleDownload } from '../download-executor.js'
+import { executeDownload, abortDownload, updateDownloadJob, scheduleDownload } from '../download-executor.js'
 import { readWorkspaceFileForDownload } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
@@ -109,7 +109,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
         task.updated_at = nowSeconds()
         task.completed_at = task.updated_at
       }
-      await updateJob(state, task.id, 'canceled')
+      await updateDownloadJob(state, task.id, 'canceled')
       addLog(state.db, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
     }
     return { ok: true }
