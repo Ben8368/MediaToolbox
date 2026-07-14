@@ -1,8 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
+import os from 'node:os'
+import fs from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { FetchTaskRecord, WorkOrderGetResponse } from '@mediatoolbox/contracts'
 
 import { buildApiServer } from './app.js'
+
+const execFileAsync = promisify(execFile)
+const ffmpegBinary = process.env.MEDIATOOLBOX_FFMPEG_PATH?.trim() || 'ffmpeg'
 
 vi.mock('@mediatoolbox/psd-worker', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@mediatoolbox/psd-worker')>()
@@ -103,6 +110,23 @@ describe('api skeleton contract', () => {
       })
     }
     await app.close()
+  })
+
+  it('never leaks the physical workspace root in a client-facing response (regression for path disclosure)', async () => {
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-secret-workspace-'))
+    process.env.MEDIATOOLBOX_WORKSPACE_DIR = workspaceDir
+    try {
+      const app = await buildApiServer()
+      const metrics = await app.inject({ method: 'GET', url: '/api/system/metrics' })
+      // 反斜杠路径在 JSON 序列化后会被转义（\ -> \\），对原始 body 字符串做 includes 检测不出泄露；
+      // 必须在解析后的对象上比较，且用 path.sep 规范化后的片段而不是完整路径，兼容 forward-slash 场景。
+      const normalizedLeakFragment = workspaceDir.replace(/\\/g, '/')
+      const serialized = JSON.stringify(metrics.json()).replace(/\\\\/g, '/')
+      expect(serialized).not.toContain(normalizedLeakFragment)
+      await app.close()
+    } finally {
+      delete process.env.MEDIATOOLBOX_WORKSPACE_DIR
+    }
   })
 
   it('rejects invalid fetch submissions with a readable error payload', async () => {
@@ -257,6 +281,42 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('actually writes a physical output file for a real ffmpeg transcode (regression for virtual-path leak)', async () => {
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-transcode-workspace-'))
+    process.env.MEDIATOOLBOX_WORKSPACE_DIR = workspaceDir
+    try {
+      const inputPhysicalPath = path.join(workspaceDir, 'sample-input.mp4')
+      await execFileAsync(ffmpegBinary, [
+        '-y', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=64x64:rate=5',
+        '-pix_fmt', 'yuv420p', inputPhysicalPath,
+      ])
+
+      const app = await buildApiServer()
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/transcode/jobs',
+        payload: { inputPath: '/Workspace/sample-input.mp4', outputPath: '/Workspace/Exports/sample-output.mp4', preset: 'copy' },
+      })
+      expect(created.statusCode).toBe(200)
+      const jobId = created.json<{ id: string }>().id
+
+      let status = 'queued'
+      for (let attempt = 0; attempt < 100 && status !== 'succeeded' && status !== 'failed'; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+        const detail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+        status = detail.json<{ job: { status: string } }>().job.status
+      }
+
+      expect(status).toBe('succeeded')
+      const outputPhysicalPath = path.join(workspaceDir, 'Exports', 'sample-output.mp4')
+      const stat = await fs.stat(outputPhysicalPath)
+      expect(stat.size).toBeGreaterThan(0)
+      await app.close()
+    } finally {
+      delete process.env.MEDIATOOLBOX_WORKSPACE_DIR
+    }
+  })
+
   it('accepts transcode jobs that use a read path grant instead of an input path', async () => {
     process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
     const app = await buildApiServer()
@@ -289,6 +349,91 @@ describe('api skeleton contract', () => {
 
     expect(created.statusCode).toBe(200)
     expect(created.json()).toMatchObject({ kind: 'media.transcode' })
+    await app.close()
+  })
+
+  it('consumes a write grant after first use and rejects reuse (regression for missing one-shot enforcement)', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-write-grant-'))
+
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: {
+        kind: 'file.write',
+        physicalPath: path.join(workspaceDir, 'out.mp4'),
+        displayName: 'out.mp4',
+      },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: { inputPath: '/Workspace/README.txt', outputGrantId: grantId, preset: 'copy' },
+    })
+    expect(first.statusCode).toBe(200)
+
+    // grant 已在第一次真正落盘写入时被消费；第二次复用同一个 grantId 必须被拒绝。
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: { inputPath: '/Workspace/README.txt', outputGrantId: grantId, preset: 'copy' },
+    })
+    expect(second.statusCode).toBe(400)
+
+    await app.close()
+  })
+
+  it('binds a read grant to its transcode job and revokes it once the job finishes (regression for missing grant lifecycle)', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: { kind: 'file.read', physicalPath: path.resolve('README.md'), displayName: 'README.md' },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/transcode/jobs',
+      payload: { inputGrantId: grantId, outputPath: '/Workspace/Exports/out.mp4', preset: 'copy' },
+    })
+    const jobId = created.json<{ id: string }>().id
+
+    // 任务创建后 grant 必须已绑定到这个 job（仍处于 active，因为任务还没跑完）。
+    const boundGrant = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+    expect(boundGrant.json<{ grant: { jobId?: string; status: string } }>().grant).toMatchObject({
+      jobId,
+      status: 'active',
+    })
+
+    // 等任务跑到终态（本地没有真实输入文件，ffmpeg 会失败，但失败也是终态）。
+    let status = 'queued'
+    for (let attempt = 0; attempt < 100 && status !== 'succeeded' && status !== 'failed'; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      const detail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+      status = detail.json<{ job: { status: string } }>().job.status
+    }
+    expect(status).toBe('failed')
+
+    // job 进入终态后，绑定的 grant 必须被自动吊销，不能无限期存活。
+    const afterCompletion = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+    expect(afterCompletion.statusCode).toBe(404)
+
     await app.close()
   })
 
@@ -370,6 +515,49 @@ describe('api skeleton contract', () => {
     expect(response.statusCode).toBe(403)
     expect(response.json()).toMatchObject({ ok: false })
     await app.close()
+  })
+
+  it('rejects shutdown requests carrying the marker but no valid desktop token (regression for spoofable shutdown)', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+
+    // 只带 marker、不带 token（模拟能从浏览器发起的伪造请求）。
+    const markerOnly = await app.inject({
+      method: 'POST',
+      url: '/api/system/shutdown',
+      headers: { 'x-mediatoolbox-shutdown': 'desktop' },
+    })
+    expect(markerOnly.statusCode).toBe(403)
+
+    // 带错误 token 同样拒绝。
+    const wrongToken = await app.inject({
+      method: 'POST',
+      url: '/api/system/shutdown',
+      headers: { 'x-mediatoolbox-shutdown': 'desktop', 'x-mediatoolbox-desktop-token': 'not-the-token' },
+    })
+    expect(wrongToken.statusCode).toBe(403)
+
+    await app.close()
+  })
+
+  it('accepts shutdown requests carrying marker and valid desktop token', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    // 成功路径会在 100ms 后调用 process.exit(0)；用假计时器阻止真实退出，避免杀掉测试进程。
+    vi.useFakeTimers()
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never)
+    try {
+      const app = await buildApiServer()
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/system/shutdown',
+        headers: { 'x-mediatoolbox-shutdown': 'desktop', 'x-mediatoolbox-desktop-token': 'test-desktop-token' },
+      })
+      expect(response.statusCode).toBe(200)
+    } finally {
+      exitSpy.mockRestore()
+      vi.useRealTimers()
+    }
   })
 
   it('returns a readable PSD adapter error when Photoshop is not configured', async () => {
@@ -461,6 +649,85 @@ describe('PSD workorder CRUD', () => {
     })
     expect(applyResp.statusCode).toBe(200)
     expect(applyResp.json()).toMatchObject({ ok: true, appliedCount: 1, skippedCount: 0 })
+
+    await app.close()
+  })
+
+  it('scans an external file via inputGrantId and applies the resulting workorder (regression for grant-marker mishandling)', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+
+    vi.mocked(runPsdWorkerJob).mockClear()
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'scan',
+      documentWidth: 800,
+      documentHeight: 600,
+      documentResolution: 72,
+      records: [],
+    })
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'apply',
+      outputPath: '/Workspace/Exports/external_adapted.psd',
+      appliedCount: 0,
+      skippedCount: 0,
+      results: [],
+    })
+
+    const app = await buildApiServer()
+
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: {
+        kind: 'file.read',
+        physicalPath: path.resolve('README.md'),
+        displayName: 'external-template.psd',
+      },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+
+    const scanResp = await app.inject({
+      method: 'POST',
+      url: '/api/psd/scan',
+      payload: { inputGrantId: grantId },
+    })
+    expect(scanResp.statusCode).toBe(200)
+    const { workOrderId } = scanResp.json<{ workOrderId: string }>()
+
+    // scan 阶段传给 worker 的必须是 grant 解析出的真实物理路径，不是占位字符串。
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[0]![0]).toMatchObject({
+      type: 'scan',
+      psdPath: path.resolve('README.md'),
+    })
+
+    // scan 之后 grant 已绑定到工单 ID，作为其生命周期宿主，此时仍处于 active。
+    const boundGrant = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+    expect(boundGrant.json<{ grant: { jobId?: string; status: string } }>().grant).toMatchObject({
+      jobId: workOrderId,
+      status: 'active',
+    })
+
+    const applyResp = await app.inject({
+      method: 'POST',
+      url: `/api/psd/workorders/${workOrderId}/apply`,
+      payload: {},
+    })
+    expect(applyResp.statusCode).toBe(200)
+    expect(applyResp.json()).toMatchObject({ ok: true })
+
+    // apply 阶段重新解析 workOrder.psdPath 中保存的 grant 标记，同样必须落回同一个真实物理路径。
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[1]![0]).toMatchObject({
+      type: 'apply',
+      workOrder: expect.objectContaining({ psdPath: path.resolve('README.md') }),
+    })
+
+    // 工单应用完成后，绑定的读授权必须被自动吊销，不能无限期存活。
+    const afterApply = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+    expect(afterApply.statusCode).toBe(404)
 
     await app.close()
   })

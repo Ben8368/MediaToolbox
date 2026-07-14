@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { FastifyInstance } from 'fastify'
 import { createJobRecord } from '@mediatoolbox/job-core'
 import type { JobRecord, OkResult, TranscodeProbeResponse, TranscodeSourceInfo, TranscodeCommandPreviewResponse } from '@mediatoolbox/contracts'
@@ -7,7 +8,7 @@ import { probeMedia, analyzeSource, buildFfmpegArgs, buildTwoPassFfmpegArgs } fr
 import { transcodeJobCreateSchema, transcodeProbeSchema, transcodePreviewCommandSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
-import { normalizeWorkspacePath, WorkspacePathError, resolveGrantPath } from '../workspace-path.js'
+import { resolveInputPath, resolveOutputPath } from '../workspace-path.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: { inputPath?: string; outputPath?: string; preset?: string; title?: string; inputGrantId?: string; outputGrantId?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number; enableVmaf?: boolean }; Reply: JobRecord }>(
@@ -16,41 +17,30 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
     async (request) => {
       const { inputPath, outputPath, preset, title, inputGrantId, outputGrantId, videoCrf, videoEncodePreset, audioBitrate, targetBitrateKbps, enableVmaf } = request.body
 
-      let effectiveInputPath: string
-      if (inputGrantId) {
-        effectiveInputPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
-      } else {
-        effectiveInputPath = normalizeWorkspacePath(inputPath, state.workspaceRoot)
-      }
-
-      let effectiveOutputPath: string
-      if (outputGrantId) {
-        // grant 模式：resolveGrantPath 返回物理路径
-        effectiveOutputPath = await resolveGrantPath(outputGrantId, state.db, 'file.write')
-      } else {
-        const normalizedOutputPath = normalizeWorkspacePath(outputPath, state.workspaceRoot)
-        const exportsRoot = `${state.workspaceRoot}/Exports`
-        if (normalizedOutputPath === exportsRoot || !normalizedOutputPath.startsWith(`${exportsRoot}/`)) {
-          throw new WorkspacePathError('转码输出必须位于工作区 Exports 目录内。')
-        }
-        effectiveOutputPath = normalizedOutputPath
-      }
+      const jobId = `transcode-${Date.now()}`
+      const input = await resolveInputPath(state, { path: inputPath, grantId: inputGrantId, bindJobId: jobId })
+      const output = await resolveOutputPath(state, {
+        path: outputPath,
+        grantId: outputGrantId,
+        requireExportsDir: true,
+        exportsErrorMessage: '转码输出必须位于工作区 Exports 目录内。',
+        consumeGrant: true,
+      })
 
       const VALID_PRESETS: TranscodePreset[] = ['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac', 'audio-aac', 'audio-mp3', 'copy', 'remux']
       const safePreset: TranscodePreset = VALID_PRESETS.includes(preset as TranscodePreset) ? (preset as TranscodePreset) : 'mp4-h264-aac'
-      const jobId = `transcode-${Date.now()}`
       const job = createJobRecord({
         id: jobId,
         kind: 'media.transcode',
-        title: title || `转码任务：${effectiveInputPath.split('/').pop() ?? 'unknown'}`,
+        title: title || `转码任务：${path.basename(input.physicalPath)}`,
       })
       await state.db.jobs.create(job)
 
       void executeTranscode(
         job,
         {
-          inputPath: effectiveInputPath,
-          outputPath: effectiveOutputPath,
+          inputPath: input.physicalPath,
+          outputPath: output.physicalPath,
           preset: safePreset,
           ...(videoCrf !== undefined ? { videoCrf } : {}),
           ...(videoEncodePreset ? { videoEncodePreset: videoEncodePreset as VideoEncodePreset } : {}),
@@ -59,6 +49,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
           ...(enableVmaf !== undefined ? { enableVmaf } : {}),
         },
         state,
+        output.virtualPath ?? `__grant:${outputGrantId}`,
       )
 
       return job
@@ -85,11 +76,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
 
       let effectiveInputPath: string
       try {
-        if (inputGrantId) {
-          effectiveInputPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
-        } else {
-          effectiveInputPath = normalizeWorkspacePath(inputPath, state.workspaceRoot)
-        }
+        effectiveInputPath = (await resolveInputPath(state, { path: inputPath, grantId: inputGrantId })).physicalPath
       } catch {
         return { ok: false }
       }

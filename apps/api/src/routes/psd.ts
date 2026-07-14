@@ -5,8 +5,7 @@ import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError
 import { psdScanSchema, psdWorkOrderUpdateSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog } from '../utils.js'
-import { normalizeWorkspacePath, resolveGrantPath } from '../workspace-path.js'
-import { toPhysicalWorkspacePath } from '../workspace-files.js'
+import { resolveInputPath, resolveOutputPath, resolvePathOrGrantMarker, toGrantMarker, revokeGrantsBoundToJob } from '../workspace-path.js'
 
 export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
   // POST /api/psd/scan — 扫描 PSD/PSB，创建工单
@@ -15,14 +14,12 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     { schema: psdScanSchema },
     async (request, reply) => {
       const { psdPath, inputGrantId } = request.body
+      const workOrderId = `wo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
       let physicalPath: string
       try {
-        if (inputGrantId) {
-          physicalPath = await resolveGrantPath(inputGrantId, state.db, 'file.read')
-        } else {
-          const virtualPath = normalizeWorkspacePath(psdPath, state.workspaceRoot)
-          physicalPath = toPhysicalWorkspacePath(state, virtualPath)
-        }
+        // PSD scan/apply 目前是同步执行，没有独立 job 记录；把读授权绑定到即将创建的工单 ID，
+        // 作为它的生命周期宿主——工单被应用或整个流程失败时随之吊销授权。
+        physicalPath = (await resolveInputPath(state, { path: psdPath, grantId: inputGrantId, bindJobId: workOrderId })).physicalPath
       } catch (error) {
         reply.status(400)
         return { ok: false, message: error instanceof Error ? error.message : String(error) }
@@ -34,10 +31,10 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
           return { ok: false, message: 'Worker returned non-scan result' }
         }
 
-        const workOrderId = `wo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         const workOrder: WorkOrder = {
           id: workOrderId,
-          psdPath: psdPath ?? physicalPath,
+          // grant 来源持久化为不透明标记，避免下次解析时把展示占位文案误当工作区路径。
+          psdPath: inputGrantId ? toGrantMarker(inputGrantId) : (psdPath ?? physicalPath),
           psdFileName: physicalPath.split(/[\\/]/).pop() ?? 'unknown.psd',
           documentWidth: result.documentWidth,
           documentHeight: result.documentHeight,
@@ -122,24 +119,24 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     let virtualOutputPath: string
 
     try {
-      if (outputGrantId) {
-        physicalOutputPath = await resolveGrantPath(outputGrantId, state.db, 'file.write')
-        virtualOutputPath = `__grant:${outputGrantId}`
-      } else {
-        const fileName = workOrder.psdFileName.replace(/\.[^.]+$/, '') + `_adapted_${Date.now()}.psd`
-        virtualOutputPath = outputPath || `${state.workspaceRoot}/Exports/${fileName}`
-        physicalOutputPath = toPhysicalWorkspacePath(state, virtualOutputPath)
-      }
+      const fileName = workOrder.psdFileName.replace(/\.[^.]+$/, '') + `_adapted_${Date.now()}.psd`
+      const defaultOutputPath = `${state.workspaceRoot}/Exports/${fileName}`
+      const output = await resolveOutputPath(state, {
+        path: outputPath || defaultOutputPath,
+        grantId: outputGrantId,
+        consumeGrant: true,
+      })
+      physicalOutputPath = output.physicalPath
+      virtualOutputPath = output.virtualPath ?? toGrantMarker(outputGrantId as string)
     } catch (error) {
       reply.status(400)
       return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
 
-    // 解析源 PSD 路径（虚拟 → 物理）
+    // 解析源 PSD 路径：可能是工作区虚拟路径，也可能是扫描时记录的 grant 标记。
     let physicalPsdPath: string
     try {
-      const virtualPsdPath = normalizeWorkspacePath(workOrder.psdPath, state.workspaceRoot)
-      physicalPsdPath = toPhysicalWorkspacePath(state, virtualPsdPath)
+      physicalPsdPath = await resolvePathOrGrantMarker(state, workOrder.psdPath, 'file.read')
     } catch (error) {
       reply.status(400)
       return { ok: false, message: `Invalid PSD path: ${error instanceof Error ? error.message : String(error)}` }
@@ -159,6 +156,8 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       }
 
       addLog(state.db, 'INFO', 'psd', `工单应用完成：${workOrder.id}，应用 ${result.appliedCount} 个图层`)
+      // 工单已成功应用，扫描阶段绑定的外部文件读授权到此结束生命周期。
+      await revokeGrantsBoundToJob(state, workOrder.id)
       return {
         ok: true,
         outputPath: virtualOutputPath,
@@ -170,6 +169,8 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         reply.status(503)
         return { ok: false, message: 'Photoshop 命令未配置，暂不能应用工单。' }
       }
+      // Photoshop 引擎缺失以外的失败视为工单流程终结，同样吊销绑定的读授权，避免悬挂授权长期存活。
+      await revokeGrantsBoundToJob(state, workOrder.id)
       return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
   })

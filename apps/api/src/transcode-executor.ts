@@ -1,10 +1,11 @@
 import { runTranscodeWorkerJob, type TranscodeWorkerJob } from '@mediatoolbox/transcode-worker'
 import { FfmpegRunError, FfmpegToolNotFoundError } from '@mediatoolbox/ffmpeg'
-import { transitionJob, canTransitionJob } from '@mediatoolbox/job-core'
+import { transitionJob, canTransitionJob, isTerminalJobStatus } from '@mediatoolbox/job-core'
 import type { JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
+import { revokeGrantsBoundToJob } from './workspace-path.js'
 
 const activeAbortControllers = new Map<string, AbortController>()
 
@@ -24,9 +25,15 @@ export async function updateTranscodeJob(
   if (!canTransitionJob(job.status, nextStatus)) return
   const updated = transitionJob(job, nextStatus)
   await state.db.jobs.update(progress ? { ...updated, progress } : updated)
+  if (isTerminalJobStatus(nextStatus)) await revokeGrantsBoundToJob(state, jobId)
 }
 
-export async function executeTranscode(job: JobRecord, workerJob: TranscodeWorkerJob, state: ApiState): Promise<void> {
+export async function executeTranscode(
+  job: JobRecord,
+  workerJob: TranscodeWorkerJob,
+  state: ApiState,
+  outputVirtualPath: string,
+): Promise<void> {
   const controller = new AbortController()
   activeAbortControllers.set(job.id, controller)
 
@@ -56,8 +63,8 @@ export async function executeTranscode(job: JobRecord, workerJob: TranscodeWorke
       await state.db.assets.create({
         id: `asset-${job.id}`,
         kind: (workerJob.preset === 'audio-mp3' || workerJob.preset === 'audio-aac') ? 'audio' : 'video',
-        name: workerJob.outputPath.split('/').pop() || job.title,
-        path: workerJob.outputPath,
+        name: outputVirtualPath.split('/').pop() || job.title,
+        path: outputVirtualPath,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }).catch(() => undefined)

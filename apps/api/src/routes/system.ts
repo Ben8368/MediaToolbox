@@ -12,6 +12,7 @@ import {
 } from '../system-sampler.js'
 import type { ApiState } from '../state.js'
 import { isTerminalTask } from '../utils.js'
+import { requireDesktopAuth } from '../desktop-auth.js'
 
 const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
 const execFileAsync = promisify(execFile)
@@ -81,7 +82,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
       service('api', '本地 API', 'Fastify API 正在运行。'),
       service('downloader', '下载服务', '下载任务已接入 yt-dlp worker 执行入口。'),
       service('browser-network', '浏览器网络', '浏览器下载事件、权限审计和工作区写入边界已接入。'),
-      service('file-manager', '文件管理', `虚拟工作区映射到受控本地目录：${state.physicalWorkspaceRoot}`),
+      service('file-manager', '文件管理', `虚拟工作区已映射到受控本地目录：${state.workspaceRoot}`),
       service('logs', '日志服务', '日志、通知已接入 SQLite 状态。'),
       service(
         'gpu',
@@ -165,9 +166,8 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
     return slice
   })
   app.post<{ Reply: OkResult }>('/api/system/shutdown', async (request, reply) => {
-    if (request.headers['x-mediatoolbox-shutdown'] !== 'desktop') {
-      reply.status(403)
-      return { ok: false, message: '缺少本地关机确认标记。' }
+    if (!requireDesktopAuth(request, reply, 'x-mediatoolbox-shutdown')) {
+      return { ok: false, message: '缺少本地关机授权。' }
     }
     reply.send({ ok: true, message: '正在关闭本地服务...' })
     setTimeout(() => {

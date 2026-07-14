@@ -229,9 +229,10 @@ export const psdScanSchema = {
   body: {
     type: 'object',
     additionalProperties: false,
-    required: ['psdPath'],
+    anyOf: [{ required: ['psdPath'] }, { required: ['inputGrantId'] }],
     properties: {
       psdPath: { type: 'string', minLength: 1 },
+      inputGrantId: { type: 'string', minLength: 1 },
     },
   },
 } as const
