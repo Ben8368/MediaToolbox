@@ -14,6 +14,15 @@ export function canTransitionJob(from: JobStatus, to: JobStatus): boolean {
   return allowedTransitions[from].includes(to)
 }
 
+/**
+ * 判断一个状态是否是"本次运行已经结束"，用于清理绑定资源（如 PathGrant）。
+ * 注意：`failed` 状态在状态机里允许转回 `queued`（预留重试路径），
+ * 但当前没有任何代码真正实现这条重试路径，所以在资源清理语境下仍视为终态。
+ */
+export function isTerminalJobStatus(status: JobStatus): boolean {
+  return status === 'succeeded' || status === 'failed' || status === 'canceled'
+}
+
 export function transitionJob(job: JobRecord, nextStatus: JobStatus, now = new Date()): JobRecord {
   if (!canTransitionJob(job.status, nextStatus)) {
     throw new Error(`Invalid job transition: ${job.status} -> ${nextStatus}`)

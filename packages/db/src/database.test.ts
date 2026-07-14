@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { SqliteDatabase } from './database.js'
-import type { JobRecord, AssetRecord, LogEntry } from '@mediatoolbox/contracts'
+import type { JobRecord, AssetRecord, LogEntry, PathGrantRecord } from '@mediatoolbox/contracts'
 
 let db: SqliteDatabase
 
@@ -152,5 +152,54 @@ describe('logs', () => {
     await db.logs.create(makeLog())
     await db.logs.clear()
     await expect(db.logs.list()).resolves.toEqual([])
+  })
+})
+
+const makeGrant = (overrides?: Partial<PathGrantRecord>): PathGrantRecord => ({
+  id: 'grant-1',
+  kind: 'file.read',
+  status: 'active',
+  physicalPath: 'C:/external/input.psd',
+  displayName: 'input.psd',
+  expiresAt: Date.now() + 3_600_000,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  ...overrides,
+})
+
+describe('pathGrants', () => {
+  it('binds a grant to a job only once (first bind wins)', async () => {
+    await db.pathGrants.create(makeGrant())
+    await db.pathGrants.bindJob('grant-1', 'job-a', Date.now())
+    await db.pathGrants.bindJob('grant-1', 'job-b', Date.now())
+
+    const grant = await db.pathGrants.findById('grant-1')
+    expect(grant?.jobId).toBe('job-a')
+  })
+
+  it('finds active grants bound to a given job', async () => {
+    await db.pathGrants.create(makeGrant({ id: 'grant-1' }))
+    await db.pathGrants.create(makeGrant({ id: 'grant-2' }))
+    await db.pathGrants.bindJob('grant-1', 'job-a', Date.now())
+    await db.pathGrants.bindJob('grant-2', 'job-b', Date.now())
+
+    const boundToA = await db.pathGrants.findActiveByJobId('job-a')
+    expect(boundToA.map((g) => g.id)).toEqual(['grant-1'])
+  })
+
+  it('excludes revoked grants from findActiveByJobId', async () => {
+    await db.pathGrants.create(makeGrant())
+    await db.pathGrants.bindJob('grant-1', 'job-a', Date.now())
+    await db.pathGrants.update({ id: 'grant-1', status: 'revoked', updatedAt: Date.now() })
+
+    const boundToA = await db.pathGrants.findActiveByJobId('job-a')
+    expect(boundToA).toEqual([])
+  })
+
+  it('findActiveById treats consumed grants as inactive', async () => {
+    await db.pathGrants.create(makeGrant({ kind: 'file.write' }))
+    await db.pathGrants.update({ id: 'grant-1', status: 'consumed', updatedAt: Date.now() })
+
+    await expect(db.pathGrants.findActiveById('grant-1')).resolves.toBeUndefined()
   })
 })

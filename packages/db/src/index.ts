@@ -27,6 +27,10 @@ export type MediaToolboxDatabase = {
     findById(id: string): Promise<PathGrantRecord | undefined>
     findActiveById(id: string): Promise<PathGrantRecord | undefined>
     update(grant: Pick<PathGrantRecord, 'id' | 'status' | 'updatedAt'>): Promise<void>
+    /** 把 grant 绑定到一个 job；grant 结束生命周期时可据此吊销。已绑定的 grant 不会被覆盖。 */
+    bindJob(id: string, jobId: string, updatedAt: number): Promise<void>
+    /** 找到绑定了该 job 的活跃 grant（用于 job 进入终态时吊销）。 */
+    findActiveByJobId(jobId: string): Promise<PathGrantRecord[]>
     listActive(): Promise<PathGrantRecord[]>
     deleteExpired(): Promise<number>
   }

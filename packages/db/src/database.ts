@@ -262,6 +262,19 @@ export class SqliteDatabase implements MediaToolboxDatabase {
         .run(status, updatedAt, id)
     },
 
+    bindJob: async (id, jobId, updatedAt) => {
+      this.db
+        .prepare(`UPDATE path_grants SET job_id = ?, updated_at = ? WHERE id = ? AND job_id IS NULL`)
+        .run(jobId, updatedAt, id)
+    },
+
+    findActiveByJobId: async (jobId) => {
+      const rows = this.db
+        .prepare(`SELECT * FROM path_grants WHERE job_id = ? AND status = 'active'`)
+        .all(jobId) as DbPathGrantRow[]
+      return rows.map((r) => this.mapDbGrantToRecord(r))
+    },
+
     listActive: async () => {
       const rows = this.db
         .prepare(`SELECT * FROM path_grants WHERE status = 'active' ORDER BY created_at DESC`)
