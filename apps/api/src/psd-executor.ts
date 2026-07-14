@@ -1,0 +1,114 @@
+import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError, type PsdWorkerJob } from '@mediatoolbox/psd-worker'
+import type { JobRecord, WorkOrder } from '@mediatoolbox/contracts'
+
+import { updateJobRecord } from './job-utils.js'
+import type { ApiState } from './state.js'
+import { addLog } from './utils.js'
+import { toGrantMarker } from './workspace-path.js'
+
+const activeAbortControllers = new Map<string, AbortController>()
+
+export function abortPsdJob(jobId: string): void {
+  activeAbortControllers.get(jobId)?.abort()
+  activeAbortControllers.delete(jobId)
+}
+
+export async function executePsdScan(
+  job: JobRecord,
+  psdPath: string,
+  physicalPath: string,
+  workOrderId: string,
+  inputGrantId: string | undefined,
+  state: ApiState,
+): Promise<void> {
+  const controller = new AbortController()
+  activeAbortControllers.set(job.id, controller)
+
+  await updateJobRecord(state, job.id, 'running')
+  addLog(state.db, 'INFO', 'psd', `开始 PSD 扫描：${job.title}`)
+
+  try {
+    const result = await runPsdWorkerJob({ type: 'scan', psdPath: physicalPath })
+    activeAbortControllers.delete(job.id)
+
+    if (result.type === 'scan') {
+      const workOrder: WorkOrder = {
+        id: workOrderId,
+        psdPath: inputGrantId ? toGrantMarker(inputGrantId) : (psdPath ?? physicalPath),
+        psdFileName: physicalPath.split(/[\\/]/).pop() ?? 'unknown.psd',
+        documentWidth: result.documentWidth,
+        documentHeight: result.documentHeight,
+        documentResolution: result.documentResolution,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        records: result.records,
+      }
+      await state.db.workOrders.create(workOrder)
+      addLog(state.db, 'INFO', 'psd', `PSD 扫描完成：${workOrder.psdFileName}，${result.records.length} 个文字图层`)
+      await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+    } else {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: 'Worker returned non-scan result' })
+      addLog(state.db, 'ERROR', 'psd', `PSD 扫描结果类型异常：${job.title}`)
+    }
+  } catch (error) {
+    activeAbortControllers.delete(job.id)
+
+    if (error instanceof PsdWorkerEngineNotConfiguredError) {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: 'Photoshop 命令未配置。' })
+      addLog(state.db, 'ERROR', 'psd', `PSD 扫描失败（引擎未配置）：${job.title}`)
+    } else if (error instanceof PsdWorkerInputError) {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: error instanceof Error ? error.message : String(error) })
+      addLog(state.db, 'ERROR', 'psd', `PSD 扫描失败（输入错误）：${job.title}`)
+    } else {
+      const message = error instanceof Error ? error.message : String(error)
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
+      addLog(state.db, 'ERROR', 'psd', `PSD 扫描出错：${job.title} — ${message}`)
+    }
+  }
+}
+
+export async function executePsdApply(
+  job: JobRecord,
+  workOrder: WorkOrder,
+  physicalPsdPath: string,
+  physicalOutputPath: string,
+  state: ApiState,
+): Promise<void> {
+  const controller = new AbortController()
+  activeAbortControllers.set(job.id, controller)
+
+  await updateJobRecord(state, job.id, 'running')
+  addLog(state.db, 'INFO', 'psd', `开始 PSD 应用：${job.title}`)
+
+  try {
+    const workOrderForApply: WorkOrder = { ...workOrder, psdPath: physicalPsdPath }
+    const result = await runPsdWorkerJob({
+      type: 'apply',
+      workOrder: workOrderForApply,
+      outputPsdPath: physicalOutputPath,
+    })
+    activeAbortControllers.delete(job.id)
+
+    if (result.type === 'apply') {
+      addLog(state.db, 'INFO', 'psd', `PSD 应用完成：${workOrder.id}，${result.appliedCount} 个图层已应用`)
+      await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+    } else {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: 'Worker returned non-apply result' })
+      addLog(state.db, 'ERROR', 'psd', `PSD 应用结果类型异常：${job.title}`)
+    }
+  } catch (error) {
+    activeAbortControllers.delete(job.id)
+
+    if (error instanceof PsdWorkerEngineNotConfiguredError) {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: 'Photoshop 命令未配置。' })
+      addLog(state.db, 'ERROR', 'psd', `PSD 应用失败（引擎未配置）：${job.title}`)
+    } else if (error instanceof PsdWorkerInputError) {
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: error instanceof Error ? error.message : String(error) })
+      addLog(state.db, 'ERROR', 'psd', `PSD 应用失败（输入错误）：${job.title}`)
+    } else {
+      const message = error instanceof Error ? error.message : String(error)
+      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
+      addLog(state.db, 'ERROR', 'psd', `PSD 应用出错：${job.title} — ${message}`)
+    }
+  }
+}

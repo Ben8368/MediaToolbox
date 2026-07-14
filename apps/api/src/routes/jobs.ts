@@ -5,12 +5,14 @@ import type { JobRecord, OkResult } from '@mediatoolbox/contracts'
 import type { ApiState } from '../state.js'
 import { abortDownload } from '../download-executor.js'
 import { abortTranscode } from '../transcode-executor.js'
+import { abortPsdJob } from '../psd-executor.js'
 import { abortWebComposerRender } from '../web-composer-executor.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 
 export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: { kind?: string; title?: string }; Reply: JobRecord }>('/api/jobs', async (request) => {
     const allowedKind = request.body.kind === 'media.transcode'
+      || request.body.kind === 'psd.scan'
       || request.body.kind === 'psd.apply'
       || request.body.kind === 'browser.download'
       || request.body.kind === 'web.render.image'
@@ -64,6 +66,8 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
       }
     } else if (job.kind === 'media.transcode') {
       abortTranscode(job.id)
+    } else if (job.kind === 'psd.scan' || job.kind === 'psd.apply') {
+      abortPsdJob(job.id)
     } else if (job.kind === 'web.render.image' || job.kind === 'web.render.video') {
       abortWebComposerRender(job.id)
     }
