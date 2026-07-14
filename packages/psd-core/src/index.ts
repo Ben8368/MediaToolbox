@@ -27,7 +27,11 @@ export type {
   PsdRoundtripThresholds,
 } from './roundtrip.js'
 
-export type PhotoshopScriptRunner = (script: string) => Promise<string>
+export type PhotoshopScriptRunOptions = {
+  signal?: AbortSignal
+}
+
+export type PhotoshopScriptRunner = (script: string, options?: PhotoshopScriptRunOptions) => Promise<string>
 
 export type PhotoshopCommandRunnerOptions = {
   command: string
@@ -44,7 +48,8 @@ export class PhotoshopPsdEngineError extends Error {
 }
 
 export function createPhotoshopCommandRunner(options: PhotoshopCommandRunnerOptions): PhotoshopScriptRunner {
-  return async (script: string) => {
+  return async (script: string, runOptions: PhotoshopScriptRunOptions = {}) => {
+    runOptions.signal?.throwIfAborted()
     const [{ spawn }, fs, os, path] = await Promise.all([
       import('node:child_process'),
       import('node:fs/promises'),
@@ -113,11 +118,12 @@ function __mtbJS(v){
         // directly with a .jsx arg does not reliably execute the script.
         // Use VBScript COM automation instead: DoJavaScriptFile() blocks until
         // the script finishes, so cscript.exe exits only after PS is done.
-        await runViaWindowsCom(scriptPath, outputPath, tag, options, spawn, fs, os, path)
+        await runViaWindowsCom(scriptPath, outputPath, tag, options, spawn, fs, os, path, runOptions.signal)
       } else {
-        await runViaDirectSpawn(scriptPath, options, spawn)
+        await runViaDirectSpawn(scriptPath, options, spawn, runOptions.signal)
       }
 
+      runOptions.signal?.throwIfAborted()
       const output = await fs.readFile(outputPath, 'utf8').catch(() => '')
       if (!output.includes('__MTB_JSON__')) {
         throw new PhotoshopPsdEngineError(
@@ -147,6 +153,7 @@ async function runViaWindowsCom(
   fs: FsPromises,
   os: OsMod,
   path: PathMod,
+  signal?: AbortSignal,
 ): Promise<void> {
   // Use PowerShell instead of VBScript: PowerShell reads UTF-8 files correctly
   // (FileSystemObject in VBScript defaults to ANSI/GBK on Chinese Windows).
@@ -172,7 +179,11 @@ async function runViaWindowsCom(
       const child = spawn(
         'powershell.exe',
         ['-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ps1Path],
-        { env: { ...process.env, ...options.env }, windowsHide: true },
+        {
+          env: { ...process.env, ...options.env },
+          windowsHide: true,
+          ...(signal ? { signal } : {}),
+        },
       )
       let stderr = ''
       child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString() })
@@ -197,6 +208,7 @@ async function runViaDirectSpawn(
   scriptPath: string,
   options: PhotoshopCommandRunnerOptions,
   spawn: SpawnFn,
+  signal?: AbortSignal,
 ): Promise<void> {
   const args = options.args !== undefined && options.args.length > 0
     ? options.args.map((arg) => (arg === '{script}' ? scriptPath : arg))
@@ -206,6 +218,7 @@ async function runViaDirectSpawn(
       cwd: options.cwd,
       env: { ...process.env, ...options.env },
       windowsHide: true,
+      ...(signal ? { signal } : {}),
     })
     let stderr = ''
     child.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString() })

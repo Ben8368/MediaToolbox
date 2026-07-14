@@ -37,13 +37,24 @@ export class PsdWorkerInputError extends Error {
   }
 }
 
-export async function runPsdWorkerJob(job: PsdWorkerJob, runScript?: PhotoshopScriptRunner): Promise<PsdWorkerResult> {
+export type PsdWorkerRunOptions = {
+  signal?: AbortSignal
+}
+
+export async function runPsdWorkerJob(
+  job: PsdWorkerJob,
+  runScript?: PhotoshopScriptRunner,
+  options: PsdWorkerRunOptions = {},
+): Promise<PsdWorkerResult> {
   const runner = runScript ?? createRunnerFromEnv()
   if (!runner) throw new PsdWorkerEngineNotConfiguredError()
+  const runnerOptions = options.signal ? { signal: options.signal } : undefined
+  options.signal?.throwIfAborted()
 
   if (job.type === 'scan') {
     const script = buildScanScript(job.psdPath)
-    const output = await runner(script)
+    const output = await runner(script, runnerOptions)
+    options.signal?.throwIfAborted()
     const result = parseScanOutput(output)
     if (!result.ok) {
       const msg = result.message ?? 'Scan failed'
@@ -64,7 +75,8 @@ export async function runPsdWorkerJob(job: PsdWorkerJob, runScript?: PhotoshopSc
       outputPath: job.outputPsdPath,
       records: job.workOrder.records,
     })
-    const output = await runner(script)
+    const output = await runner(script, runnerOptions)
+    options.signal?.throwIfAborted()
     const result = parseApplyOutput(output)
     if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Apply failed')
     return {
@@ -78,7 +90,8 @@ export async function runPsdWorkerJob(job: PsdWorkerJob, runScript?: PhotoshopSc
 
   if (job.type === 'list-fonts') {
     const script = buildFontListScript()
-    const output = await runner(script)
+    const output = await runner(script, runnerOptions)
+    options.signal?.throwIfAborted()
     const result = parseFontListOutput(output)
     if (!result.ok) throw new PhotoshopPsdEngineError(result.message ?? 'Font list failed')
     return { type: 'list-fonts', fonts: result.fonts ?? [] }

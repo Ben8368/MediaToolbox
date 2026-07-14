@@ -170,8 +170,8 @@ const makeGrant = (overrides?: Partial<PathGrantRecord>): PathGrantRecord => ({
 describe('pathGrants', () => {
   it('binds a grant to a job only once (first bind wins)', async () => {
     await db.pathGrants.create(makeGrant())
-    await db.pathGrants.bindJob('grant-1', 'job-a', Date.now())
-    await db.pathGrants.bindJob('grant-1', 'job-b', Date.now())
+    await expect(db.pathGrants.bindJob('grant-1', 'job-a', Date.now())).resolves.toBe(true)
+    await expect(db.pathGrants.bindJob('grant-1', 'job-b', Date.now())).resolves.toBe(false)
 
     const grant = await db.pathGrants.findById('grant-1')
     expect(grant?.jobId).toBe('job-a')
@@ -198,8 +198,17 @@ describe('pathGrants', () => {
 
   it('findActiveById treats consumed grants as inactive', async () => {
     await db.pathGrants.create(makeGrant({ kind: 'file.write' }))
-    await db.pathGrants.update({ id: 'grant-1', status: 'consumed', updatedAt: Date.now() })
+    await expect(db.pathGrants.consume('grant-1', Date.now())).resolves.toBe(true)
+    await expect(db.pathGrants.consume('grant-1', Date.now())).resolves.toBe(false)
 
     await expect(db.pathGrants.findActiveById('grant-1')).resolves.toBeUndefined()
+  })
+
+  it('does not bind or consume expired grants', async () => {
+    await db.pathGrants.create(makeGrant({ id: 'read-expired', expiresAt: Date.now() - 1 }))
+    await db.pathGrants.create(makeGrant({ id: 'write-expired', kind: 'file.write', expiresAt: Date.now() - 1 }))
+
+    await expect(db.pathGrants.bindJob('read-expired', 'job-a', Date.now())).resolves.toBe(false)
+    await expect(db.pathGrants.consume('write-expired', Date.now())).resolves.toBe(false)
   })
 })

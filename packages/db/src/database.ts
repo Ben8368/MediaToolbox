@@ -1,16 +1,22 @@
 import Database from 'better-sqlite3'
-import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, TrashEntry, WorkOrder } from '@mediatoolbox/contracts'
+import type { AssetRecord, JobRecord, LogEntry, WorkOrder } from '@mediatoolbox/contracts'
 import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH } from './schema.js'
 import type { MediaToolboxDatabase } from './index.js'
+import { createPathGrantRepository } from './path-grant-repository.js'
+import { createTrashRepository } from './trash-repository.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
   private db: Database.Database
+  readonly pathGrants: MediaToolboxDatabase['pathGrants']
+  readonly trash: MediaToolboxDatabase['trash']
 
   constructor(dbPath: string) {
     this.db = new Database(dbPath)
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.initializeSchema()
+    this.pathGrants = createPathGrantRepository(this.db)
+    this.trash = createTrashRepository(this.db)
   }
 
   private initializeSchema(): void {
@@ -25,24 +31,25 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     if (currentVersion < 2) {
       this.db.exec(SCHEMA_V2_SETTINGS)
       this.recordSchemaVersion(2)
+      currentVersion = 2
     }
 
-      if (currentVersion < 3) {
-        this.db.exec(SCHEMA_V3_PATH_GRANTS)
-        this.recordSchemaVersion(3)
-        currentVersion = 3
-      }
+    if (currentVersion < 3) {
+      this.db.exec(SCHEMA_V3_PATH_GRANTS)
+      this.recordSchemaVersion(3)
+      currentVersion = 3
+    }
 
-      if (currentVersion < 4) {
-        this.db.exec(SCHEMA_V4_WORKORDERS)
-        this.recordSchemaVersion(4)
-        currentVersion = 4
-      }
+    if (currentVersion < 4) {
+      this.db.exec(SCHEMA_V4_WORKORDERS)
+      this.recordSchemaVersion(4)
+      currentVersion = 4
+    }
 
-      if (currentVersion < 5) {
-        this.db.exec(SCHEMA_V5_TRASH)
-        this.recordSchemaVersion(5)
-      }
+    if (currentVersion < 5) {
+      this.db.exec(SCHEMA_V5_TRASH)
+      this.recordSchemaVersion(5)
+    }
   }
 
   private recordSchemaVersion(version: number): void {
@@ -220,83 +227,6 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     },
   }
 
-  readonly pathGrants: MediaToolboxDatabase['pathGrants'] = {
-    create: async (grant) => {
-      this.db
-        .prepare(
-          `INSERT INTO path_grants (id, kind, status, physical_path, display_name, expires_at, created_at, updated_at, job_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          grant.id,
-          grant.kind,
-          grant.status,
-          grant.physicalPath,
-          grant.displayName,
-          grant.expiresAt,
-          grant.createdAt,
-          grant.updatedAt,
-          grant.jobId ?? null,
-        )
-    },
-
-    findById: async (id) => {
-      const row = this.db
-        .prepare('SELECT * FROM path_grants WHERE id = ?')
-        .get(id) as DbPathGrantRow | undefined
-      return row ? this.mapDbGrantToRecord(row) : undefined
-    },
-
-    findActiveById: async (id) => {
-      const row = this.db
-        .prepare('SELECT * FROM path_grants WHERE id = ?')
-        .get(id) as DbPathGrantRow | undefined
-      if (!row) return undefined
-      if (row.status !== 'active') return undefined
-      if (row.expires_at <= Date.now()) {
-        this.db
-          .prepare(`UPDATE path_grants SET status = 'expired', updated_at = ? WHERE id = ?`)
-          .run(Date.now(), id)
-        return undefined
-      }
-      return this.mapDbGrantToRecord(row)
-    },
-
-    update: async ({ id, status, updatedAt }) => {
-      this.db
-        .prepare('UPDATE path_grants SET status = ?, updated_at = ? WHERE id = ?')
-        .run(status, updatedAt, id)
-    },
-
-    bindJob: async (id, jobId, updatedAt) => {
-      this.db
-        .prepare(`UPDATE path_grants SET job_id = ?, updated_at = ? WHERE id = ? AND job_id IS NULL`)
-        .run(jobId, updatedAt, id)
-    },
-
-    findActiveByJobId: async (jobId) => {
-      const rows = this.db
-        .prepare(`SELECT * FROM path_grants WHERE job_id = ? AND status = 'active'`)
-        .all(jobId) as DbPathGrantRow[]
-      return rows.map((r) => this.mapDbGrantToRecord(r))
-    },
-
-    listActive: async () => {
-      const rows = this.db
-        .prepare(`SELECT * FROM path_grants WHERE status = 'active' ORDER BY created_at DESC`)
-        .all() as DbPathGrantRow[]
-      return rows.map((r) => this.mapDbGrantToRecord(r))
-    },
-
-    deleteExpired: async () => {
-      const cutoff = Date.now() - 86_400_000
-      const result = this.db
-        .prepare(`DELETE FROM path_grants WHERE expires_at < ? AND status != 'active'`)
-        .run(cutoff)
-      return result.changes
-    },
-  }
-
   private mapDbLogToEntry(row: DbLogRow): LogEntry {
     return {
       level: row.level,
@@ -357,60 +287,6 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     },
   }
 
-  readonly trash: MediaToolboxDatabase['trash'] = {
-    create: async (workspaceRoot: string, entry: TrashEntry): Promise<void> => {
-      this.db
-        .prepare(
-          `INSERT INTO trash_entries (id, workspace_root, name, original_path, deleted_at, type, size, stored_path)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          entry.id,
-          workspaceRoot,
-          entry.name,
-          entry.original_path,
-          entry.deleted_at,
-          entry.type,
-          entry.size,
-          entry.stored_path,
-        )
-    },
-
-    findById: async (workspaceRoot: string, id: string): Promise<TrashEntry | undefined> => {
-      const row = this.db
-        .prepare('SELECT * FROM trash_entries WHERE workspace_root = ? AND id = ?')
-        .get(workspaceRoot, id) as DbTrashRow | undefined
-      return row ? this.mapDbTrashToRecord(row) : undefined
-    },
-
-    list: async (workspaceRoot: string): Promise<TrashEntry[]> => {
-      const rows = this.db
-        .prepare('SELECT * FROM trash_entries WHERE workspace_root = ? ORDER BY deleted_at DESC')
-        .all(workspaceRoot) as DbTrashRow[]
-      return rows.map((r) => this.mapDbTrashToRecord(r))
-    },
-
-    delete: async (workspaceRoot: string, id: string): Promise<void> => {
-      this.db.prepare('DELETE FROM trash_entries WHERE workspace_root = ? AND id = ?').run(workspaceRoot, id)
-    },
-
-    clear: async (workspaceRoot: string): Promise<void> => {
-      this.db.prepare('DELETE FROM trash_entries WHERE workspace_root = ?').run(workspaceRoot)
-    },
-  }
-
-  private mapDbTrashToRecord(row: DbTrashRow): TrashEntry {
-    return {
-      id: row.id,
-      name: row.name,
-      original_path: row.original_path,
-      deleted_at: row.deleted_at,
-      type: row.type as TrashEntry['type'],
-      size: row.size,
-      stored_path: row.stored_path,
-    }
-  }
-
   private mapDbWorkOrderToRecord(row: DbWorkOrderRow): WorkOrder {
     return {
       id: row.id,
@@ -425,20 +301,6 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     }
   }
 
-  private mapDbGrantToRecord(row: DbPathGrantRow): PathGrantRecord {
-    const record: PathGrantRecord = {
-      id: row.id,
-      kind: row.kind as PathGrantRecord['kind'],
-      status: row.status as PathGrantRecord['status'],
-      physicalPath: row.physical_path,
-      displayName: row.display_name,
-      expiresAt: row.expires_at,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
-    if (row.job_id !== null) record.jobId = row.job_id
-    return record
-  }
 }
 
 type DbJobRow = {
@@ -473,18 +335,6 @@ type DbLogRow = {
   message: string
 }
 
-type DbPathGrantRow = {
-  id: string
-  kind: string
-  status: string
-  physical_path: string
-  display_name: string
-  expires_at: number
-  created_at: number
-  updated_at: number
-  job_id: string | null
-}
-
 type DbWorkOrderRow = {
   id: string
   psd_path: string
@@ -495,15 +345,4 @@ type DbWorkOrderRow = {
   records_json: string
   created_at: number
   updated_at: number
-}
-
-type DbTrashRow = {
-  id: string
-  workspace_root: string
-  name: string
-  original_path: string
-  deleted_at: number
-  type: string
-  size: number
-  stored_path: string
 }
