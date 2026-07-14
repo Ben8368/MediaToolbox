@@ -55,7 +55,7 @@ Workers / adapters 负责：
 | `POST /api/jobs` | 创建统一任务 | SQLite |
 | `GET /api/jobs` | 任务列表 | SQLite |
 | `GET /api/jobs/{id}` | 任务详情 | SQLite |
-| `POST /api/jobs/{id}/cancel` | 取消任务 | 状态联动 |
+| `POST /api/jobs/{id}/cancel` | 取消任务；联动 executor abort，并通过共享终态入口回收绑定授权 | 状态联动 |
 | `GET /api/assets` | 文件库资产索引，汇总浏览器下载、转码、网页合成和 PSD 产出 | SQLite |
 | `GET /api/browser-network/downloads` | 浏览器下载记录列表 | 本地状态 + jobs |
 | `GET /api/browser-network/downloads/{id}` | 浏览器下载记录详情 | 本地状态 + jobs |
@@ -85,6 +85,10 @@ Workers / adapters 负责：
 | `POST /api/web-composer/exports/video` | 提交 `application/octet-stream` WebM 捕获；query 额外携带 fps 与时长。当前仅接受共享 catalog 声明的精确 Slot v2 元组；服务端校验 WebM 签名、30 fps/15 秒/4K 上限，创建 `web.render.video` job，由 worker 编码为 H.264 MP4 并写入 `/Workspace/Exports` | 执行入口 |
 | `POST /api/transcode/jobs` | 创建转码任务，输入可为工作区路径或 `inputGrantId`；输出可为 `/Workspace/Exports` 路径或 `outputGrantId` | 执行入口 |
 | `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
+| `POST /api/psd/scan` | 提交 PSD/PSB 扫描 Job；输入可为工作区路径或 `inputGrantId`，立即返回 `psd.scan` Job 与预分配工单 ID | 执行入口 |
+| `GET /api/psd/workorders/{id}` | 读取异步扫描完成后生成的 PSD 工单 | SQLite |
+| `PUT /api/psd/workorders/{id}` | 更新工单文字图层记录 | SQLite |
+| `POST /api/psd/workorders/{id}/apply` | 提交 `psd.apply` Job；输出可写入工作区 Exports 或使用 one-shot `outputGrantId` | 执行入口 |
 | `POST /api/psd/templates/inspect` | 检查 PSD 模版 slot，需配置 Photoshop 命令 runner；未配置返回 503 可读错误 | 执行入口 |
 | `POST /api/psd/render` | 渲染 PSD 模版；`template.sourcePath` 必须在工作区内，输出由服务端固定生成到 `/Workspace/Exports`，回写虚拟路径。当前仅支持 `text` slot，非文字必填 slot 或非文字 slot 输入会返回 400 可读错误。**客户端传入的 `__` 保留键（`__outputPath`/`__psdPath` 等）一律被剥离**，前端不得依赖它们指定路径 | 执行入口 |
 | `POST /api/psd/manifests/save` | 保存 manifest JSON sidecar 到 PSD 同目录（`<psd>.manifest.json`）；`sourcePath` 必须在工作区内，持久化时规范化为虚拟路径 | 本地映射 |
@@ -114,7 +118,7 @@ Workers / adapters 负责：
   - 转码、网页合成与 PSD：`POST /api/transcode/jobs`、`POST /api/web-composer/exports/png`、`POST /api/web-composer/exports/video`、`POST /api/psd/templates/inspect`
   - 浏览器网络写入端点
 - `POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 兼容 `urls` 数组，按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`。
-- `POST /api/jobs/{id}/cancel` 会联动下载/转码/网页合成 abort controller，并可标记浏览器下载 job 取消状态。
+- `POST /api/jobs/{id}/cancel` 会联动下载、转码、PSD、网页合成 abort controller，标记浏览器下载 job 取消状态，并统一执行 Job 终态资源清理。
 - `GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。
 
 安全边界：
@@ -146,9 +150,10 @@ Workers / adapters 负责：
 
 任务契约扩展：
 
-- 转码、PSD 渲染、文件导入等执行入口可接受 `inputGrantId` 代替工作区内 `sourcePath`。
+- 转码、PSD 扫描、文件导入等执行入口可接受 `inputGrantId` 代替工作区内 `sourcePath`。
 - 工作区外导出可接受 `outputGrantId`；写入 `/Workspace/Exports` 仍只需工作区路径，无需 write grant。
 - worker 仅通过 grant 解析物理路径，不得接受裸盘符或 UNC。
+- read grant 通过条件更新原子绑定首个生命周期宿主，绑定失败即拒绝任务；write grant 通过条件更新原子消费，确保并发请求中最多一个请求领取成功。
 
 与现有端点关系：
 

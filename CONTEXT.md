@@ -3,7 +3,9 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
-> **最近更新：** 2026-07-13
+> **最近更新：** 2026-07-14
+> - PathGrant 生命周期已收口：read/write grant 使用 SQLite 条件更新原子领取，统一 Job 取消入口执行终态授权回收，任务启动前失败不会遗留孤儿读授权或提前消费写授权。
+> - PSD scan/apply 已接入可取消异步 Job：HTTP 立即返回任务，Photoshop adapter 接收 `AbortSignal`，扫描失败/取消不创建工单，前端与右侧任务中心展示持久化错误信息。
 > - Web Composer 三套默认预设的字体、视频和 Lumora 火车窗前景图已本地化到 `apps/web/public/static/web-composer/`，预览页与默认 manifest 不再依赖远程素材加载。
 > - Web Composer 排版控件改为下拉选择字体、设计字号与可读字重，编辑对象大纲和属性区收进同一连续面板；顶部参数与操作控件统一为 30px 高，预设选择器进一步收至 96px。
 > - Web Composer 侧栏已将“画布主题”并入“编辑对象”大纲，与元素共用搜索和选择入口；窗口标题栏预设选择器进一步收窄，视频导出默认值调整为 30 fps / 10 秒。
@@ -30,7 +32,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-13 `npm run verify` 已通过；Web Composer v2 manifest/default/DOM Slot 契约、消息校验、状态更新与 API 版本拒绝路径已纳入测试，浏览器自动化已确认大纲选择、上下文编辑器刷新、选择框与设计坐标回传；预览区直接点选的最终主观手感仍待用户确认。既有 PNG 和 H.264 MP4 本地烟测保持有效；浏览器 app 拖拽、缩放已完成用户主观验收；右侧状态面板 CPU / 内存 / GPU 仪表已验收为真实系统采样（开发模式 Web + 本地 API）。
+- **验证：** 2026-07-14 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功。PathGrant 原子领取、统一取消资源回收、PSD 异步失败/取消与输出授权保护均已纳入回归；预览区直接点选的最终主观手感仍待用户确认。
 
 ## 当前阻断项
 
@@ -59,7 +61,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 1. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
 2. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
-3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/render` 输出正确 PNG，验证 manifest 保存/加载往返。
+3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/scan` → 工单编辑 → `POST /api/psd/workorders/{id}/apply` 的异步执行、取消和外部路径授权闭环。
 4. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 5. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
 6. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
