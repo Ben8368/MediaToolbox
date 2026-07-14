@@ -9,6 +9,7 @@
 > - GitHub CI 已显式准备 `ffmpeg` 并升级官方 checkout/setup-node action，避免 hosted runner 工具缺失和 Node 20 action 警告。
 > - PathGrant 生命周期、统一 Job 取消与 PSD scan/apply 可取消异步执行已收口。
 > - Web Composer Slot v2、统一可调侧栏、Browser Network 多标签事件隔离和 Electron 生产打包基础链路均已接入，剩余事项进入下方验收清单。
+> - 后续 Phase 11 已规划独立的「社交场景生成工作台」：先以微信对话的项目编辑、长图 PNG 与自动播放 MP4 验证闭环，不改变现有网页合成工作台边界。
 
 ## 项目定位
 
@@ -59,6 +60,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 6. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
 7. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
 8. 公开候选版本前确认 8 个默认 MP4 的来源与再分发授权，并补充项目许可证；无法确认授权的素材必须替换。
+9. 内部候选版本稳定后，按 `docs/ROADMAP.md` Phase 11 启动社交场景生成工作台 MVP；首期仅覆盖微信单聊，后续再评估朋友圈与其他平台场景。
 
 ## 常用命令
 
