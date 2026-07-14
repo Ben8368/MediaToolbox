@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { FastifyInstance } from 'fastify'
@@ -41,7 +42,6 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     ensureDefaultPhysicalWorkspace(state.physicalWorkspaceRoot)
     state.folders = createDefaultFolders(workspace)
     state.files = createDefaultFiles(workspace)
-    state.trash = []
     addLog(state.db, 'INFO', 'file-manager', `切换本地工作区：${workspace}`)
     return { ok: true, workspace }
   })
@@ -108,11 +108,11 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
       return { ok: true }
     }
 
-    const id = createTrashId(state)
+    const id = createTrashId()
     const trashPhysicalPath = path.join(state.physicalWorkspaceRoot, TRASH_DIR, id)
     await fs.mkdir(path.dirname(trashPhysicalPath), { recursive: true })
     await fs.rename(physicalPath, trashPhysicalPath)
-    state.trash.unshift({
+    await state.db.trash.create(state.workspaceRoot, {
       id,
       name: entryName(virtualPath),
       original_path: virtualPath,
@@ -124,37 +124,38 @@ export function registerFilebrowserRoutes(app: FastifyInstance, state: ApiState)
     return { ok: true }
   })
 
-  app.get<{ Reply: TrashListResponse }>('/api/filebrowser/trash', async () => ({ ok: true, items: state.trash }))
+  app.get<{ Reply: TrashListResponse }>('/api/filebrowser/trash', async () => ({
+    ok: true,
+    items: await state.db.trash.list(state.workspaceRoot),
+  }))
 
   app.post<{ Params: { id: string }; Reply: OkResult }>('/api/filebrowser/trash/:id/restore', async (request) => {
-    const index = state.trash.findIndex((item) => item.id === request.params.id)
-    if (index < 0) return { ok: false, message: '回收站条目不存在。' }
-    const [item] = state.trash.splice(index, 1)
+    const item = await state.db.trash.findById(state.workspaceRoot, request.params.id)
     if (!item) return { ok: false, message: '回收站条目不存在。' }
 
     const from = path.join(state.physicalWorkspaceRoot, TRASH_DIR, item.id)
     const to = toPhysicalWorkspacePath(state, item.original_path)
     if (await exists(to)) {
-      state.trash.splice(index, 0, item)
       return { ok: false, message: '原路径已存在，无法恢复。' }
     }
     await fs.mkdir(path.dirname(to), { recursive: true })
     await fs.rename(from, to)
+    await state.db.trash.delete(state.workspaceRoot, item.id)
     return { ok: true }
   })
 
   app.delete<{ Params: { id: string }; Reply: OkResult }>('/api/filebrowser/trash/:id', async (request) => {
-    const index = state.trash.findIndex((item) => item.id === request.params.id)
-    const [item] = index >= 0 ? state.trash.splice(index, 1) : []
+    const item = await state.db.trash.findById(state.workspaceRoot, request.params.id)
     if (item) {
       await fs.rm(path.join(state.physicalWorkspaceRoot, TRASH_DIR, item.id), { force: true, recursive: true })
+      await state.db.trash.delete(state.workspaceRoot, item.id)
     }
     return { ok: true }
   })
 
   app.delete<{ Reply: OkResult }>('/api/filebrowser/trash', async () => {
     await fs.rm(path.join(state.physicalWorkspaceRoot, TRASH_DIR), { force: true, recursive: true })
-    state.trash.splice(0, state.trash.length)
+    await state.db.trash.clear(state.workspaceRoot)
     return { ok: true }
   })
 
@@ -234,8 +235,8 @@ function createDefaultFiles(workspaceRoot: string) {
   ]
 }
 
-function createTrashId(state: ApiState) {
-  return `trash-${Date.now()}-${state.trash.length + 1}`
+function createTrashId() {
+  return `trash-${Date.now()}-${randomUUID().slice(0, 8)}`
 }
 
 function extensionFromName(name: string) {

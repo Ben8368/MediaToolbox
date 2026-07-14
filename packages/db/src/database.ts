@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
-import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, WorkOrder } from '@mediatoolbox/contracts'
-import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS } from './schema.js'
+import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, TrashEntry, WorkOrder } from '@mediatoolbox/contracts'
+import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH } from './schema.js'
 import type { MediaToolboxDatabase } from './index.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
@@ -36,6 +36,12 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       if (currentVersion < 4) {
         this.db.exec(SCHEMA_V4_WORKORDERS)
         this.recordSchemaVersion(4)
+        currentVersion = 4
+      }
+
+      if (currentVersion < 5) {
+        this.db.exec(SCHEMA_V5_TRASH)
+        this.recordSchemaVersion(5)
       }
   }
 
@@ -351,6 +357,60 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     },
   }
 
+  readonly trash: MediaToolboxDatabase['trash'] = {
+    create: async (workspaceRoot: string, entry: TrashEntry): Promise<void> => {
+      this.db
+        .prepare(
+          `INSERT INTO trash_entries (id, workspace_root, name, original_path, deleted_at, type, size, stored_path)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          entry.id,
+          workspaceRoot,
+          entry.name,
+          entry.original_path,
+          entry.deleted_at,
+          entry.type,
+          entry.size,
+          entry.stored_path,
+        )
+    },
+
+    findById: async (workspaceRoot: string, id: string): Promise<TrashEntry | undefined> => {
+      const row = this.db
+        .prepare('SELECT * FROM trash_entries WHERE workspace_root = ? AND id = ?')
+        .get(workspaceRoot, id) as DbTrashRow | undefined
+      return row ? this.mapDbTrashToRecord(row) : undefined
+    },
+
+    list: async (workspaceRoot: string): Promise<TrashEntry[]> => {
+      const rows = this.db
+        .prepare('SELECT * FROM trash_entries WHERE workspace_root = ? ORDER BY deleted_at DESC')
+        .all(workspaceRoot) as DbTrashRow[]
+      return rows.map((r) => this.mapDbTrashToRecord(r))
+    },
+
+    delete: async (workspaceRoot: string, id: string): Promise<void> => {
+      this.db.prepare('DELETE FROM trash_entries WHERE workspace_root = ? AND id = ?').run(workspaceRoot, id)
+    },
+
+    clear: async (workspaceRoot: string): Promise<void> => {
+      this.db.prepare('DELETE FROM trash_entries WHERE workspace_root = ?').run(workspaceRoot)
+    },
+  }
+
+  private mapDbTrashToRecord(row: DbTrashRow): TrashEntry {
+    return {
+      id: row.id,
+      name: row.name,
+      original_path: row.original_path,
+      deleted_at: row.deleted_at,
+      type: row.type as TrashEntry['type'],
+      size: row.size,
+      stored_path: row.stored_path,
+    }
+  }
+
   private mapDbWorkOrderToRecord(row: DbWorkOrderRow): WorkOrder {
     return {
       id: row.id,
@@ -435,4 +495,15 @@ type DbWorkOrderRow = {
   records_json: string
   created_at: number
   updated_at: number
+}
+
+type DbTrashRow = {
+  id: string
+  workspace_root: string
+  name: string
+  original_path: string
+  deleted_at: number
+  type: string
+  size: number
+  stored_path: string
 }

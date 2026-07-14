@@ -18,16 +18,6 @@ export type ApiFile = {
   type: 'file'
 }
 
-export type ApiTrashEntry = {
-  id: string
-  name: string
-  original_path: string
-  deleted_at: number
-  type: 'directory' | 'file'
-  size: number
-  stored_path: string
-}
-
 export type ApiState = {
   startedAt: number
   workspaceRoot: string
@@ -43,14 +33,16 @@ export type ApiState = {
   notificationsReadAt: string | null
   folders: Set<string>
   files: ApiFile[]
-  trash: ApiTrashEntry[]
 }
 
-const DB_PATH = process.env['MEDIATOOLBOX_DB_PATH'] ?? (process.env['NODE_ENV'] === 'test' ? ':memory:' : 'mediatoolbox.db')
+function resolveDbPath(): string {
+  return process.env['MEDIATOOLBOX_DB_PATH'] ?? (process.env['NODE_ENV'] === 'test' ? ':memory:' : 'mediatoolbox.db')
+}
+
 let testWorkspaceCounter = 0
 
 export function createApiState(): ApiState {
-  const db = new SqliteDatabase(DB_PATH)
+  const db = new SqliteDatabase(resolveDbPath())
   const physicalWorkspaceBase = resolvePhysicalWorkspaceBase()
   const physicalWorkspaceRoot = physicalWorkspaceForVirtualRoot(physicalWorkspaceBase, WORKSPACE_ROOT)
   ensureDefaultPhysicalWorkspace(physicalWorkspaceRoot)
@@ -81,7 +73,6 @@ export function createApiState(): ApiState {
     files: [
       { name: 'README.txt', path: '/Workspace/README.txt', size: 128, extension: 'txt', type: 'file' },
     ],
-    trash: [],
   }
 }
 

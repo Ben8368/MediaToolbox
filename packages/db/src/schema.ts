@@ -2,7 +2,7 @@
  * Database schema definitions and migrations
  */
 
-export const CURRENT_SCHEMA_VERSION = 4
+export const CURRENT_SCHEMA_VERSION = 5
 
 export const SCHEMA_V1 = `
 -- Schema version tracking
@@ -98,4 +98,19 @@ CREATE TABLE IF NOT EXISTS psd_workorders (
 );
 CREATE INDEX IF NOT EXISTS idx_psd_workorders_psd_path ON psd_workorders(psd_path);
 CREATE INDEX IF NOT EXISTS idx_psd_workorders_updated_at ON psd_workorders(updated_at DESC);
+`
+
+export const SCHEMA_V5_TRASH = `
+CREATE TABLE IF NOT EXISTS trash_entries (
+  id TEXT PRIMARY KEY,
+  workspace_root TEXT NOT NULL,
+  name TEXT NOT NULL,
+  original_path TEXT NOT NULL,
+  deleted_at INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  size INTEGER NOT NULL,
+  stored_path TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_trash_entries_workspace_root ON trash_entries(workspace_root);
+CREATE INDEX IF NOT EXISTS idx_trash_entries_deleted_at ON trash_entries(deleted_at DESC);
 `

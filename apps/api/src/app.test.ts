@@ -475,6 +475,34 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('persists trash entries across API restarts via SQLite (regression for in-memory-only trash)', async () => {
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-trash-persist-'))
+    process.env.MEDIATOOLBOX_WORKSPACE_DIR = workspaceDir
+    const dbPath = path.join(workspaceDir, 'test.db')
+    process.env.MEDIATOOLBOX_DB_PATH = dbPath
+    try {
+      // 第一次启动：创建回收站条目
+      const app1 = await buildApiServer()
+      await app1.inject({ method: 'DELETE', url: '/api/filebrowser/path', payload: { path: '/Workspace/README.txt', to_trash: true } })
+      const trash1 = await app1.inject({ method: 'GET', url: '/api/filebrowser/trash' })
+      expect(trash1.json<{ items: Array<{ name: string }> }>().items).toHaveLength(1)
+      await app1.close()
+
+      // 第二次启动（复用同一个 db 文件）：回收站条目应仍然存在
+      const app2 = await buildApiServer()
+      const trash2 = await app2.inject({ method: 'GET', url: '/api/filebrowser/trash' })
+      expect(trash2.json<{ items: Array<{ name: string }> }>().items).toHaveLength(1)
+      const restored = trash2.json<{ items: Array<{ id: string }> }>().items[0]!.id
+      await app2.inject({ method: 'POST', url: `/api/filebrowser/trash/${restored}/restore` })
+      const root = await app2.inject({ method: 'POST', url: '/api/filebrowser/list', payload: { directory: '/Workspace' } })
+      expect(root.json<{ files: Array<{ name: string }> }>().files.some((f) => f.name === 'README.txt')).toBe(true)
+      await app2.close()
+    } finally {
+      delete process.env.MEDIATOOLBOX_WORKSPACE_DIR
+      delete process.env.MEDIATOOLBOX_DB_PATH
+    }
+  })
+
   it('cancels queued jobs through the unified jobs endpoint', async () => {
     const app = await buildApiServer()
 

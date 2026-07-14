@@ -1,4 +1,4 @@
-import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, WorkOrder } from '@mediatoolbox/contracts'
+import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, TrashEntry, WorkOrder } from '@mediatoolbox/contracts'
 
 export type MediaToolboxDatabase = {
   jobs: {
@@ -40,6 +40,13 @@ export type MediaToolboxDatabase = {
     update(workOrder: WorkOrder): Promise<void>
     list(): Promise<WorkOrder[]>
     delete(id: string): Promise<void>
+  }
+  trash: {
+    create(workspaceRoot: string, entry: TrashEntry): Promise<void>
+    findById(workspaceRoot: string, id: string): Promise<TrashEntry | undefined>
+    list(workspaceRoot: string): Promise<TrashEntry[]>
+    delete(workspaceRoot: string, id: string): Promise<void>
+    clear(workspaceRoot: string): Promise<void>
   }
   close(): void
 }
