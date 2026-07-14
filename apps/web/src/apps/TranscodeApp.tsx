@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 
 import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource, previewTranscodeCommand } from '@/api'
 import type { JobRecord, TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
-import { requestReadGrant } from '@/api/real/pathGrants'
+import { formatEstimatedSize } from '@/apps/transcode/helpers'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
+import { useExternalReadGrant } from '@/hooks/useExternalPathGrant'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 
 const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
@@ -39,7 +40,7 @@ const PRESET_EXTENSIONS: Record<NonNullable<TranscodeJobDraft['preset']>, string
 }
 
 export function TranscodeApp() {
-  const [inputPath, setInputPath] = useState('')
+  const inputGrant = useExternalReadGrant('')
   const [outputPath, setOutputPath] = useState('/Workspace/Exports/output.mp4')
   const [preset, setPreset] = useState<NonNullable<TranscodeJobDraft['preset']>>('mp4-h265-aac')
   const [title, setTitle] = useState('')
@@ -48,8 +49,6 @@ export function TranscodeApp() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
-  const [inputGrantId, setInputGrantId] = useState<string | null>(null)
-  const [inputGrantLabel, setInputGrantLabel] = useState<string>('')
   const [videoCrf, setVideoCrf] = useState(20)
   const [videoEncodePreset, setVideoEncodePreset] = useState<NonNullable<TranscodeJobDraft['videoEncodePreset']>>('slow')
   const [audioBitrate, setAudioBitrate] = useState(192)
@@ -83,12 +82,12 @@ export function TranscodeApp() {
   useVisibilityPolling(refreshJobs, 2000)
 
   useEffect(() => {
-    if (!inputPath.trim() && !inputGrantId) {
+    if (!inputGrant.displayPath.trim() && !inputGrant.grantId) {
       setSourceInfo(null)
       return
     }
 
-    const draft = inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }
+    const draft = inputGrant.grantId ? { inputGrantId: inputGrant.grantId } : { inputPath: inputGrant.displayPath.trim() }
     let cancelled = false
     const timer = setTimeout(async () => {
       setProbing(true)
@@ -111,13 +110,13 @@ export function TranscodeApp() {
       } finally {
         if (!cancelled) setProbing(false)
       }
-    }, inputGrantId ? 0 : 600)
+    }, inputGrant.grantId ? 0 : 600)
 
     return () => {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [inputPath, inputGrantId])
+  }, [inputGrant.displayPath, inputGrant.grantId])
 
   useEffect(() => {
     if (preset === 'copy' || preset === 'remux') {
@@ -128,7 +127,7 @@ export function TranscodeApp() {
     const timer = setTimeout(async () => {
       try {
         const result = await previewTranscodeCommand({
-          ...(inputPath.trim() ? { inputPath: inputPath.trim() } : {}),
+          ...(inputGrant.displayPath.trim() ? { inputPath: inputGrant.displayPath.trim() } : {}),
           ...(outputPath.trim() ? { outputPath: outputPath.trim() } : {}),
           preset,
           videoCrf,
@@ -145,19 +144,11 @@ export function TranscodeApp() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [preset, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, inputPath, outputPath])
-
-  const importExternal = useCallback(async () => {
-    const grant = await requestReadGrant()
-    if (!grant) return
-    setInputGrantId(grant.id)
-    setInputGrantLabel(grant.displayName)
-    setInputPath(`[外部文件] ${grant.displayName}`)
-  }, [])
+  }, [preset, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, inputGrant.displayPath, outputPath])
 
   const submit = useCallback(async (event: FormEvent) => {
     event.preventDefault()
-    if ((!inputPath.trim() && !inputGrantId) || !outputPath.trim() || submitting) return
+    if ((!inputGrant.displayPath.trim() && !inputGrant.grantId) || !outputPath.trim() || submitting) return
     setSubmitting(true)
     setError('')
     setNotice('')
@@ -166,7 +157,7 @@ export function TranscodeApp() {
       const job = await submitTranscodeJob({
         outputPath: outputPath.trim(),
         preset,
-        ...(inputGrantId ? { inputGrantId } : { inputPath: inputPath.trim() }),
+        ...(inputGrant.grantId ? { inputGrantId: inputGrant.grantId } : { inputPath: inputGrant.displayPath.trim() }),
         ...(title.trim() ? { title: title.trim() } : {}),
         ...(isReencode ? { videoCrf, videoEncodePreset, audioBitrate } : {}),
         ...(isReencode && useTargetBitrate ? { targetBitrateKbps } : {}),
@@ -179,7 +170,7 @@ export function TranscodeApp() {
     } finally {
       setSubmitting(false)
     }
-  }, [inputPath, outputPath, preset, refreshJobs, submitting, title, inputGrantId, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, enableVmaf])
+  }, [inputGrant.displayPath, outputPath, preset, refreshJobs, submitting, title, inputGrant.grantId, videoCrf, videoEncodePreset, audioBitrate, useTargetBitrate, targetBitrateKbps, enableVmaf])
 
   const submitBatch = useCallback(async () => {
     const paths = batchPaths.split('\n').map((p) => p.trim()).filter(Boolean)
@@ -238,20 +229,20 @@ export function TranscodeApp() {
             <span>输入路径</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               <input
-                value={inputPath}
+                value={inputGrant.displayPath}
                 onChange={(event) => {
-                  setInputPath(event.target.value)
-                  if (inputGrantId) { setInputGrantId(null); setInputGrantLabel('') }
+                  inputGrant.setDisplayPath(event.target.value)
+                  if (inputGrant.grantId) inputGrant.clearGrant()
                 }}
                 placeholder="/Workspace/Downloads/source.mov"
-                readOnly={!!inputGrantId}
+                readOnly={!!inputGrant.grantId}
                 style={{ flex: 1 }}
               />
-              {inputGrantId && (
+              {inputGrant.grantId && (
                 <button
                   type="button"
                   className="mt-btn"
-                  onClick={() => { setInputGrantId(null); setInputGrantLabel(''); setInputPath('') }}
+                  onClick={inputGrant.clearGrant}
                   title="清除外部文件授权"
                 >
                   ✕
@@ -260,7 +251,7 @@ export function TranscodeApp() {
               <button
                 type="button"
                 className="mt-btn"
-                onClick={() => void importExternal()}
+                onClick={() => void inputGrant.importExternal()}
                 title="从外部导入文件（需要桌面版）"
               >
                 从外部导入
@@ -367,7 +358,7 @@ export function TranscodeApp() {
             <span>任务名</span>
             <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="可选" />
           </label>
-          <button className="mt-btn mt-btn--primary transcode-submit" type="submit" disabled={(!inputPath.trim() && !inputGrantId) || !outputPath.trim() || submitting}>
+          <button className="mt-btn mt-btn--primary transcode-submit" type="submit" disabled={(!inputGrant.displayPath.trim() && !inputGrant.grantId) || !outputPath.trim() || submitting}>
             {submitting ? '提交中' : '开始转码'}
           </button>
         </form>
@@ -443,24 +434,3 @@ function formatProgress(job: JobRecord): string {
   return `${job.progress.current}/${job.progress.total} ${job.progress.unit}`
 }
 
-function estimateVideoBitrateKbps(width: number | undefined, height: number | undefined, crf: number): number {
-  const pixels = (width ?? 1920) * (height ?? 1080)
-  const table4k: Record<number, number> = { 16: 40000, 18: 32000, 20: 24000, 22: 18000, 24: 13000, 26: 9000, 28: 6500 }
-  const table1080p: Record<number, number> = { 16: 12000, 18: 8500, 20: 6000, 22: 4500, 24: 3200, 26: 2200, 28: 1500 }
-  const tableSd: Record<number, number> = { 16: 4000, 18: 2800, 20: 2000, 22: 1400, 24: 1000, 26: 700, 28: 500 }
-  const table = pixels >= 3840 * 2160 * 0.8 ? table4k : pixels >= 1920 * 1080 * 0.8 ? table1080p : tableSd
-  const keys = Object.keys(table).map(Number)
-  let closest = keys[0] ?? 20
-  for (const k of keys) {
-    if (Math.abs(k - crf) < Math.abs(closest - crf)) closest = k
-  }
-  return table[closest] ?? 6000
-}
-
-function formatEstimatedSize(source: TranscodeSourceInfo, crf: number, targetBitrateKbpsValue: number | undefined, audioBitrateKbps: number): string {
-  const videoBitrateKbps = targetBitrateKbpsValue ?? estimateVideoBitrateKbps(source.width, source.height, crf)
-  const totalKbps = videoBitrateKbps + audioBitrateKbps
-  const durationSeconds = source.durationSeconds ?? 0
-  const sizeMb = (totalKbps * durationSeconds) / 8 / 1024
-  return sizeMb >= 1024 ? `约 ${(sizeMb / 1024).toFixed(2)} GB` : `约 ${sizeMb.toFixed(1)} MB`
-}

@@ -1,9 +1,11 @@
 import { useCallback, useState, type FormEvent } from 'react'
 
 import { applyWorkOrder, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
-import { requestReadGrant, requestWriteGrant } from '@/api/real/pathGrants'
+import { useExternalReadGrant, useExternalWriteGrant } from '@/hooks/useExternalPathGrant'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import type { WorkOrder, TextLayerRecord, TranslationLanguage } from '@mediatoolbox/contracts'
+
+const DEFAULT_PSD_PATH = '/Workspace/PSD/document.psd'
 
 type ActiveTab = 'scan' | 'workorder' | 'apply' | 'translate'
 
@@ -22,8 +24,7 @@ export function PsdApp() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('scan')
 
   // 扫描状态
-  const [psdPath, setPsdPath] = useState('/Workspace/PSD/document.psd')
-  const [inputGrantId, setInputGrantId] = useState<string | null>(null)
+  const inputGrant = useExternalReadGrant(DEFAULT_PSD_PATH)
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
 
@@ -34,26 +35,13 @@ export function PsdApp() {
   const [saveMessage, setSaveMessage] = useState<{ success: boolean; text: string } | null>(null)
 
   // 应用状态
-  const [outputGrantId, setOutputGrantId] = useState<string | null>(null)
+  const outputGrant = useExternalWriteGrant()
   const [applying, setApplying] = useState(false)
   const [applyResult, setApplyResult] = useState<{ success: boolean; message: string; outputPath?: string } | null>(null)
 
   // AI 翻译状态
   const [targetLanguage, setTargetLanguage] = useState<TranslationLanguage>('ja')
   const [customPrompt, setCustomPrompt] = useState('')
-
-  const importExternal = useCallback(async () => {
-    const grant = await requestReadGrant()
-    if (!grant) return
-    setInputGrantId(grant.id)
-    setPsdPath(`[外部文件] ${grant.displayName}`)
-  }, [])
-
-  const selectOutputPath = useCallback(async () => {
-    const grant = await requestWriteGrant()
-    if (!grant) return
-    setOutputGrantId(grant.id)
-  }, [])
 
   const scan = useCallback(async (event: FormEvent) => {
     event.preventDefault()
@@ -65,7 +53,7 @@ export function PsdApp() {
     setSaveMessage(null)
     setApplyResult(null)
     try {
-      const scanResult = await scanPsd(psdPath.trim(), inputGrantId ?? undefined)
+      const scanResult = await scanPsd(inputGrant.displayPath.trim(), inputGrant.grantId ?? undefined)
       if (!scanResult.ok || !scanResult.workOrderId) {
         throw new Error(scanResult.message || 'PSD 扫描失败')
       }
@@ -80,7 +68,7 @@ export function PsdApp() {
     } finally {
       setScanning(false)
     }
-  }, [scanning, psdPath, inputGrantId])
+  }, [scanning, inputGrant.displayPath, inputGrant.grantId])
 
   const updateRecord = useCallback((index: number, field: keyof TextLayerRecord, value: unknown) => {
     if (!workOrder) return
@@ -118,7 +106,7 @@ export function PsdApp() {
     setApplying(true)
     setApplyResult(null)
     try {
-      const result = await applyWorkOrder(workOrder.id, undefined, outputGrantId ?? undefined)
+      const result = await applyWorkOrder(workOrder.id, undefined, outputGrant.grantId ?? undefined)
       if (result.ok) {
         setApplyResult({
           success: true,
@@ -133,7 +121,7 @@ export function PsdApp() {
     } finally {
       setApplying(false)
     }
-  }, [workOrder, applying, workOrderDirty, outputGrantId])
+  }, [workOrder, applying, workOrderDirty, outputGrant.grantId])
 
   const enabledCount = workOrder?.records.filter((r) => r.enabled).length ?? 0
   const changedCount = workOrder?.records.filter((r) => r.enabled && (r.newText !== undefined || r.newFontFamily !== undefined)).length ?? 0
@@ -189,19 +177,19 @@ export function PsdApp() {
             <span>PSD / PSB 路径</span>
             <div style={{ display: 'flex', gap: '4px' }}>
               <input
-                value={psdPath}
-                onChange={(e) => { setPsdPath(e.target.value); if (inputGrantId) setInputGrantId(null) }}
+                value={inputGrant.displayPath}
+                onChange={(e) => { inputGrant.setDisplayPath(e.target.value); if (inputGrant.grantId) inputGrant.clearGrant() }}
                 placeholder="/Workspace/PSD/document.psd"
-                readOnly={!!inputGrantId}
+                readOnly={!!inputGrant.grantId}
                 style={{ flex: 1 }}
               />
-              {inputGrantId && (
-                <button type="button" className="mt-btn" onClick={() => { setInputGrantId(null); setPsdPath('/Workspace/PSD/document.psd') }} title="清除授权">✕</button>
+              {inputGrant.grantId && (
+                <button type="button" className="mt-btn" onClick={inputGrant.clearGrant} title="清除授权">✕</button>
               )}
-              <button type="button" className="mt-btn" onClick={importExternal} title="从外部导入（需要桌面版）">从外部导入</button>
+              <button type="button" className="mt-btn" onClick={inputGrant.importExternal} title="从外部导入（需要桌面版）">从外部导入</button>
             </div>
           </label>
-          <button className="mt-btn mt-btn--primary" type="submit" disabled={!psdPath.trim() || scanning}>
+          <button className="mt-btn mt-btn--primary" type="submit" disabled={!inputGrant.displayPath.trim() || scanning}>
             {scanning ? '扫描中...' : '扫描文件'}
           </button>
         </form>
@@ -321,15 +309,15 @@ export function PsdApp() {
               <div className="psd-apply-output">
                 <span>输出路径</span>
                 <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                  {outputGrantId ? (
+                  {outputGrant.grantId ? (
                     <>
                       <span className="psd-grant-label">已授权外部路径</span>
-                      <button type="button" className="mt-btn" onClick={() => setOutputGrantId(null)} title="取消">✕</button>
+                      <button type="button" className="mt-btn" onClick={outputGrant.clearGrant} title="取消">✕</button>
                     </>
                   ) : (
                     <span className="psd-grant-label psd-grant-label--none">工作区 Exports 目录（自动生成文件名）</span>
                   )}
-                  <button type="button" className="mt-btn" onClick={selectOutputPath}>选择外部路径</button>
+                  <button type="button" className="mt-btn" onClick={() => void outputGrant.selectOutputPath()}>选择外部路径</button>
                 </div>
               </div>
               <button
