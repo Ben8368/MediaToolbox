@@ -4,6 +4,7 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-14
+> - Web Composer 字体已提升到 `/static/fonts/` 供主页面与预览运行时共享；8 个默认 MP4 已迁移到 `web-composer-assets-v1` 专用 GitHub Release Asset，固定归档与逐文件 SHA-256，远端全新安装通过，源码仓库不再跟踪视频。
 > - PathGrant 生命周期已收口：read/write grant 使用 SQLite 条件更新原子领取，统一 Job 取消入口执行终态授权回收，任务启动前失败不会遗留孤儿读授权或提前消费写授权。
 > - PSD scan/apply 已接入可取消异步 Job：HTTP 立即返回任务，Photoshop adapter 接收 `AbortSignal`，扫描失败/取消不创建工单，前端与右侧任务中心展示持久化错误信息。
 > - Web Composer 三套默认预设的字体、视频和 Lumora 火车窗前景图已本地化到 `apps/web/public/static/web-composer/`，预览页与默认 manifest 不再依赖远程素材加载。
@@ -32,7 +33,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-14 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功。PathGrant 原子领取、统一取消资源回收、PSD 异步失败/取消与输出授权保护均已纳入回归；预览区直接点选的最终主观手感仍待用户确认。
+- **验证：** 2026-07-14 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功。Web Composer 素材包本地打包/安装/逐文件校验、共享字体与视频 HTTP 200、renderer 视频入包 preflight、远端 Release 全新下载与 SHA-256 校验均已通过；预览区直接点选的最终主观手感仍待验收。
 
 ## 当前阻断项
 
@@ -46,7 +47,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
 - Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
-- Web Composer 默认预设素材已本地化；4K/15 秒长时视频压力验收待补齐。
+- Web Composer 默认视频的 Release Asset 分发与远端下载验收已通过；4K/15 秒长时视频压力验收仍待补齐。
 - Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
 
 **已迁移至技术债追踪：**
@@ -75,6 +76,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 | `npm run dev:web` | 单独启动前端开发服务器 |
 | `npm run dev:api` | 单独启动本地 API 服务 |
 | `npm run dev:desktop` | 启动桌面壳开发入口 |
+| `npm run assets:web-composer:verify` | 校验 Web Composer 默认视频素材包 |
 | `npm run typecheck` | workspace 类型检查 |
 | `npm run test` | workspace 测试 |
 | `npm run verify` | 客观验证 |

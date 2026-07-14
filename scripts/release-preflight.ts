@@ -69,6 +69,8 @@ const checks: ReleaseCheck[] = [
   checkExists('Desktop main process build', 'apps/desktop/dist/main.js'),
   checkExists('Desktop preload source', 'apps/desktop/src/preload.cjs'),
   checkExists('Shared app icon source', 'apps/web/public/static/app/icons/default/setting.png'),
+  checkExists('Web Composer asset manifest', 'assets/web-composer/manifest.json'),
+  checkExists('Web Composer packaged video', 'apps/web/dist/static/web-composer/videos/vaultshield-hero.mp4'),
   hasAnyEnv(['CSC_LINK', 'CSC_NAME'])
     ? { level: 'ok', label: 'Code signing identity', detail: 'CSC_LINK/CSC_NAME detected.' }
     : { level: 'warn', label: 'Code signing identity', detail: 'Set CSC_LINK or CSC_NAME before signed release builds.' },

@@ -7,9 +7,11 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "npm --prefix ../.. run assets:web-composer:ensure",
     "dev": "vite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "prebuild": "npm --prefix ../.. run assets:web-composer:ensure",
     "build": "tsc && vite build",
     "verify": "npm run test && npm run typecheck && npm run build",
     "preview": "vite preview"

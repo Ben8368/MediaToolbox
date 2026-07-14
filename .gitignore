@@ -9,6 +9,7 @@ node_modules/
 dist/
 .vite/
 coverage/
+.artifacts/
 apps/*/node_modules/
 apps/*/dist/
 apps/*/.vite/
@@ -17,6 +18,9 @@ packages/*/node_modules/
 packages/*/dist/
 workers/*/node_modules/
 workers/*/dist/
+
+# Web Composer 视频由版本化 GitHub Release Asset 安装，不进入源码仓库。
+apps/web/public/static/web-composer/videos/
 
 .env
 .env.*

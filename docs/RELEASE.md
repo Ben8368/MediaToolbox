@@ -14,10 +14,20 @@
 1. 确认 [CONTEXT.md](../CONTEXT.md) 的当前阶段、阻断项、黄灯和下一步真实。
 2. 确认 [ROADMAP.md](ROADMAP.md) 与当前状态一致。
 3. 运行 `npm run verify`。
-4. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、图标来源和发布签名/公证环境提示。
-5. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
-6. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
-7. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
+4. 运行 `npm run assets:web-composer:verify`，确认固定版本的默认视频完整且 SHA-256 匹配。
+5. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、Web Composer 视频、图标来源和发布签名/公证环境提示。
+6. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
+7. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
+8. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
+
+## Web Composer 素材包
+
+- 源码仓库只保存 `assets/web-composer/manifest.json` 和安装工具，不保存默认 MP4。
+- 素材 Release 使用独立 tag，不标记为产品最新版本；归档名称、下载地址和 SHA-256 固定在清单中。
+- `npm run dev` 与 `npm run build` 会先执行素材 `ensure`；已有文件逐项校验通过时不访问网络。
+- 更新素材时必须提升素材包版本和 tag，不能覆盖已发布归档后继续复用旧 SHA-256。
+- 发布 Electron 候选包前，必须确认 `apps/web/dist/static/web-composer/videos/` 已进入 renderer 资源。
+- 完整操作与本地覆盖参数见 [素材包说明](../assets/web-composer/README.md)。
 
 ## 候选构建
 
@@ -31,6 +41,7 @@
 当前 Electron 发布预检覆盖：
 
 - `apps/web/dist` 是否打入 `renderer` 资源目录。
+- 固定版本的 Web Composer 素材清单和默认视频是否进入 renderer 构建目录。
 - `apps/api/dist/server.cjs` 是否打入 `api` 资源目录。
 - 桌面主进程构建、preload 文件和共享 app 图标来源是否存在。
 - macOS / Windows / Linux 目标和 artifact 命名是否已配置。

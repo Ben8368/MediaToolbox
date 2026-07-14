@@ -35,6 +35,9 @@ npm install
 npm run dev
 ```
 
+首次启动会校验 Web Composer 默认视频；源码归档未携带视频时，会从固定版本的
+GitHub Release Asset 下载约 118 MiB 的素材包并校验 SHA-256。已安装且校验通过后不会重复下载。
+
 常用命令：
 
 ```bash
@@ -44,6 +47,7 @@ npm run dev:desktop
 npm run typecheck
 npm run test
 npm run verify
+npm run assets:web-composer:verify
 ```
 
 Windows PowerShell 读取中文文档或运行可能输出中文的命令前，建议先执行：

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "1.0.0",
+  "installPath": "apps/web/public/static/web-composer/videos",
+  "release": {
+    "repository": "Ben8368/MediaToolbox",
+    "tag": "web-composer-assets-v1",
+    "assetName": "web-composer-assets-v1.tar.gz",
+    "downloadUrl": "https://github.com/Ben8368/MediaToolbox/releases/download/web-composer-assets-v1/web-composer-assets-v1.tar.gz",
+    "sha256": "f3a62be989eafdf1b3d2bbadc22ba61e068b60c37c0c8fcfe901f566578f2789"
+  },
+  "files": [
+    {
+      "path": "lumora-deep-woods.mp4",
+      "size": 23545875,
+      "sha256": "3c382bfa55ac95ecb879daad1d5ed7dd1a92af9c0c4b8eedd2f83ad2d345d9b8"
+    },
+    {
+      "path": "lumora-golden-hour.mp4",
+      "size": 14397127,
+      "sha256": "25f8d1c02b4e9ef91858255163e76a82a825901b5a8abf29b3843ac35322ea2d"
+    },
+    {
+      "path": "lumora-quiet-dawn.mp4",
+      "size": 20345671,
+      "sha256": "eaeb0307fb96d3550de4f0fde4ec5600d2766e5c5efb92b9721660fc30630ed4"
+    },
+    {
+      "path": "lumora-still-water.mp4",
+      "size": 22340534,
+      "sha256": "0fc5e45d6f32eb56035ed3510516ac45f3a9c97a06a584c36af1b33c3b450356"
+    },
+    {
+      "path": "vaultshield-hero.mp4",
+      "size": 3828471,
+      "sha256": "c104c22dbc475487128e642ea5c651bcf88578810ae5142e570626c395cd4fe3"
+    },
+    {
+      "path": "viktor-gridwave.mp4",
+      "size": 12348531,
+      "sha256": "fd829cf002e7e372d5f5fb3d1964ffefc7a81feb5b6c4d63d7626322b8824ca7"
+    },
+    {
+      "path": "viktor-light-tunnel.mp4",
+      "size": 7784070,
+      "sha256": "d780db2dbaf518adb9b22e3d345298ba6bb737c103651fc470c08e325b5520f6"
+    },
+    {
+      "path": "viktor-water-wave.mp4",
+      "size": 18740585,
+      "sha256": "589349eac3086bb418bf65dc72676ecc613c7853254c96bc0a473e44083f2908"
+    }
+  ]
+}
