@@ -2,42 +2,11 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 
 import { cancelJob, listJobs, submitTranscodeJob, probeTranscodeSource, previewTranscodeCommand } from '@/api'
 import type { JobRecord, TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
-import { formatEstimatedSize } from '@/apps/transcode/helpers'
+import { formatEstimatedSize, TRANSCODE_PRESETS, TRANSCODE_PRESET_EXTENSIONS } from '@/apps/transcode/helpers'
+import { TranscodeJobSections } from '@/apps/transcode/TranscodeJobSections'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import { useExternalReadGrant } from '@/hooks/useExternalPathGrant'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
-
-const PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
-  { value: 'mp4-h265-aac', label: 'MP4 H.265 / AAC（推荐）' },
-  { value: 'mp4-h264-aac', label: 'MP4 H.264 / AAC' },
-  { value: 'mkv-h265-aac', label: 'MKV H.265 / AAC（保留字幕）' },
-  { value: 'remux', label: 'Remux（仅转封装）' },
-  { value: 'audio-aac', label: 'AAC 音频' },
-  { value: 'audio-mp3', label: 'MP3 音频' },
-  { value: 'copy', label: '流复制' },
-]
-
-const STATUS_LABELS: Record<JobRecord['status'], string> = {
-  queued: '排队',
-  running: '运行中',
-  paused: '暂停',
-  succeeded: '完成',
-  failed: '失败',
-  retrying: '重试',
-  canceled: '取消',
-}
-
-const TERMINAL_STATUSES = new Set<JobRecord['status']>(['succeeded', 'failed', 'canceled'])
-
-const PRESET_EXTENSIONS: Record<NonNullable<TranscodeJobDraft['preset']>, string> = {
-  'mp4-h265-aac': 'mp4',
-  'mp4-h264-aac': 'mp4',
-  'mkv-h265-aac': 'mkv',
-  'remux': 'mp4',
-  'audio-aac': 'm4a',
-  'audio-mp3': 'mp3',
-  'copy': 'mp4',
-}
 
 export function TranscodeApp() {
   const inputGrant = useExternalReadGrant('')
@@ -183,7 +152,7 @@ export function TranscodeApp() {
       try {
         const fileName = path.split('/').pop() ?? 'output'
         const baseName = fileName.replace(/\.[^.]+$/, '')
-        const ext = PRESET_EXTENSIONS[preset]
+        const ext = TRANSCODE_PRESET_EXTENSIONS[preset]
         const outPath = `/Workspace/Exports/${baseName}.${ext}`
         await submitTranscodeJob({
           inputPath: path,
@@ -286,7 +255,7 @@ export function TranscodeApp() {
           <label className="mt-field">
             <span>预设</span>
             <select value={preset} onChange={(event) => setPreset(event.target.value as NonNullable<TranscodeJobDraft['preset']>)}>
-              {PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {TRANSCODE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
           {preset !== 'copy' && preset !== 'remux' && (
@@ -369,68 +338,18 @@ export function TranscodeApp() {
           </div>
         )}
 
-        <section className="transcode-jobs">
-          <div className="transcode-jobs__header">
-            <strong>转码队列</strong>
-            <button className="mt-btn" type="button" onClick={() => void refreshJobs()} disabled={loading}>刷新</button>
-          </div>
-
-          <div className="transcode-table">
-            <div className="transcode-row transcode-row--head">
-              <span>任务</span>
-              <span>状态</span>
-              <span>进度</span>
-              <span>操作</span>
-            </div>
-            {loading && <div className="transcode-empty">正在加载任务</div>}
-            {!loading && transcodeJobs.length === 0 && <div className="transcode-empty">暂无转码任务</div>}
-            {transcodeJobs.map((job) => (
-              <div className="transcode-row" key={job.id}>
-                <span>
-                  <strong>{job.title}</strong>
-                  {job.errorMessage && <small>{job.errorMessage}</small>}
-                </span>
-                <span><i className={`transcode-status transcode-status--${job.status}`} />{STATUS_LABELS[job.status]}</span>
-                <span>{formatProgress(job)}</span>
-                <span>
-                  <button className="mt-btn" type="button" disabled={TERMINAL_STATUSES.has(job.status)} onClick={() => void cancel(job.id)}>
-                    取消
-                  </button>
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="transcode-batch">
-          <div className="transcode-jobs__header">
-            <strong>批量转码（使用当前预设与质量设置）</strong>
-          </div>
-          <label className="mt-field">
-            <span>批量输入路径（每行一个工作区路径）</span>
-            <textarea
-              value={batchPaths}
-              onChange={(e) => setBatchPaths(e.target.value)}
-              placeholder={'/Workspace/Downloads/a.mov\n/Workspace/Downloads/b.mov'}
-              rows={4}
-            />
-          </label>
-          <button className="mt-btn mt-btn--primary" type="button" onClick={() => void submitBatch()} disabled={!batchPaths.trim() || batchSubmitting}>
-            {batchSubmitting ? '提交中' : '批量提交'}
-          </button>
-          {batchResult && <div className="transcode-message">{batchResult}</div>}
-        </section>
+        <TranscodeJobSections
+          jobs={transcodeJobs}
+          loading={loading}
+          onRefresh={() => void refreshJobs()}
+          onCancel={(jobId) => void cancel(jobId)}
+          batchPaths={batchPaths}
+          onBatchPathsChange={setBatchPaths}
+          batchSubmitting={batchSubmitting}
+          batchResult={batchResult}
+          onSubmitBatch={() => void submitBatch()}
+        />
       </main>
     </div>
   )
 }
-
-function formatProgress(job: JobRecord): string {
-  if (!job.progress) return '-'
-  const value = job.progress.total > 0
-    ? Math.round((job.progress.current / job.progress.total) * 100)
-    : job.progress.current
-  if (job.progress.unit === 'percent') return `${Math.min(100, Math.max(0, value))}%`
-  return `${job.progress.current}/${job.progress.total} ${job.progress.unit}`
-}
-

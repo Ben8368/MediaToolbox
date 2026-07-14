@@ -1,29 +1,17 @@
 import { useCallback, useState, type FormEvent } from 'react'
 
-import { applyWorkOrder, cancelJob, getJob, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
+import { applyWorkOrder, getJob, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
 import { useExternalReadGrant, useExternalWriteGrant } from '@/hooks/useExternalPathGrant'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import type { JobRecord, WorkOrder, TextLayerRecord, TranslationLanguage } from '@mediatoolbox/contracts'
+import { PsdPanels, type PsdActiveTab } from './psd/PsdPanels'
 
 const TERMINAL_STATUSES = new Set<JobRecord['status']>(['succeeded', 'failed', 'canceled'])
 
 const DEFAULT_PSD_PATH = '/Workspace/PSD/document.psd'
 
-type ActiveTab = 'scan' | 'workorder' | 'apply' | 'translate'
-
-const TRANSLATION_LANGUAGES: Array<{ value: TranslationLanguage; label: string }> = [
-  { value: 'ja', label: '日语 (Japanese)' },
-  { value: 'zh', label: '中文 (Chinese)' },
-  { value: 'pt', label: '葡萄牙语 (Portuguese)' },
-  { value: 'en', label: '英语 (English)' },
-  { value: 'ko', label: '韩语 (Korean)' },
-  { value: 'fr', label: '法语 (French)' },
-  { value: 'de', label: '德语 (German)' },
-  { value: 'es', label: '西班牙语 (Spanish)' },
-]
-
 export function PsdApp() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('scan')
+  const [activeTab, setActiveTab] = useState<PsdActiveTab>('scan')
 
   // 扫描状态
   const inputGrant = useExternalReadGrant(DEFAULT_PSD_PATH)
@@ -60,9 +48,9 @@ export function PsdApp() {
         throw new Error(scanResult.message || 'PSD 扫描失败')
       }
       // 扫描已转为异步 Job；轮询等待 Photoshop 完成后查询工单。
-      const status = await pollUntilTerminal(scanResult.job.id)
-      if (status !== 'succeeded') {
-        throw new Error('PSD 扫描未完成，请查看任务中心了解详情。')
+      const completedJob = await pollUntilTerminal(scanResult.job.id)
+      if (completedJob.status !== 'succeeded') {
+        throw new Error(completedJob.errorMessage || `PSD 扫描未完成（状态：${completedJob.status}）。`)
       }
       const woResult = await getWorkOrder(scanResult.workOrderId)
       if (!woResult.ok || !woResult.workOrder) {
@@ -118,14 +106,17 @@ export function PsdApp() {
         throw new Error(result.message || '应用失败')
       }
       // 应用已转为异步 Job；轮询等待 Photoshop 完成后展示结果。
-      const status = await pollUntilTerminal(result.job.id)
-      if (status === 'succeeded') {
+      const completedJob = await pollUntilTerminal(result.job.id)
+      if (completedJob.status === 'succeeded') {
         setApplyResult({
           success: true,
           message: '工单应用完成。',
         })
       } else {
-        setApplyResult({ success: false, message: `工单应用未完成（状态：${status}），请查看任务中心了解详情。` })
+        setApplyResult({
+          success: false,
+          message: completedJob.errorMessage || `工单应用未完成（状态：${completedJob.status}）。`,
+        })
       }
     } catch (err: unknown) {
       setApplyResult({ success: false, message: err instanceof Error ? err.message : '应用失败' })
@@ -207,199 +198,37 @@ export function PsdApp() {
 
         {scanError && <div className="psd-message psd-message--error">{scanError}</div>}
 
-        {/* Tab: 扫描结果 */}
-        {activeTab === 'scan' && (
-          <section className="psd-result">
-            {!workOrder && !scanError && (
-              <div className="psd-empty">选择 PSD/PSB 文件后点击「扫描文件」，工单将自动创建。</div>
-            )}
-            {workOrder && (
-              <>
-                <div className="psd-summary">
-                  <strong>{workOrder.psdFileName}</strong>
-                  <span>{workOrder.documentWidth}×{workOrder.documentHeight}px · {workOrder.documentResolution}dpi · {workOrder.records.length} 个文字图层</span>
-                </div>
-                <div className="psd-slot-table">
-                  <div className="psd-slot-row psd-slot-row--head">
-                    <span>图层路径</span>
-                    <span>原始文案</span>
-                    <span>字体</span>
-                    <span>大小 / 行高</span>
-                  </div>
-                  {workOrder.records.map((rec) => (
-                    <div className="psd-slot-row" key={rec.id}>
-                      <span className="psd-layer-path">{rec.soChain.length > 0 ? `[SO] ` : ''}{rec.layerPath}</span>
-                      <span className="psd-text-preview">{rec.originalText}</span>
-                      <span>{rec.originalFontFamily} {rec.originalFontStyle}</span>
-                      <span>{rec.originalSizePt}pt{rec.originalLeadingPt ? ` / ${rec.originalLeadingPt}pt` : ''}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        )}
-
-        {/* Tab: 工单编辑 */}
-        {activeTab === 'workorder' && workOrder && (
-          <section className="psd-result psd-editor">
-            <div className="psd-editor-header">
-              <strong>工单编辑 — {workOrder.psdFileName}</strong>
-              <button
-                className="mt-btn mt-btn--primary"
-                type="button"
-                disabled={!workOrderDirty || saving}
-                onClick={saveWorkOrder}
-              >
-                {saving ? '保存中...' : '保存工单'}
-              </button>
-            </div>
-            {saveMessage && (
-              <div className={`psd-message psd-message--${saveMessage.success ? 'ok' : 'error'}`}>{saveMessage.text}</div>
-            )}
-            <div className="psd-wo-table">
-              <div className="psd-wo-row psd-wo-row--head">
-                <span>启用</span>
-                <span>图层</span>
-                <span>原始文案</span>
-                <span>新文案</span>
-                <span>新字族</span>
-                <span>新字重</span>
-              </div>
-              {workOrder.records.map((rec, index) => (
-                <div className="psd-wo-row" key={rec.id}>
-                  <input
-                    type="checkbox"
-                    checked={rec.enabled}
-                    onChange={(e) => updateRecord(index, 'enabled', e.target.checked)}
-                    title="启用此图层"
-                  />
-                  <span className="psd-layer-path" title={rec.layerPath}>
-                    {rec.soChain.length > 0 && <span className="psd-so-badge">SO</span>}
-                    {rec.layerPath.split('/').pop()}
-                  </span>
-                  <span className="psd-text-preview" title={rec.originalText}>{rec.originalText}</span>
-                  <input
-                    className="psd-wo-input"
-                    value={rec.newText ?? ''}
-                    onChange={(e) => updateRecord(index, 'newText', e.target.value || undefined)}
-                    placeholder={rec.originalText}
-                    disabled={!rec.enabled}
-                  />
-                  <input
-                    className="psd-wo-input"
-                    value={rec.newFontFamily ?? ''}
-                    onChange={(e) => updateRecord(index, 'newFontFamily', e.target.value || undefined)}
-                    placeholder={rec.originalFontFamily}
-                    disabled={!rec.enabled}
-                  />
-                  <input
-                    className="psd-wo-input"
-                    value={rec.newFontStyle ?? ''}
-                    onChange={(e) => updateRecord(index, 'newFontStyle', e.target.value || undefined)}
-                    placeholder={rec.originalFontStyle || 'Regular'}
-                    disabled={!rec.enabled}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Tab: 应用输出 */}
-        {activeTab === 'apply' && workOrder && (
-          <section className="psd-result">
-            <form className="psd-apply-form" onSubmit={apply}>
-              <div className="psd-apply-info">
-                <div><span>源文件</span><strong>{workOrder.psdFileName}</strong></div>
-                <div><span>待改图层</span><strong>{changedCount} / {workOrder.records.length}</strong></div>
-              </div>
-              {workOrderDirty && (
-                <div className="psd-message psd-message--error">工单有未保存的修改，请先在「工单编辑」保存再应用。</div>
-              )}
-              <div className="psd-apply-output">
-                <span>输出路径</span>
-                <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                  {outputGrant.grantId ? (
-                    <>
-                      <span className="psd-grant-label">已授权外部路径</span>
-                      <button type="button" className="mt-btn" onClick={outputGrant.clearGrant} title="取消">✕</button>
-                    </>
-                  ) : (
-                    <span className="psd-grant-label psd-grant-label--none">工作区 Exports 目录（自动生成文件名）</span>
-                  )}
-                  <button type="button" className="mt-btn" onClick={() => void outputGrant.selectOutputPath()}>选择外部路径</button>
-                </div>
-              </div>
-              <button
-                className="mt-btn mt-btn--primary"
-                type="submit"
-                disabled={applying || workOrderDirty || changedCount === 0}
-              >
-                {applying ? '应用中（自适应算法运行中）...' : `应用工单（${changedCount} 个图层）`}
-              </button>
-            </form>
-            {applyResult && (
-              <div className={`psd-message psd-message--${applyResult.success ? 'ok' : 'error'}`}>
-                <strong>{applyResult.message}</strong>
-                {applyResult.outputPath && <p>输出：{applyResult.outputPath}</p>}
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* Tab: AI 翻译（占位） */}
-        {activeTab === 'translate' && workOrder && (
-          <section className="psd-result psd-translate">
-            <div className="psd-translate-notice">
-              <span className="psd-badge psd-badge--coming">功能预留</span>
-              <p>AI 自动翻译功能暂未开放。接口已预留，后续接入 AI Agent 时可直接扩展。</p>
-            </div>
-            <div className="psd-translate-config">
-              <label className="mt-field">
-                <span>目标语言</span>
-                <select
-                  className="psd-slot-select"
-                  value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value as TranslationLanguage)}
-                >
-                  {TRANSLATION_LANGUAGES.map((lang) => (
-                    <option key={lang.value} value={lang.value}>{lang.label}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="mt-field">
-                <span>自定义提示词（可选）</span>
-                <textarea
-                  className="psd-translate-prompt"
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                  placeholder={`把所选画板的文案翻译成${TRANSLATION_LANGUAGES.find(l => l.value === targetLanguage)?.label.split(' ')[0] ?? '目标语言'}，需要适配本地化翻译，同时文案长度和原文相接近，行数保持一致`}
-                  rows={3}
-                />
-              </label>
-              <div className="psd-translate-preview">
-                <span>预览提示词：</span>
-                <code>{customPrompt || `把所选画板的文案翻译成${TRANSLATION_LANGUAGES.find(l => l.value === targetLanguage)?.label.split(' ')[0] ?? '目标语言'}，需要适配本地化翻译，同时文案长度和原文相接近，行数保持一致`}</code>
-              </div>
-              <button className="mt-btn mt-btn--primary" type="button" disabled title="AI 翻译功能暂未开放">
-                发送翻译请求（暂未开放）
-              </button>
-            </div>
-          </section>
-        )}
+        <PsdPanels
+          activeTab={activeTab}
+          workOrder={workOrder}
+          scanError={scanError}
+          workOrderDirty={workOrderDirty}
+          saving={saving}
+          saveMessage={saveMessage}
+          onSaveWorkOrder={() => void saveWorkOrder()}
+          onUpdateRecord={updateRecord}
+          changedCount={changedCount}
+          applying={applying}
+          applyResult={applyResult}
+          onApply={apply}
+          outputGrant={outputGrant}
+          targetLanguage={targetLanguage}
+          onTargetLanguageChange={setTargetLanguage}
+          customPrompt={customPrompt}
+          onCustomPromptChange={setCustomPrompt}
+        />
       </main>
     </div>
   )
 }
 
-async function pollUntilTerminal(jobId: string, timeoutMs = 300_000): Promise<JobRecord['status']> {
+async function pollUntilTerminal(jobId: string, timeoutMs = 300_000): Promise<JobRecord> {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     const result = await getJob(jobId)
-    const status = result.job?.status
-    if (!status || TERMINAL_STATUSES.has(status)) return status ?? 'failed'
+    if (!result.job) throw new Error('任务记录不存在或已被清理。')
+    if (TERMINAL_STATUSES.has(result.job.status)) return result.job
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
-  return 'failed'
+  throw new Error('PSD 任务等待超时；任务可能仍在后台执行，可在任务中心查看或取消。')
 }

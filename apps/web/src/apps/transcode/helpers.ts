@@ -1,4 +1,24 @@
-import type { TranscodeSourceInfo } from '@/api/types'
+import type { TranscodeJobDraft, TranscodeSourceInfo } from '@/api/types'
+
+export const TRANSCODE_PRESETS: Array<{ value: NonNullable<TranscodeJobDraft['preset']>; label: string }> = [
+  { value: 'mp4-h265-aac', label: 'MP4 H.265 / AAC（推荐）' },
+  { value: 'mp4-h264-aac', label: 'MP4 H.264 / AAC' },
+  { value: 'mkv-h265-aac', label: 'MKV H.265 / AAC（保留字幕）' },
+  { value: 'remux', label: 'Remux（仅转封装）' },
+  { value: 'audio-aac', label: 'AAC 音频' },
+  { value: 'audio-mp3', label: 'MP3 音频' },
+  { value: 'copy', label: '流复制' },
+]
+
+export const TRANSCODE_PRESET_EXTENSIONS: Record<NonNullable<TranscodeJobDraft['preset']>, string> = {
+  'mp4-h265-aac': 'mp4',
+  'mp4-h264-aac': 'mp4',
+  'mkv-h265-aac': 'mkv',
+  remux: 'mp4',
+  'audio-aac': 'm4a',
+  'audio-mp3': 'mp3',
+  copy: 'mp4',
+}
 
 const BITRATE_TABLE_4K: Record<number, number> = { 16: 40000, 18: 32000, 20: 24000, 22: 18000, 24: 13000, 26: 9000, 28: 6500 }
 const BITRATE_TABLE_1080P: Record<number, number> = { 16: 12000, 18: 8500, 20: 6000, 22: 4500, 24: 3200, 26: 2200, 28: 1500 }
