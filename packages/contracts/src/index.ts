@@ -24,6 +24,7 @@ export type JobKind =
   | 'browser.download'
   | 'browser.request'
   | 'media.transcode'
+  | 'psd.scan'
   | 'psd.apply'
   | 'web.render.image'
   | 'web.render.video'
