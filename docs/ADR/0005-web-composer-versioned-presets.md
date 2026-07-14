@@ -37,7 +37,7 @@ Web Composer 需要把 Html2Video demo 的网页预设接入 MediaToolbox 桌面
 - 新增字段或调整结构必须走预设版本升级，不能在通用编辑器中任意拖拽 DOM。
 - 预设作者必须维护 Slot ID、manifest 能力与 DOM 绑定的一致性；混合文案或内联图标需要拆成可独立命中的明确 Slot。
 - Inspector 只呈现声明能力，因此需要新增通用编辑能力时必须先扩展共享契约与状态校验，不能在单个预设内私自绕过。
-- 默认远程字体和媒体仍依赖网络可用性；后续若需离线确定性，需要把对应资产纳入版本化资源包。
+- 默认字体与媒体的离线确定性已在后续决策中落地：字体和必要图片随源码管理，8 个默认 MP4 由版本化外部资源包分发；详见 [ADR 0006](0006-web-composer-external-video-assets.md)。
 - 高分辨率、长时视频的浏览器逐帧捕获成本较高，需要继续做桌面端压力验收。
 
 ## 关联文档
@@ -46,3 +46,4 @@ Web Composer 需要把 Html2Video demo 的网页预设接入 MediaToolbox 桌面
 - `docs/FRONTEND_API_CONTRACT.md`
 - `docs/API_VALIDATION.md`
 - `docs/UI_COMPAT.md`
+- `docs/ADR/0006-web-composer-external-video-assets.md`

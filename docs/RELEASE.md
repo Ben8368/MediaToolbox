@@ -22,11 +22,15 @@
 
 ## Web Composer 素材包
 
-- 源码仓库只保存 `assets/web-composer/manifest.json` 和安装工具，不保存默认 MP4。
+- 当前拆分范围是 8 个默认 MP4：源码仓库保留字体、CSS、必要图片、`assets/web-composer/manifest.json`、操作说明和安装工具，但不跟踪这 8 个视频。
 - 素材 Release 使用独立 tag，不标记为产品最新版本；归档名称、下载地址和 SHA-256 固定在清单中。
 - `npm run dev` 与 `npm run build` 会先执行素材 `ensure`；已有文件逐项校验通过时不访问网络。
 - 更新素材时必须提升素材包版本和 tag，不能覆盖已发布归档后继续复用旧 SHA-256。
 - 发布 Electron 候选包前，必须确认 `apps/web/dist/static/web-composer/videos/` 已进入 renderer 资源。
+- 素材清单变更必须在同一改动中记录兼容的预设/产品范围、来源与再分发授权，并完成本地归档安装、远端全新安装和逐文件校验。
+- 已被任一源码版本引用的素材 Release Asset 必须长期保留；若需要迁移，先发布新版本并验证，再更新源码清单。禁止删除仍被已发布源码或产品引用的旧归档。
+- 回滚优先恢复到上一个仍可下载且哈希匹配的清单版本；不得通过跳过哈希、改用浮动 URL 或覆盖旧 tag 回滚。
+- 当前仓库和默认视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐 `LICENSE` 与逐项素材授权记录。
 - 完整操作与本地覆盖参数见 [素材包说明](../assets/web-composer/README.md)。
 
 ## 候选构建
@@ -46,6 +50,8 @@
 - 桌面主进程构建、preload 文件和共享 app 图标来源是否存在。
 - macOS / Windows / Linux 目标和 artifact 命名是否已配置。
 - `CSC_LINK` / `CSC_NAME`、`APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD`、`APPLE_TEAM_ID` 等签名与公证环境变量是否已准备；缺失时为警告，设置 `MEDIATOOLBOX_RELEASE_STRICT=1` 或传入 `--strict` 可将警告视为失败。
+
+GitHub CI 的真实转码回归依赖系统 `ffmpeg`。CI workflow 必须在三个 runner 上显式安装并运行 `ffmpeg -version`，不能依赖 hosted image 的隐式预装状态。
 
 ## 变更记录
 

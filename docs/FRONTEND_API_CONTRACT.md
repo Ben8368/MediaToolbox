@@ -172,7 +172,7 @@ Workers / adapters 负责：
 VITE_API_BASE_URL=http://127.0.0.1:3701
 ```
 
-说明：当前前端展示为“本地 API 契约模式”。这表示 HTTP 契约和部分本地能力已启用；文件浏览、浏览器下载登记、网页合成 PNG/MP4 导出、权限审计、受控上传确认流、日志清理、通知已读、统一任务取消、基础系统采样、项目任务网络速率、Windows/Linux NVIDIA GPU、Windows GPU 计数器回退与 macOS Apple Silicon GPU 采样已接入，但不表示 Electron 完整安装包发布、Web Composer 默认远程素材离线化/4K 长时压力验收、PSD image/smart-object slot 和 Photoshop 本机联调已经完整完成。
+“本地 API 契约模式”只描述请求边界，不在本文重复维护阶段完成度；当前已接入能力、候选构建黄灯和主观验收状态统一以 [CONTEXT.md](../CONTEXT.md) 为准。
 
 ## 5. 迁移规则
 

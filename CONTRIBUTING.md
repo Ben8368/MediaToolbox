@@ -5,8 +5,10 @@ MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期
 ## 开发环境
 
 - Node.js 22 或更高版本。
+- `ffmpeg` / `ffprobe` 可从命令行直接调用；真实转码与 VMAF 回归测试依赖该前置条件。
 - 使用 npm workspaces 管理 `apps/*`、`packages/*` 和 `workers/*`。
 - 安装依赖：`npm install`。
+- 首次运行 `npm run dev`、`npm run dev:web` 或 Web 构建时会安装并校验约 118 MiB 的默认视频资源包。
 - 常用启动：
   - `npm run dev`：同时启动 Web 前端和本地 API。
   - `npm run dev:web`：只启动前端。
@@ -60,4 +62,5 @@ PR 描述应包含：
 - 修改 `packages/contracts` 的跨模块契约。
 - 引入新运行时依赖。
 - Electron 打包、自动更新、发布或安装器相关变更。
+- `assets/web-composer/manifest.json`、外部视频资源包、Release tag、归档哈希或素材分发来源变更。
 - 大型 UI 重构或跨多个 app 的状态模型调整。

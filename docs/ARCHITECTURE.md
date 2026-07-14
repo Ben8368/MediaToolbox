@@ -47,7 +47,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 
 Web Composer 使用独立同源 iframe 承载浏览器原生预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成，API 校验捕获元数据与文件签名，MP4 编码交给 `web-render-worker` 和 ffmpeg。输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。
 
-Web Composer 默认视频不进入源码 Git 对象，而是由 `assets/web-composer/manifest.json` 固定版本、Release URL、归档 SHA-256 和逐文件 SHA-256。`apps/web` 的开发与构建生命周期先执行素材 `ensure`，本地有效时不访问网络，缺失时从专用 GitHub Release Asset 安装到原静态 URL 目录；Electron renderer 构建产物仍必须包含完整视频，因此源码归档瘦身不改变安装包的离线能力。
+Web Composer 的 8 个默认 MP4 不进入源码 Git 对象，而是由 `assets/web-composer/manifest.json` 固定版本、Release URL、归档 SHA-256 和逐文件 SHA-256；字体、CSS 与必要图片仍随源码管理。根 `npm run dev`、`apps/web` 开发与构建生命周期先执行素材 `ensure`，本地有效时不访问网络，缺失时从专用 GitHub Release Asset 安装到原静态 URL 目录；Electron renderer 构建产物仍必须包含完整视频，因此源码归档瘦身不改变安装包的离线能力。不可变 tag、授权记录、长期保留和回滚边界见 [ADR/0006-web-composer-external-video-assets.md](ADR/0006-web-composer-external-video-assets.md)。
 
 Slot v2 与预览交互边界：
 

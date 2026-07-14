@@ -67,7 +67,7 @@
 5. 切换 `16:9`、`4:3`、`1:1`、`9:16` 与分辨率，确认 iframe 的真实像素尺寸随设置变化，外层窗口只改变显示缩放，设计字号与偏移按画布比例呈现。
 6. `POST /api/web-composer/exports/png` 返回 `web.render.image` job，成功后在 `/Workspace/Exports` 创建 PNG asset；选择框/Slot 标签不进入导出。错误签名、旧版/未知预设元组或超出 4K 总像素返回 400。
 7. `POST /api/web-composer/exports/video` 返回 `web.render.video` job，WebM 捕获经 worker 输出 H.264、`yuv420p`、faststart MP4；取消与失败状态通过统一 jobs 可读。
-8. 默认远程字体/媒体不可用、捕获超时、浏览器不支持 MediaRecorder 或 ffmpeg 缺失时，工作台显示可读错误，不写入假成功 asset。
+8. 删除或篡改一个本地默认视频后运行素材 `ensure`，确认从固定 Release Asset 恢复并通过归档与逐文件 SHA-256；下载不可用、哈希不匹配、捕获超时、浏览器不支持 MediaRecorder 或 ffmpeg 缺失时必须显示可读错误，不写入假成功 asset。
 9. 预设源码或 CSS 被意外修改、manifest Slot 与默认状态/DOM 绑定不一致时测试失败；有意结构变更必须升级预设版本并更新来源 SHA/完整性锁。
 
 ## 系统状态路径
@@ -91,4 +91,5 @@
 
 联调完成后，在 `CONTEXT.md` 中记录本地 API 地址、验收日期、阻断项和剩余黄灯。
 
-- 2026-07-13：本地备用端口完成 Web Composer beta 烟测。桌面入口、`960×640` 默认窗口、`760×520` 最小窗口、文案 Slot、`4:3` 的 `1440×1080` 画布均通过；PNG 成功写入 Exports；1 秒 MP4 经 ffprobe 确认为 H.264、`1920×1080`、`yuv420p`、时长 `1.000000` 秒；控制台无运行错误。4K/15 秒与默认远程素材离线场景仍列为压力/体验黄灯。
+- 2026-07-13：本地备用端口完成 Web Composer beta 烟测。桌面入口、`960×640` 默认窗口、`760×520` 最小窗口、文案 Slot、`4:3` 的 `1440×1080` 画布均通过；PNG 成功写入 Exports；1 秒 MP4 经 ffprobe 确认为 H.264、`1920×1080`、`yuv420p`、时长 `1.000000` 秒；控制台无运行错误。
+- 2026-07-14：默认字体/图片本地化、视频资源包本地打包/安装/逐文件校验、共享字体与视频 HTTP 200、renderer 入包 preflight、远端 Release 全新下载与 SHA-256 校验均通过；剩余黄灯仅保留 4K/15 秒压力与主观体验验收。

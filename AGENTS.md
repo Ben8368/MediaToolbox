@@ -1,6 +1,6 @@
 # AI 协作规范
 
-`AGENTS.md` 是通用 AI 的治理入口和权威规则源。工具专属入口只做摘要：`CLAUDE.md` 给 Claude Code。
+`AGENTS.md` 是通用 AI 的治理入口和权威规则源。工具专属入口只做摘要：`CLAUDE.md` 给 Claude Code，`.cursorrules` 给 Cursor。
 
 ## 开局读取
 
@@ -27,6 +27,7 @@
    - [docs/ROADMAP.md](docs/ROADMAP.md)：阶段路线。
    - [CONTRIBUTING.md](CONTRIBUTING.md)：人类贡献流程。
    - [docs/RELEASE.md](docs/RELEASE.md)：发布流程。
+   - [assets/web-composer/README.md](assets/web-composer/README.md)：默认视频资源包的打包、安装与发布操作。
    - `docs/archive/`：长历史与复盘。
 
 治理文档维护原则：入口短小，事实单一，状态真实，规则可执行；同一条规则需要第二次展开时，优先链接权威来源而不是复制。
@@ -39,6 +40,7 @@
 - 客观验证默认：`npm run verify`。
 - Audit Report 为 🟢 且验证通过时，按 [docs/AI_RULES.md](docs/AI_RULES.md) 判断是否自动提交 / 推送；用户本轮明确禁止时遵从用户。
 - 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 [CONTEXT.md](CONTEXT.md) 或相关 `docs/`。
+- 版本化外部素材变更必须同步清单、不可变 tag、哈希、来源/再分发授权记录和全新安装验收；具体门禁见 [docs/RELEASE.md](docs/RELEASE.md)。
 - 面向开放协作的流程、安全、发布和维护职责分别见 [CONTRIBUTING.md](CONTRIBUTING.md)、[SECURITY.md](SECURITY.md)、[docs/RELEASE.md](docs/RELEASE.md) 与 [docs/MAINTAINERS.md](docs/MAINTAINERS.md)。
 
 ## PowerShell 编码

@@ -4,22 +4,11 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-14
-> - Web Composer 字体已提升到 `/static/fonts/` 供主页面与预览运行时共享；8 个默认 MP4 已迁移到 `web-composer-assets-v1` 专用 GitHub Release Asset，固定归档与逐文件 SHA-256，远端全新安装通过，源码仓库不再跟踪视频。
-> - PathGrant 生命周期已收口：read/write grant 使用 SQLite 条件更新原子领取，统一 Job 取消入口执行终态授权回收，任务启动前失败不会遗留孤儿读授权或提前消费写授权。
-> - PSD scan/apply 已接入可取消异步 Job：HTTP 立即返回任务，Photoshop adapter 接收 `AbortSignal`，扫描失败/取消不创建工单，前端与右侧任务中心展示持久化错误信息。
-> - Web Composer 三套默认预设的字体、视频和 Lumora 火车窗前景图已本地化到 `apps/web/public/static/web-composer/`，预览页与默认 manifest 不再依赖远程素材加载。
-> - Web Composer 排版控件改为下拉选择字体、设计字号与可读字重，编辑对象大纲和属性区收进同一连续面板；顶部参数与操作控件统一为 30px 高，预设选择器进一步收至 96px。
-> - Web Composer 侧栏已将“画布主题”并入“编辑对象”大纲，与元素共用搜索和选择入口；窗口标题栏预设选择器进一步收窄，视频导出默认值调整为 30 fps / 10 秒。
-> - Web Composer 已升级为 Slot v2 的“预览区点选、左侧上下文编辑”工作流：三套预设提供显式文案/Logo/Icon/背景 Slot，支持字体、设计字号、字重、颜色、内容类型替换、X/Y 偏移和显隐；元素大纲支持搜索、分组与隐藏恢复，编辑/交互预览模式分离。
-> - Web Composer Inspector 已按画布点选工作流收紧：元素大纲获得独立且更高的滚动空间，未选中时直接显示画布主题控件；冗余说明与导出尺寸文案已移除，顶部参数改为紧凑字段内单位提示，预览画布补充极浅边界以适配深色预设。
-> - 各工作台左侧栏已统一为 `200px` 默认宽度，并接入共享拖拽调整、键盘调整、双击复位与按 App 记忆宽度能力。
-> - Web Composer 的预设入口位于窗口右上角的紧凑可滚动选择菜单；当前 Slot 的编辑能力收纳到左侧上下文 Inspector，导出参数与操作位于预览区顶部。
-> - Web Composer 已按桌面 App 模式接入统一应用注册，继承 `960×640` 默认窗口和 `760×520` 最小窗口；三套版本化预设、Slot 编辑、精确尺寸画布、PNG/MP4 Job/Asset 导出闭环已完成本地烟测。
-> - Electron 生产打包基础链路已打通：renderer/API runtime 入包、`userData` 工作区与 SQLite 默认路径、macOS arm64 `electron-builder --dir` 和包内 `/api/health` 烟测已通过；发布侧仍待签名、公证与完整安装包验收。
-> - Phase 6A-C PathGrant 管道已落地：读/写/目录读授权、`inputGrantId` / `outputGrantId` 任务扩展、转码/PSD 外部导入导出和纯 Web 降级已接入；下一步继续做桌面端体验与边界验收。
-> - Browser Network 多标签能力继续收口：下载、权限和上传侧栏事件已按活动 `viewId` 隔离，下载取消校验标签归属；下一步验收桌面端 view 生命周期和真实下载/权限路径。
-> - 文件管理器上传/下载真实 API 与 multipart 上传字节统计已接入；下一步验收真实大文件上传体验。
-> - PSD 渲染 API、manifest 持久化和工作台闭环已接入；下一步做真实 Photoshop 联调与 image / smart-object slot 渲染。
+> - Web Composer 字体/图片已随源码本地化，8 个默认 MP4 已迁移到固定 SHA-256 的 `web-composer-assets-v1` Release Asset；根开发入口、Web 开发和构建均接入素材 `ensure`。
+> - 源码/视频资源包边界已补充 ADR、维护责任、安全、发布、PR 与回滚治理；公开分发仍需补齐项目许可证和逐项素材授权记录。
+> - GitHub CI 已显式准备 `ffmpeg` 并升级官方 checkout/setup-node action，避免 hosted runner 工具缺失和 Node 20 action 警告。
+> - PathGrant 生命周期、统一 Job 取消与 PSD scan/apply 可取消异步执行已收口。
+> - Web Composer Slot v2、统一可调侧栏、Browser Network 多标签事件隔离和 Electron 生产打包基础链路均已接入，剩余事项进入下方验收清单。
 
 ## 项目定位
 
@@ -33,7 +22,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-14 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功。Web Composer 素材包本地打包/安装/逐文件校验、共享字体与视频 HTTP 200、renderer 视频入包 preflight、远端 Release 全新下载与 SHA-256 校验均已通过；预览区直接点选的最终主观手感仍待验收。
+- **验证：** 2026-07-14 本轮 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功，GitHub CI 失败对应的真实 ffmpeg 转码/VMAF 回归均在本地通过。Web Composer 素材包校验与根 `predev` ensure 通过，workflow YAML 和本地 Markdown 链接已解析检查；预览区直接点选的最终主观手感仍待验收。
 
 ## 当前阻断项
 
@@ -49,9 +38,11 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
 - Web Composer 默认视频的 Release Asset 分发与远端下载验收已通过；4K/15 秒长时视频压力验收仍待补齐。
 - Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
+- 公开分发前需补齐项目 `LICENSE` 与 8 个默认 MP4 的逐项来源/再分发授权记录；内部开发和候选构建不受影响。
 
 **已迁移至技术债追踪：**
 - TD-021: Web Composer 默认素材离线资源包与 4K/15 秒压力验收
+- TD-023: Web Composer 默认视频来源与再分发授权
 - TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
 - TD-019: Electron 发布 polish（应用图标、签名、公证与完整安装包验收）
@@ -67,6 +58,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 5. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
 6. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
 7. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
+8. 公开候选版本前确认 8 个默认 MP4 的来源与再分发授权，并补充项目许可证；无法确认授权的素材必须替换。
 
 ## 常用命令
 

@@ -12,8 +12,9 @@
     "workers/*"
   ],
   "scripts": {
+    "predev": "npm run assets:web-composer:ensure",
     "dev": "tsx scripts/dev-supervisor.ts",
-    "dev:supervisor": "tsx scripts/dev-supervisor.ts",
+    "dev:supervisor": "npm run dev",
     "dev:web": "npm run dev -w @mediatoolbox/web",
     "dev:api": "npm run dev -w @mediatoolbox/api",
     "dev:desktop": "npm run dev -w @mediatoolbox/desktop",
