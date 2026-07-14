@@ -101,8 +101,10 @@ export async function runTranscodeWorkerJob(
     try {
       const vmafResult = await runVmafComparison(job.inputPath, job.outputPath, { command: ffmpegTool.command })
       vmafScore = vmafResult.vmafScore
-    } catch {
-      // best-effort quality check; a failed VMAF run must not fail the transcode job
+    } catch (error) {
+      // best-effort quality check；VMAF 失败不应让转码任务失败，但必须让调用方看到，不能静默吞掉。
+      const message = error instanceof Error ? error.message : String(error)
+      options.onLog?.(`VMAF comparison failed: ${message}`, 'stderr')
     }
   }
 

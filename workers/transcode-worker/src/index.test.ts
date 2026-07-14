@@ -1,4 +1,14 @@
 import { describe, it, expect, vi } from 'vitest'
+
+vi.mock('@mediatoolbox/ffmpeg', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mediatoolbox/ffmpeg')>()
+  return {
+    ...actual,
+    runVmafComparison: vi.fn(),
+  }
+})
+
+import { runVmafComparison } from '@mediatoolbox/ffmpeg'
 import { describeTranscodeWorker, runTranscodeWorkerJob } from './index.js'
 import type { TranscodeWorkerJob } from './index.js'
 
@@ -49,5 +59,40 @@ describe('runTranscodeWorkerJob', () => {
     await expect(
       runTranscodeWorkerJob(job, { signal: controller.signal }),
     ).rejects.toThrow()
+  })
+
+  it('surfaces a failed VMAF comparison via onLog without failing the transcode job (regression for silently swallowed VMAF errors)', async () => {
+    const os = await import('node:os')
+    const path = await import('node:path')
+    const fs = await import('node:fs/promises')
+    const { execFile } = await import('node:child_process')
+    const { promisify } = await import('node:util')
+    const execFileAsync = promisify(execFile)
+
+    const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-vmaf-test-'))
+    const inputPath = path.join(workDir, 'input.mp4')
+    const outputPath = path.join(workDir, 'output.mp4')
+    await execFileAsync('ffmpeg', [
+      '-y', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=64x64:rate=5',
+      '-pix_fmt', 'yuv420p', inputPath,
+    ])
+
+    vi.mocked(runVmafComparison).mockRejectedValueOnce(new Error('VMAF probe crashed'))
+
+    const onLog = vi.fn()
+    const job: TranscodeWorkerJob = {
+      inputPath,
+      outputPath,
+      preset: 'copy',
+      enableVmaf: true,
+    }
+
+    const result = await runTranscodeWorkerJob(job, { onLog })
+
+    expect(result.status).toBe('succeeded')
+    expect(result.vmafScore).toBeUndefined()
+    expect(onLog).toHaveBeenCalledWith(expect.stringContaining('VMAF comparison failed: VMAF probe crashed'), 'stderr')
+
+    await fs.rm(workDir, { recursive: true, force: true })
   })
 })
