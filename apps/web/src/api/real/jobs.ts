@@ -27,8 +27,8 @@ export function cancelJob(jobId: string): Promise<OkResult> {
   })
 }
 
-export function scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse> {
-  return apiRequest<WorkOrderScanResponse>('/api/psd/scan', {
+export function scanPsd(psdPath: string, inputGrantId?: string): Promise<{ ok: boolean; job: JobRecord; workOrderId: string; message?: string }> {
+  return apiRequest<{ ok: boolean; job: JobRecord; workOrderId: string; message?: string }>('/api/psd/scan', {
     method: 'POST',
     body: JSON.stringify({ psdPath, ...(inputGrantId ? { inputGrantId } : {}) }),
   })
@@ -49,8 +49,8 @@ export function applyWorkOrder(
   workOrderId: string,
   outputPath?: string,
   outputGrantId?: string,
-): Promise<WorkOrderApplyResponse> {
-  return apiRequest<WorkOrderApplyResponse>(`/api/psd/workorders/${encodeURIComponent(workOrderId)}/apply`, {
+): Promise<{ ok: boolean; job: JobRecord }> {
+  return apiRequest<{ ok: boolean; job: JobRecord }>(`/api/psd/workorders/${encodeURIComponent(workOrderId)}/apply`, {
     method: 'POST',
     body: JSON.stringify({ ...(outputPath ? { outputPath } : {}), ...(outputGrantId ? { outputGrantId } : {}) }),
   })

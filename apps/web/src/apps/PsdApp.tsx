@@ -1,9 +1,11 @@
 import { useCallback, useState, type FormEvent } from 'react'
 
-import { applyWorkOrder, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
+import { applyWorkOrder, cancelJob, getJob, getWorkOrder, scanPsd, updateWorkOrder } from '@/api'
 import { useExternalReadGrant, useExternalWriteGrant } from '@/hooks/useExternalPathGrant'
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
-import type { WorkOrder, TextLayerRecord, TranslationLanguage } from '@mediatoolbox/contracts'
+import type { JobRecord, WorkOrder, TextLayerRecord, TranslationLanguage } from '@mediatoolbox/contracts'
+
+const TERMINAL_STATUSES = new Set<JobRecord['status']>(['succeeded', 'failed', 'canceled'])
 
 const DEFAULT_PSD_PATH = '/Workspace/PSD/document.psd'
 
@@ -54,8 +56,13 @@ export function PsdApp() {
     setApplyResult(null)
     try {
       const scanResult = await scanPsd(inputGrant.displayPath.trim(), inputGrant.grantId ?? undefined)
-      if (!scanResult.ok || !scanResult.workOrderId) {
+      if (!scanResult.ok) {
         throw new Error(scanResult.message || 'PSD 扫描失败')
+      }
+      // 扫描已转为异步 Job；轮询等待 Photoshop 完成后查询工单。
+      const status = await pollUntilTerminal(scanResult.job.id)
+      if (status !== 'succeeded') {
+        throw new Error('PSD 扫描未完成，请查看任务中心了解详情。')
       }
       const woResult = await getWorkOrder(scanResult.workOrderId)
       if (!woResult.ok || !woResult.workOrder) {
@@ -107,14 +114,18 @@ export function PsdApp() {
     setApplyResult(null)
     try {
       const result = await applyWorkOrder(workOrder.id, undefined, outputGrant.grantId ?? undefined)
-      if (result.ok) {
+      if (!result.ok) {
+        throw new Error(result.message || '应用失败')
+      }
+      // 应用已转为异步 Job；轮询等待 Photoshop 完成后展示结果。
+      const status = await pollUntilTerminal(result.job.id)
+      if (status === 'succeeded') {
         setApplyResult({
           success: true,
-          message: `应用完成：${result.appliedCount ?? 0} 个图层已修改，${result.skippedCount ?? 0} 个跳过`,
-          outputPath: result.outputPath,
+          message: '工单应用完成。',
         })
       } else {
-        setApplyResult({ success: false, message: result.message || '应用失败' })
+        setApplyResult({ success: false, message: `工单应用未完成（状态：${status}），请查看任务中心了解详情。` })
       }
     } catch (err: unknown) {
       setApplyResult({ success: false, message: err instanceof Error ? err.message : '应用失败' })
@@ -380,4 +391,15 @@ export function PsdApp() {
       </main>
     </div>
   )
+}
+
+async function pollUntilTerminal(jobId: string, timeoutMs = 300_000): Promise<JobRecord['status']> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const result = await getJob(jobId)
+    const status = result.job?.status
+    if (!status || TERMINAL_STATUSES.has(status)) return status ?? 'failed'
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+  return 'failed'
 }

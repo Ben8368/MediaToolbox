@@ -78,10 +78,10 @@ export interface MediaToolboxApi {
   cancelJob(jobId: string): Promise<OkResult>
   probeTranscodeSource(draft: { inputPath?: string; inputGrantId?: string }): Promise<TranscodeProbeResponse>
   previewTranscodeCommand(draft: { inputPath?: string; outputPath?: string; preset?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number }): Promise<TranscodeCommandPreviewResponse>
-  scanPsd(psdPath: string, inputGrantId?: string): Promise<WorkOrderScanResponse>
+  scanPsd(psdPath: string, inputGrantId?: string): Promise<{ ok: boolean; job: JobRecord; workOrderId: string; message?: string }>
   getWorkOrder(workOrderId: string): Promise<WorkOrderGetResponse>
   updateWorkOrder(workOrder: WorkOrder): Promise<OkResult>
-  applyWorkOrder(workOrderId: string, outputPath?: string, outputGrantId?: string): Promise<WorkOrderApplyResponse>
+  applyWorkOrder(workOrderId: string, outputPath?: string, outputGrantId?: string): Promise<{ ok: boolean; job: JobRecord; message?: string }>
   submitWebComposerPng(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
   submitWebComposerVideo(capture: ArrayBuffer, metadata: WebComposerCaptureMetadata): Promise<JobRecord>
 

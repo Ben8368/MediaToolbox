@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import path from 'node:path'
 import os from 'node:os'
 import fs from 'node:fs/promises'
@@ -18,7 +18,7 @@ vi.mock('@mediatoolbox/psd-worker', async (importOriginal) => {
     runPsdWorkerJob: vi.fn().mockRejectedValue(new actual.PsdWorkerEngineNotConfiguredError()),
   }
 })
-import { runPsdWorkerJob } from '@mediatoolbox/psd-worker'
+import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError } from '@mediatoolbox/psd-worker'
 import { buildDownloadJob } from './download-executor.js'
 
 describe('api skeleton contract', () => {
@@ -604,36 +604,31 @@ describe('api skeleton contract', () => {
 })
 
 describe('PSD workorder CRUD', () => {
+  beforeEach(() => {
+    vi.mocked(runPsdWorkerJob).mockReset()
+    vi.mocked(runPsdWorkerJob).mockRejectedValue(new PsdWorkerEngineNotConfiguredError())
+  })
+
   it('scan → read → update → list → apply 全链路', async () => {
+    // engine 可用性检查（scan 路由中的同步 gate）+ 异步 scan 执行
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({ type: 'list-fonts', fonts: [] })
     vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
       type: 'scan',
       documentWidth: 1080,
       documentHeight: 1920,
       documentResolution: 72,
       records: [{
-        id: 'layer-1',
-        layerId: 1,
-        layerPath: 'Group/Title',
-        soChain: [],
-        enabled: true,
-        originalText: 'Hello',
-        originalFontFamily: 'Arial',
-        originalFontStyle: 'Regular',
-        originalFontPs: 'ArialMT',
-        originalSizePt: 24,
-        originalLeadingPt: null,
-        originalTrackingValue: 0,
-        boundsHPx: 40,
-        boundsWPx: 200,
-        fakesBold: false,
+        id: 'layer-1', layerId: 1, layerPath: 'Group/Title', soChain: [], enabled: true,
+        originalText: 'Hello', originalFontFamily: 'Arial', originalFontStyle: 'Regular',
+        originalFontPs: 'ArialMT', originalSizePt: 24, originalLeadingPt: null,
+        originalTrackingValue: 0, boundsHPx: 40, boundsWPx: 200, fakesBold: false,
       }],
     })
+    // 异步 apply 执行
     vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
       type: 'apply',
       outputPath: '/Workspace/Exports/smoke_adapted.psd',
-      appliedCount: 1,
-      skippedCount: 0,
-      results: [],
+      appliedCount: 1, skippedCount: 0, results: [],
     })
 
     const app = await buildApiServer()
@@ -644,9 +639,11 @@ describe('PSD workorder CRUD', () => {
       payload: { psdPath: '/Workspace/PSD/smoke.psd' },
     })
     expect(scanResp.statusCode).toBe(200)
-    const { workOrderId, recordCount } = scanResp.json<{ workOrderId: string; recordCount: number }>()
+    const { workOrderId } = scanResp.json<{ workOrderId: string }>()
     expect(workOrderId).toBeTruthy()
-    expect(recordCount).toBe(1)
+
+    // 等待异步 scan 执行完成（mock 同步解析，微任务即可完成）
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     const getResp = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
     expect(getResp.statusCode).toBe(200)
@@ -676,7 +673,7 @@ describe('PSD workorder CRUD', () => {
       payload: {},
     })
     expect(applyResp.statusCode).toBe(200)
-    expect(applyResp.json()).toMatchObject({ ok: true, appliedCount: 1, skippedCount: 0 })
+    expect(applyResp.json()).toMatchObject({ ok: true })
 
     await app.close()
   })
@@ -688,7 +685,7 @@ describe('PSD workorder CRUD', () => {
       'x-mediatoolbox-desktop-token': 'test-desktop-token',
     }
 
-    vi.mocked(runPsdWorkerJob).mockClear()
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({ type: 'list-fonts', fonts: [] })
     vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
       type: 'scan',
       documentWidth: 800,
@@ -726,11 +723,15 @@ describe('PSD workorder CRUD', () => {
     expect(scanResp.statusCode).toBe(200)
     const { workOrderId } = scanResp.json<{ workOrderId: string }>()
 
+    // calls[0] = engine check (list-fonts), calls[1] = 异步 scan 执行。
     // scan 阶段传给 worker 的必须是 grant 解析出的真实物理路径，不是占位字符串。
-    expect(vi.mocked(runPsdWorkerJob).mock.calls[0]![0]).toMatchObject({
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[1]![0]).toMatchObject({
       type: 'scan',
       psdPath: path.resolve('README.md'),
     })
+
+    // 等待异步 scan 执行完成（mock 同步解析，微任务即可完成），否则 apply 会因工单未创建而 404。
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     // scan 之后 grant 已绑定到工单 ID，作为其生命周期宿主，此时仍处于 active。
     const boundGrant = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
@@ -748,7 +749,8 @@ describe('PSD workorder CRUD', () => {
     expect(applyResp.json()).toMatchObject({ ok: true })
 
     // apply 阶段重新解析 workOrder.psdPath 中保存的 grant 标记，同样必须落回同一个真实物理路径。
-    expect(vi.mocked(runPsdWorkerJob).mock.calls[1]![0]).toMatchObject({
+    // calls[0]=list-fonts, calls[1]=scan, calls[2]=apply。
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[2]![0]).toMatchObject({
       type: 'apply',
       workOrder: expect.objectContaining({ psdPath: path.resolve('README.md') }),
     })
@@ -770,6 +772,11 @@ describe('PSD workorder CRUD', () => {
 })
 
 describe('PSD fonts endpoint', () => {
+  beforeEach(() => {
+    vi.mocked(runPsdWorkerJob).mockReset()
+    vi.mocked(runPsdWorkerJob).mockRejectedValue(new PsdWorkerEngineNotConfiguredError())
+  })
+
   it('returns 503 when Photoshop is not configured', async () => {
     const app = await buildApiServer()
     const resp = await app.inject({ method: 'GET', url: '/api/psd/fonts' })
