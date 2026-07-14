@@ -88,5 +88,6 @@ Phase 6 已引入 **PathGrant** 作为越界访问的唯一入口，与浏览器
 - worker 只消费 job 附带的 grant，不自行扩展搜索范围。
 - 读授权与写授权分离；写入工作区外必须二次确认，且权限窄于读取。
 - 当前已接入单文件读授权、单路径写授权和目录级读授权管道；桌面端真实体验仍按 `docs/API_VALIDATION.md` 跟进验收。
+- 写授权（`file.write`）在真正落盘写入时立即消费为 `consumed`，不可重复使用；读授权在任务创建时绑定 `jobId`，任务进入终态（成功/失败/取消）后自动吊销，避免长期悬挂。PSD scan/apply 当前仍是同步执行、没有独立 job 记录，读授权临时绑定到工单 ID 作为生命周期宿主。
 
 详细分期与端点状态见 [ROADMAP.md](ROADMAP.md) Phase 6 与 [FRONTEND_API_CONTRACT.md](FRONTEND_API_CONTRACT.md) 安全边界章节。关键决策记录见 [ADR/0002-workspace-sandbox-and-pathgrant.md](ADR/0002-workspace-sandbox-and-pathgrant.md)。
