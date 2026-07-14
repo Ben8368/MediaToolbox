@@ -110,6 +110,10 @@ export type DesktopPathGrantsBridge = {
   requestDirRead: () => Promise<DesktopBrowserResult<PathGrantInfo | null>>
 }
 
+export type DesktopSystemBridge = {
+  shutdown: () => Promise<DesktopBrowserResult<{ ok: boolean }>>
+}
+
 export type DesktopBrowserBridge = {
   create: (id: string, url?: string, options?: { sessionScope?: DesktopBrowserSessionScope }) => Promise<DesktopBrowserResult<DesktopBrowserState>>
   destroy: (id: string) => Promise<DesktopBrowserResult<{ id: string }>>
@@ -131,10 +135,15 @@ declare global {
     mediaToolboxDesktop?: {
       browser?: DesktopBrowserBridge
       pathGrants?: DesktopPathGrantsBridge
+      system?: DesktopSystemBridge
     }
   }
 }
 
 export function getDesktopBrowserBridge(): DesktopBrowserBridge | undefined {
   return window.mediaToolboxDesktop?.browser
+}
+
+export function getDesktopSystemBridge(): DesktopSystemBridge | undefined {
+  return window.mediaToolboxDesktop?.system
 }

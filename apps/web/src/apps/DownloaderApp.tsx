@@ -133,15 +133,7 @@ export function DownloaderApp() {
         if (ytdlpUrls.length) await submitTaskPayloads(ytdlpUrls, 'auto')
         if (browserUrls.length) await submitBrowserDownloads(browserUrls)
       } else if (form.taskChannel === 'browser') {
-        const bridge = getDesktopBrowserBridge()
-        if (!bridge) throw new Error('浏览器资源下载需要在 MediaToolbox 桌面端中使用。')
-        const channel = await bridge.create(BROWSER_DOWNLOAD_CHANNEL_ID, 'about:blank', { sessionScope: 'default' })
-        if (!channel.ok) throw new Error(channel.error)
-        for (const url of urls) {
-          const result = await bridge.downloadUrl(BROWSER_DOWNLOAD_CHANNEL_ID, url)
-          if (!result.ok) throw new Error(result.error)
-        }
-        void refreshLists()
+        await submitBrowserDownloads(urls)
       } else {
         await submitTaskPayloads(urls, 'ytdlp')
       }

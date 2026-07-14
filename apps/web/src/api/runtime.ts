@@ -18,6 +18,7 @@ export type ApiRuntimePresentation = {
     fallbackError: string
     completeTitle: string
     completeBody: string
+    webModeUnavailable: string
   }
   settings: {
     initialNotice: string
@@ -59,6 +60,7 @@ export function getApiRuntimePresentation(): ApiRuntimePresentation {
       fallbackError: '关闭请求失败，请检查本地 API 服务状态。',
       completeTitle: '本地服务已关闭',
       completeBody: '本地 API 已停止运行。如需重新使用，请在终端重新启动服务后刷新页面。',
+      webModeUnavailable: '纯 Web 模式下无法从此页面关闭本地 API：出于安全考虑，关机授权不会下发给 Web UI。请在终端或桌面端关闭服务。',
     },
     settings: {
       initialNotice: '本地 API 联调模式：文件浏览、下载、日志、通知和任务状态已部分接入后端，本页偏好仍暂存浏览器。',

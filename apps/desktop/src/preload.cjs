@@ -56,7 +56,14 @@ const pathGrantsApi = {
   },
 }
 
+const systemApi = {
+  shutdown() {
+    return ipcRenderer.invoke('mediatoolbox:shutdown')
+  },
+}
+
 contextBridge.exposeInMainWorld('mediaToolboxDesktop', {
   browser: browserApi,
   pathGrants: pathGrantsApi,
+  system: systemApi,
 })

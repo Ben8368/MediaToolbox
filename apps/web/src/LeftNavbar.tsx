@@ -2,6 +2,7 @@
 import { ApiRequestError } from '@/api/http'
 import { markAllNotificationsAsRead } from '@/api'
 import { getAppIcon } from '@/icon-library'
+import { getDesktopSystemBridge } from '@/desktopBrowser'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import {
   IconBell,
@@ -72,6 +73,22 @@ export function LeftNavbar() {
 
     setIsShuttingDown(true)
     beginSystemShutdown()
+
+    const desktopSystem = getDesktopSystemBridge()
+    if (desktopSystem) {
+      // 桌面模式下必须走 IPC：本地 API 的关机 token 只在桌面主进程与本地 API 之间传递，不会暴露给 Web UI。
+      const result = await desktopSystem.shutdown()
+      if (result.ok) {
+        completeSystemShutdown()
+        setPowerComplete('shutdown')
+      } else {
+        window.alert(result.error || runtime.shutdown.fallbackError)
+        setIsShuttingDown(false)
+        resetSystemLifecycle()
+      }
+      return
+    }
+
     try {
       await shutdownSystem()
       completeSystemShutdown()
@@ -81,6 +98,13 @@ export function LeftNavbar() {
       if (error instanceof ApiRequestError && (error.status === undefined || error.status >= 500)) {
         completeSystemShutdown()
         setPowerComplete('shutdown')
+        return
+      }
+      // 纯 Web 模式下本地 API 会拒绝未授权的关机请求（403），这是预期行为而非故障。
+      if (error instanceof ApiRequestError && error.status === 403) {
+        window.alert(runtime.shutdown.webModeUnavailable)
+        setIsShuttingDown(false)
+        resetSystemLifecycle()
         return
       }
       window.alert(getErrorMessage(error) || runtime.shutdown.fallbackError)
