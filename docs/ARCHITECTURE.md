@@ -17,7 +17,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - UI 不直接执行 `yt-dlp`、`ffmpeg`、Photoshop 或文件系统危险操作。
 - API 只编排任务和管理本地资源，重活交给 worker。
 - 第三方工具必须通过 adapter 包装，命令参数构建与进程执行分开。
-- 所有长任务进入统一 Job 模型，支持进度、日志、取消、失败重试和恢复。
+- 所有长任务进入统一 Job 模型，支持进度、日志、取消、失败重试和恢复。当前进度、日志、取消已落地；`JobStatus.retrying` 在类型和状态机中预留，失败重试与恢复尚未有代码路径真正转入该状态，详见 [TECH_DEBT.md](TECH_DEBT.md) TD-022。
 - PSD 能力以模版 manifest 为中心，高保真编辑通过 Photoshop adapter 实现。
 - Web Composer 以版本化 Slot v2 预设为中心；编辑器只写入 manifest 声明的 slot 与主题变量，预设 DOM、样式和动画源码保持只读并由完整性测试锁定。
 - 浏览器网络能力由 Electron 主进程承载，其他 app 只能通过受控 API / IPC 调用，不直接读取 cookie、session 或本地文件。

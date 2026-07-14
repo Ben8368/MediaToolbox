@@ -86,6 +86,17 @@
 
 ### 🟢 P2 — 长期规划
 
+#### TD-022: JobStatus.retrying 是预留死状态
+- **位置：** `packages/contracts/src/index.ts`（`JobStatus` 类型）、`packages/job-core/src/index.ts`（状态转移表）、`apps/api/src/routes/system.ts`（过滤、can_cancel、状态标签）、`apps/web/src/apps/TranscodeApp.tsx`（展示文案）
+- **来源：** 代码审查（2026-07-14），两份独立 review 报告共同指出
+- **目标阶段：** 实现失败重试能力时一并处理，暂无阶段绑定
+- **阻断候选构建：** 否
+- **验证方式：** 若实现重试，需补充真正把 job 转入 `retrying` 再转回 `running`/`queued` 的集成测试；若决定移除，需确认 `packages/contracts`、`job-core`、`apps/api`、`apps/web` 四处引用同步清理且 `npm run verify` 通过
+- **问题：** `JobStatus` 类型、`job-core` 的转移表（`running -> retrying`、`retrying -> queued/running/failed/canceled`）和前端展示文案都包含 `retrying`，但全仓库没有任何代码路径真正把 job 转换成这个状态——它只被读取（过滤活跃任务、判断可取消、状态标签翻译），从未被写入。`docs/ARCHITECTURE.md` 描述的"失败重试和恢复"目前对 `retrying` 状态而言是未实现的承诺。
+- **影响：** 不影响现有功能正确性（没有代码依赖这个状态真的会被触发），但可能误导后续开发者以为重试机制已经存在
+- **建议方案：** 两个选项均可：(a) 实现真正的重试机制，在 ffmpeg/yt-dlp/PSD 等 executor 失败时转入 `retrying` 并按策略退避重试；(b) 如果短期不打算做失败自动重试，从类型系统和展示代码中移除 `retrying`，回归到实际支持的状态集合。本轮暂不动代码，只记录决策留痕。
+- **估算工作量：** 选项 (a) 属于中等功能开发；选项 (b) 是几行类型和过滤逻辑的清理
+
 #### TD-020: PSD fixture 边界场景覆盖
 - **位置：** `fixtures/psd/photoshop-workbench/`
 - **来源：** PSD 工作台后端测试完善规划（2026-07-09）
