@@ -116,11 +116,11 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
         can_cancel: true,
       })),
       ...activeJobs
-        .filter((job) => job.kind === 'media.transcode' || job.kind === 'psd.apply' || job.kind.startsWith('web.render.'))
+        .filter((job) => job.kind === 'media.transcode' || job.kind === 'psd.scan' || job.kind === 'psd.apply' || job.kind.startsWith('web.render.'))
         .map((job) => ({
           id: job.id,
           name: job.title,
-          type: job.kind === 'media.transcode' ? 'transcode' : job.kind === 'psd.apply' ? 'psd' : 'web-composer',
+          type: job.kind === 'media.transcode' ? 'transcode' : job.kind === 'psd.scan' || job.kind === 'psd.apply' ? 'psd' : 'web-composer',
           status: job.status,
           status_label: jobStatusLabel(job.status),
           stage: job.errorMessage || job.kind,

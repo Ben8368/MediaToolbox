@@ -18,8 +18,12 @@ export async function updateTranscodeJob(
   jobId: string,
   nextStatus: Parameters<typeof updateJobRecord>[2],
   progress?: JobRecord['progress'],
+  errorMessage?: string,
 ) {
-  await updateJobRecord(state, jobId, nextStatus, progress ? { progress } : {})
+  await updateJobRecord(state, jobId, nextStatus, {
+    ...(progress ? { progress } : {}),
+    ...(errorMessage ? { errorMessage } : {}),
+  })
 }
 
 export async function executeTranscode(
@@ -38,7 +42,7 @@ export async function executeTranscode(
     const result = await runTranscodeWorkerJob(workerJob, {
       signal: controller.signal,
       onProgress: (progress) => {
-        updateTranscodeJob(state, job.id, 'running', progress)
+        void updateTranscodeJob(state, job.id, 'running', progress)
       },
       onLog: (line, stream) => {
         if (!line.trim()) return
@@ -71,14 +75,14 @@ export async function executeTranscode(
     activeAbortControllers.delete(job.id)
 
     if (error instanceof FfmpegToolNotFoundError) {
-      await updateTranscodeJob(state, job.id, 'failed')
+      await updateTranscodeJob(state, job.id, 'failed', undefined, '未找到可用的 ffmpeg，请确认已安装并在 PATH 中。')
       addLog(state.db, 'ERROR', 'transcode', `转码失败（ffmpeg 缺失）：${job.title}`)
     } else if (error instanceof FfmpegRunError) {
-      await updateTranscodeJob(state, job.id, 'failed')
+      await updateTranscodeJob(state, job.id, 'failed', undefined, error.normalized.message)
       addLog(state.db, 'ERROR', 'transcode', `转码失败：${job.title} — ${error.normalized.message}`)
     } else {
       const message = error instanceof Error ? error.message : String(error)
-      await updateTranscodeJob(state, job.id, 'failed')
+      await updateTranscodeJob(state, job.id, 'failed', undefined, message)
       addLog(state.db, 'ERROR', 'transcode', `转码出错：${job.title} — ${message}`)
     }
   }

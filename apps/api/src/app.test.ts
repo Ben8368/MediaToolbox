@@ -429,6 +429,8 @@ describe('api skeleton contract', () => {
       status = detail.json<{ job: { status: string } }>().job.status
     }
     expect(status).toBe('failed')
+    const failedDetail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+    expect(failedDetail.json<{ job: { errorMessage?: string } }>().job.errorMessage).toBeTruthy()
 
     // job 进入终态后，绑定的 grant 必须被自动吊销，不能无限期存活。
     const afterCompletion = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
@@ -516,6 +518,34 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('revokes grants bound to jobs canceled through the unified endpoint', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+    const created = await app.inject({ method: 'POST', url: '/api/jobs', payload: { title: 'Grant owner' } })
+    const jobId = created.json<{ id: string }>().id
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers: {
+        'x-mediatoolbox-desktop': 'desktop',
+        'x-mediatoolbox-desktop-token': 'test-desktop-token',
+      },
+      payload: {
+        kind: 'file.read',
+        physicalPath: path.resolve('README.md'),
+        displayName: 'README.md',
+        jobId,
+      },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+
+    await app.inject({ method: 'POST', url: `/api/jobs/${jobId}/cancel` })
+    const grantAfterCancel = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+
+    expect(grantAfterCancel.statusCode).toBe(404)
+    await app.close()
+  })
+
   it('clears logs and marks derived notifications as read', async () => {
     const app = await buildApiServer()
 
@@ -588,7 +618,7 @@ describe('api skeleton contract', () => {
     }
   })
 
-  it('returns a readable PSD adapter error when Photoshop is not configured', async () => {
+  it('returns a PSD job immediately and persists a readable adapter error asynchronously', async () => {
     const app = await buildApiServer()
 
     const response = await app.inject({
@@ -597,8 +627,13 @@ describe('api skeleton contract', () => {
       payload: { psdPath: '/Workspace/PSD/template.psd' },
     })
 
-    expect(response.statusCode).toBe(503)
-    expect(response.json()).toMatchObject({ ok: false, message: 'Photoshop 命令未配置，暂不能扫描 PSD。' })
+    expect(response.statusCode).toBe(200)
+    const jobId = response.json<{ job: { id: string } }>().job.id
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const detail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+    expect(detail.json()).toMatchObject({
+      job: { status: 'failed', errorMessage: 'Photoshop 命令未配置。' },
+    })
     await app.close()
   })
 })
@@ -610,8 +645,7 @@ describe('PSD workorder CRUD', () => {
   })
 
   it('scan → read → update → list → apply 全链路', async () => {
-    // engine 可用性检查（scan 路由中的同步 gate）+ 异步 scan 执行
-    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({ type: 'list-fonts', fonts: [] })
+    // 异步 scan 执行
     vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
       type: 'scan',
       documentWidth: 1080,
@@ -685,7 +719,6 @@ describe('PSD workorder CRUD', () => {
       'x-mediatoolbox-desktop-token': 'test-desktop-token',
     }
 
-    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({ type: 'list-fonts', fonts: [] })
     vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
       type: 'scan',
       documentWidth: 800,
@@ -723,9 +756,8 @@ describe('PSD workorder CRUD', () => {
     expect(scanResp.statusCode).toBe(200)
     const { workOrderId } = scanResp.json<{ workOrderId: string }>()
 
-    // calls[0] = engine check (list-fonts), calls[1] = 异步 scan 执行。
     // scan 阶段传给 worker 的必须是 grant 解析出的真实物理路径，不是占位字符串。
-    expect(vi.mocked(runPsdWorkerJob).mock.calls[1]![0]).toMatchObject({
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[0]![0]).toMatchObject({
       type: 'scan',
       psdPath: path.resolve('README.md'),
     })
@@ -740,6 +772,14 @@ describe('PSD workorder CRUD', () => {
       status: 'active',
     })
 
+    const reusedGrant = await app.inject({
+      method: 'POST',
+      url: '/api/psd/scan',
+      payload: { inputGrantId: grantId },
+    })
+    expect(reusedGrant.statusCode).toBe(400)
+    expect(reusedGrant.json()).toMatchObject({ ok: false, message: expect.stringContaining('已被其他任务使用') })
+
     const applyResp = await app.inject({
       method: 'POST',
       url: `/api/psd/workorders/${workOrderId}/apply`,
@@ -749,8 +789,8 @@ describe('PSD workorder CRUD', () => {
     expect(applyResp.json()).toMatchObject({ ok: true })
 
     // apply 阶段重新解析 workOrder.psdPath 中保存的 grant 标记，同样必须落回同一个真实物理路径。
-    // calls[0]=list-fonts, calls[1]=scan, calls[2]=apply。
-    expect(vi.mocked(runPsdWorkerJob).mock.calls[2]![0]).toMatchObject({
+    // calls[0]=scan, calls[1]=apply。
+    expect(vi.mocked(runPsdWorkerJob).mock.calls[1]![0]).toMatchObject({
       type: 'apply',
       workOrder: expect.objectContaining({ psdPath: path.resolve('README.md') }),
     })
@@ -759,6 +799,88 @@ describe('PSD workorder CRUD', () => {
     const afterApply = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
     expect(afterApply.statusCode).toBe(404)
 
+    await app.close()
+  })
+
+  it('does not consume an output grant when the workorder input grant is invalid', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+    vi.mocked(runPsdWorkerJob).mockResolvedValueOnce({
+      type: 'scan',
+      documentWidth: 800,
+      documentHeight: 600,
+      documentResolution: 72,
+      records: [],
+    })
+    const app = await buildApiServer()
+    const inputGrantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: { kind: 'file.read', physicalPath: path.resolve('README.md'), displayName: 'input.psd' },
+    })
+    const inputGrantId = inputGrantResponse.json<{ grant: { id: string } }>().grant.id
+    const scanResponse = await app.inject({ method: 'POST', url: '/api/psd/scan', payload: { inputGrantId } })
+    const workOrderId = scanResponse.json<{ workOrderId: string }>().workOrderId
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await app.inject({ method: 'DELETE', url: `/api/path-grants/${inputGrantId}` })
+
+    const outputGrantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: { kind: 'file.write', physicalPath: path.resolve('output.psd'), displayName: 'output.psd' },
+    })
+    const outputGrantId = outputGrantResponse.json<{ grant: { id: string } }>().grant.id
+    const applyResponse = await app.inject({
+      method: 'POST',
+      url: `/api/psd/workorders/${workOrderId}/apply`,
+      payload: { outputGrantId },
+    })
+    const outputGrantAfterFailure = await app.inject({ method: 'GET', url: `/api/path-grants/${outputGrantId}` })
+
+    expect(applyResponse.statusCode).toBe(400)
+    expect(outputGrantAfterFailure.statusCode).toBe(200)
+    expect(outputGrantAfterFailure.json()).toMatchObject({ grant: { status: 'active' } })
+    await app.close()
+  })
+
+  it('cancels an in-flight PSD scan without creating a workorder and revokes its input grant', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const headers = {
+      'x-mediatoolbox-desktop': 'desktop',
+      'x-mediatoolbox-desktop-token': 'test-desktop-token',
+    }
+    vi.mocked(runPsdWorkerJob).mockImplementationOnce((_job, _runner, options) => new Promise((_resolve, reject) => {
+      if (options?.signal?.aborted) {
+        reject(new DOMException('Aborted', 'AbortError'))
+        return
+      }
+      options?.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+    }))
+    const app = await buildApiServer()
+    const grantResponse = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers,
+      payload: { kind: 'file.read', physicalPath: path.resolve('README.md'), displayName: 'cancel.psd' },
+    })
+    const grantId = grantResponse.json<{ grant: { id: string } }>().grant.id
+    const scanResponse = await app.inject({ method: 'POST', url: '/api/psd/scan', payload: { inputGrantId: grantId } })
+    const { job, workOrderId } = scanResponse.json<{ job: { id: string }; workOrderId: string }>()
+
+    await app.inject({ method: 'POST', url: `/api/jobs/${job.id}/cancel` })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const detail = await app.inject({ method: 'GET', url: `/api/jobs/${job.id}` })
+    const workOrderResponse = await app.inject({ method: 'GET', url: `/api/psd/workorders/${workOrderId}` })
+    const grantAfterCancel = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
+
+    expect(detail.json()).toMatchObject({ job: { status: 'canceled' } })
+    expect(workOrderResponse.statusCode).toBe(404)
+    expect(grantAfterCancel.statusCode).toBe(404)
     await app.close()
   })
 

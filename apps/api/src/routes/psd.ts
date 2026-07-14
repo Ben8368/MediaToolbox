@@ -1,12 +1,12 @@
 import type { FastifyInstance } from 'fastify'
-import type { WorkOrder, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, OkResult, FontsListResponse, JobRecord } from '@mediatoolbox/contracts'
+import type { WorkOrder, WorkOrderGetResponse, OkResult, FontsListResponse, JobRecord } from '@mediatoolbox/contracts'
 import { createJobRecord } from '@mediatoolbox/job-core'
-import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError } from '@mediatoolbox/psd-worker'
+import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError } from '@mediatoolbox/psd-worker'
 
 import { psdScanSchema, psdWorkOrderUpdateSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog } from '../utils.js'
-import { resolveInputPath, resolveOutputPath, resolvePathOrGrantMarker, toGrantMarker, revokeGrantsBoundToJob } from '../workspace-path.js'
+import { resolveInputPath, resolveOutputPath, resolvePathOrGrantMarker, revokeGrantsBoundToJob } from '../workspace-path.js'
 import { executePsdScan, executePsdApply } from '../psd-executor.js'
 
 export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
@@ -25,24 +25,20 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         return { ok: false, message: error instanceof Error ? error.message : String(error) }
       }
 
-      // 同步快速检测 Photoshop 引擎是否可用。
-      try {
-        await runPsdWorkerJob({ type: 'list-fonts' })
-      } catch (error) {
-        if (error instanceof PsdWorkerEngineNotConfiguredError) {
-          reply.status(503)
-          return { ok: false, message: 'Photoshop 命令未配置，暂不能扫描 PSD。' }
-        }
-      }
-
       const job = createJobRecord({
         id: `psd-scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         kind: 'psd.scan',
         title: `PSD 扫描：${physicalPath.split(/[\\/]/).pop() ?? 'unknown.psd'}`,
       })
-      await state.db.jobs.create(job)
+      try {
+        await state.db.jobs.create(job)
+      } catch (error) {
+        await revokeGrantsBoundToJob(state, workOrderId)
+        throw error
+      }
 
       void executePsdScan(job, psdPath ?? physicalPath, physicalPath, workOrderId, inputGrantId, state)
+        .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 扫描执行器清理失败：${error instanceof Error ? error.message : String(error)}`))
 
       return { ok: true, job, workOrderId }
     },
@@ -101,25 +97,6 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       return { ok: false, message: '工单不存在' }
     }
 
-    const { outputPath, outputGrantId } = request.body
-    let physicalOutputPath: string
-    let virtualOutputPath: string
-
-    try {
-      const fileName = workOrder.psdFileName.replace(/\.[^.]+$/, '') + `_adapted_${Date.now()}.psd`
-      const defaultOutputPath = `${state.workspaceRoot}/Exports/${fileName}`
-      const output = await resolveOutputPath(state, {
-        path: outputPath || defaultOutputPath,
-        grantId: outputGrantId,
-        consumeGrant: true,
-      })
-      physicalOutputPath = output.physicalPath
-      virtualOutputPath = output.virtualPath ?? toGrantMarker(outputGrantId as string)
-    } catch (error) {
-      reply.status(400)
-      return { ok: false, message: error instanceof Error ? error.message : String(error) }
-    }
-
     let physicalPsdPath: string
     try {
       physicalPsdPath = await resolvePathOrGrantMarker(state, workOrder.psdPath, 'file.read')
@@ -129,6 +106,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     }
 
     const workOrderForApply: WorkOrder = { ...workOrder, psdPath: physicalPsdPath }
+    const { outputPath, outputGrantId } = request.body
 
     const job = createJobRecord({
       id: `psd-apply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -137,8 +115,25 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     })
     await state.db.jobs.create(job)
 
+    let physicalOutputPath: string
+    try {
+      const fileName = workOrder.psdFileName.replace(/\.[^.]+$/, '') + `_adapted_${Date.now()}.psd`
+      const defaultOutputPath = `${state.workspaceRoot}/Exports/${fileName}`
+      const output = await resolveOutputPath(state, {
+        path: outputPath || defaultOutputPath,
+        grantId: outputGrantId,
+        consumeGrant: true,
+      })
+      physicalOutputPath = output.physicalPath
+    } catch (error) {
+      await state.db.jobs.delete(job.id)
+      reply.status(400)
+      return { ok: false, message: error instanceof Error ? error.message : String(error) }
+    }
+
     void executePsdApply(job, workOrderForApply, physicalPsdPath, physicalOutputPath, state)
-      .finally(() => { void revokeGrantsBoundToJob(state, workOrder.id) })
+      .finally(() => revokeGrantsBoundToJob(state, workOrder.id))
+      .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 应用执行器清理失败：${error instanceof Error ? error.message : String(error)}`))
 
     return { ok: true, job }
   })
@@ -175,5 +170,3 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     }
   })
 }
-
-

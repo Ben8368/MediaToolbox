@@ -61,7 +61,8 @@ export async function resolveGrantPath(
  * 只在真正创建任务时调用，不要在 probe/preview 等只读预览路径调用。
  */
 export async function bindReadGrantToJob(state: ApiState, grantId: string, jobId: string): Promise<void> {
-  await state.db.pathGrants.bindJob(grantId, jobId, Date.now())
+  const claimed = await state.db.pathGrants.bindJob(grantId, jobId, Date.now())
+  if (!claimed) throw new WorkspacePathError('路径授权已被其他任务使用、已过期或已失效。')
 }
 
 /** 吊销绑定到某个 job 的所有活跃 grant；在 job 进入终态（succeeded/failed/canceled）时调用。 */
@@ -72,7 +73,8 @@ export async function revokeGrantsBoundToJob(state: ApiState, jobId: string): Pr
 
 /** 写授权默认 one-shot：真正用于落盘写入后立即消费，不允许重复使用同一个 grant。 */
 async function consumeWriteGrant(state: ApiState, grantId: string): Promise<void> {
-  await state.db.pathGrants.update({ id: grantId, status: 'consumed', updatedAt: Date.now() })
+  const claimed = await state.db.pathGrants.consume(grantId, Date.now())
+  if (!claimed) throw new WorkspacePathError('写入授权已被使用、已过期或已失效。')
 }
 
 const GRANT_MARKER_PREFIX = '__grant:'

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { canTransitionJob, createJobRecord, transitionJob } from '@mediatoolbox/job-core'
+import { canTransitionJob, createJobRecord } from '@mediatoolbox/job-core'
 import type { JobRecord, OkResult } from '@mediatoolbox/contracts'
 
 import type { ApiState } from '../state.js'
@@ -7,6 +7,7 @@ import { abortDownload } from '../download-executor.js'
 import { abortTranscode } from '../transcode-executor.js'
 import { abortPsdJob } from '../psd-executor.js'
 import { abortWebComposerRender } from '../web-composer-executor.js'
+import { updateJobRecord } from '../job-utils.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 
 export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
@@ -72,7 +73,7 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
       abortWebComposerRender(job.id)
     }
 
-    await state.db.jobs.update(transitionJob(job, 'canceled'))
+    await updateJobRecord(state, job.id, 'canceled')
     addLog(state.db, 'WARNING', 'jobs', `取消任务：${job.title}`)
     return { ok: true }
   })

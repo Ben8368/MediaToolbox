@@ -8,7 +8,7 @@ import { probeMedia, analyzeSource, buildFfmpegArgs, buildTwoPassFfmpegArgs } fr
 import { transcodeJobCreateSchema, transcodeProbeSchema, transcodePreviewCommandSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
-import { resolveInputPath, resolveOutputPath } from '../workspace-path.js'
+import { resolveInputPath, resolveOutputPath, revokeGrantsBoundToJob } from '../workspace-path.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: { inputPath?: string; outputPath?: string; preset?: string; title?: string; inputGrantId?: string; outputGrantId?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number; enableVmaf?: boolean }; Reply: JobRecord }>(
@@ -19,14 +19,6 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
 
       const jobId = `transcode-${Date.now()}`
       const input = await resolveInputPath(state, { path: inputPath, grantId: inputGrantId, bindJobId: jobId })
-      const output = await resolveOutputPath(state, {
-        path: outputPath,
-        grantId: outputGrantId,
-        requireExportsDir: true,
-        exportsErrorMessage: '转码输出必须位于工作区 Exports 目录内。',
-        consumeGrant: true,
-      })
-
       const VALID_PRESETS: TranscodePreset[] = ['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac', 'audio-aac', 'audio-mp3', 'copy', 'remux']
       const safePreset: TranscodePreset = VALID_PRESETS.includes(preset as TranscodePreset) ? (preset as TranscodePreset) : 'mp4-h264-aac'
       const job = createJobRecord({
@@ -34,7 +26,27 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         kind: 'media.transcode',
         title: title || `转码任务：${path.basename(input.physicalPath)}`,
       })
-      await state.db.jobs.create(job)
+      try {
+        await state.db.jobs.create(job)
+      } catch (error) {
+        await revokeGrantsBoundToJob(state, jobId)
+        throw error
+      }
+
+      let output: Awaited<ReturnType<typeof resolveOutputPath>>
+      try {
+        output = await resolveOutputPath(state, {
+          path: outputPath,
+          grantId: outputGrantId,
+          requireExportsDir: true,
+          exportsErrorMessage: '转码输出必须位于工作区 Exports 目录内。',
+          consumeGrant: true,
+        })
+      } catch (error) {
+        await state.db.jobs.delete(jobId)
+        await revokeGrantsBoundToJob(state, jobId)
+        throw error
+      }
 
       void executeTranscode(
         job,
