@@ -72,7 +72,7 @@ Windows PowerShell 读取中文文档或运行可能输出中文的命令前，�
 
 ### 1. 项目理解
 
-- [CONTEXT.md](CONTEXT.md)：当前阶段、阻断项、黄灯和下一步。
+- [CONTEXT.md](CONTEXT.md)：当前决策、三项优先级和最后验证。
 - [docs/ROADMAP.md](docs/ROADMAP.md)：阶段路线和未来规划。
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：架构边界与模块职责。
 - [docs/ADR/](docs/ADR/README.md)：长期架构决策记录。
@@ -87,7 +87,8 @@ Windows PowerShell 读取中文文档或运行可能输出中文的命令前，�
 ### 3. AI 协作治理
 
 - [AGENTS.md](AGENTS.md)：通用 AI 协作入口和权威规则源。
-- [LESSONS.md](LESSONS.md)：每轮必读的压缩错题本。
+- [LESSONS.md](LESSONS.md)：每轮必读的错题路由，按任务加载详情。
+- [docs/GOVERNANCE.md](docs/GOVERNANCE.md)：治理文档的事实源、预算和归档规则。
 - [docs/AI_RULES.md](docs/AI_RULES.md)：红绿灯审查、客观验证、提交与推送规则。
 - [docs/TECH_DEBT.md](docs/TECH_DEBT.md)：黄灯、技术债和偿还计划。
 
@@ -124,7 +125,7 @@ LESSONS 压缩反复踩坑。
   → AI_RULES 红绿灯审查
   → npm run verify
   → 红灯修复
-  → 黄灯进入 CONTEXT 或 TECH_DEBT
+  → 跨任务黄灯进入 TECH_DEBT；阶段阻断在 CONTEXT 仅保留 ID 与一句摘要
   → 长期架构变化进入 ADR
   → 阶段变化更新 ROADMAP / CONTEXT
 ```

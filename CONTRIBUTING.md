@@ -41,7 +41,7 @@ MediaToolbox 当前以个人/小团队协作为主，但所有改动都按长期
 npm run verify
 ```
 
-提交或发起 PR 前，请记录验证命令和结果；如阶段、功能、API 契约或架构边界变化，同步更新 [CONTEXT.md](CONTEXT.md) 或相关 `docs/`。AI 自动审查与自动提交流程不在本文重复，按 [docs/AI_RULES.md](docs/AI_RULES.md) 执行。
+提交或发起 PR 前，请记录验证命令和结果；阶段、功能、API 契约或架构边界变化时，只更新对应的权威文档；`CONTEXT.md` 仅在当前决策、前三优先级或最后验证变化时更新。AI 自动审查与自动提交流程不在本文重复，按 [docs/AI_RULES.md](docs/AI_RULES.md) 执行。
 
 主观体验项，例如 NAS 风格桌面密度、浏览器多标签真机体验、Photoshop 联调结果，不能只用测试或构建代替。
 

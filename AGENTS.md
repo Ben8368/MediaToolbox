@@ -1,102 +1,39 @@
 # AI 协作规范
 
-`AGENTS.md` 是通用 AI 的治理入口和权威规则源。工具专属入口只做摘要：`CLAUDE.md` 给 Claude Code，`.cursorrules` 给 Cursor。
+`AGENTS.md` 是通用 AI 的唯一入口；`CLAUDE.md` 与 `.cursorrules` 只能保留摘要。规则细节只在其权威文档中维护，不在入口重复。
 
-## 开局读取
+## 开局与按需读取
 
-`AGENTS.md` 是仓库治理入口；外层工具或仓库发现机制应以本文件作为进入项目的第一站。读取到本文件后，再按下方四层路由继续读取，先小后大。入口文件保持短小，细节、历史和长复盘下沉到 `docs/`。
+所有任务先读 [CONTEXT.md](CONTEXT.md)（状态卡）和 [LESSONS.md](LESSONS.md)（错题路由），再仅加载下表命中的文档；不要为“可能相关”预读长文档。
 
-在 Windows PowerShell 中读取任何仓库文本文件前，先初始化 UTF-8 控制台编码，并对 `Get-Content` 明确使用 `-Encoding UTF8`；不得先用默认编码读取中文文档再事后纠偏。
+| 任务 | 必读文档 |
+| --- | --- |
+| 任意源码改动 | [docs/AI_RULES.md](docs/AI_RULES.md)、[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| 前端或 API 边界 | [docs/FRONTEND_API_CONTRACT.md](docs/FRONTEND_API_CONTRACT.md)；前端另读 [docs/UI_COMPAT.md](docs/UI_COMPAT.md) |
+| worker、外部工具、路径或权限 | [SECURITY.md](SECURITY.md)；契约变化另读 API Contract 与相关 ADR |
+| 下载策略 | [docs/YTDLP_CAPABILITY.md](docs/YTDLP_CAPABILITY.md) |
+| 验收、发布或素材包 | [docs/API_VALIDATION.md](docs/API_VALIDATION.md)、[docs/RELEASE.md](docs/RELEASE.md)；素材包另读 `assets/web-composer/README.md` |
+| 技术债、阶段或规划 | [docs/TECH_DEBT.md](docs/TECH_DEBT.md)、[docs/ROADMAP.md](docs/ROADMAP.md) |
+| 治理文档改动 | [docs/GOVERNANCE.md](docs/GOVERNANCE.md) |
+| 维护职责或架构决策 | [docs/MAINTAINERS.md](docs/MAINTAINERS.md)、[docs/ADR/README.md](docs/ADR/README.md) |
 
-1. **每轮必读**
-   - [CONTEXT.md](CONTEXT.md)：当前阶段、阻断项、黄灯、下一步。
-   - [LESSONS.md](LESSONS.md)：按任务关键词匹配压缩错题。
-2. **代码改动按需**
-   - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：架构边界与模块职责。
-   - [docs/AI_RULES.md](docs/AI_RULES.md)：审查、验证、提交与代码规模触发项。
-   - [docs/FRONTEND_API_CONTRACT.md](docs/FRONTEND_API_CONTRACT.md)：前后端 API 边界。
-   - [docs/UI_COMPAT.md](docs/UI_COMPAT.md)：UI 兼容与体验约束。
-   - [docs/TECH_DEBT.md](docs/TECH_DEBT.md)：技术债追踪与偿还计划。
-   - [docs/YTDLP_CAPABILITY.md](docs/YTDLP_CAPABILITY.md)：yt-dlp 与浏览器下载路由策略。
-3. **高风险按需**
-   - [SECURITY.md](SECURITY.md)：安全策略。
-   - [docs/API_VALIDATION.md](docs/API_VALIDATION.md)：真实路径验收清单。
-   - [docs/MAINTAINERS.md](docs/MAINTAINERS.md)：领域责任与升级评审边界。
-   - [docs/ADR/](docs/ADR/README.md)：已记录的架构决策。
-4. **规划 / 发布按需**
-   - [docs/ROADMAP.md](docs/ROADMAP.md)：阶段路线。
-   - [CONTRIBUTING.md](CONTRIBUTING.md)：人类贡献流程。
-   - [docs/RELEASE.md](docs/RELEASE.md)：发布流程。
-   - [assets/web-composer/README.md](assets/web-composer/README.md)：默认视频资源包的打包、安装与发布操作。
-   - `docs/archive/`：长历史与复盘。
+Windows PowerShell 读取中文或输出中文前，初始化 UTF-8，并对 `Get-Content` 显式使用 `-Encoding UTF8`；具体命令见 `scripts/dev/init-utf8-console.ps1`。
 
-治理文档维护原则：入口短小，事实单一，状态真实，规则可执行；同一条规则需要第二次展开时，优先链接权威来源而不是复制。
+## 不可跨越的边界
 
-## 工作流
+- 本仓库是 TypeScript monorepo：Web 负责交互，本地 API 负责编排与安全，worker 负责长任务，共享契约与 adapter 位于 `packages/*`。
+- UI 不直接调用 `yt-dlp`、`ffmpeg`、Photoshop、危险文件操作或系统命令；第三方能力必须经 adapter 分层。
+- Legacy 仅作布局、资产和用户路径参考；旧 API 耦合、vendor、缓存和构建产物不得回流。
+- 前端保持 NAS 风格 Web 桌面的可用首屏；错误、空态、加载态可读，窄屏文本不溢出。其余实现细则以 Architecture / UI Compat 为准。
 
-- 先确认 [CONTEXT.md](CONTEXT.md) 的当前快照，再动手。
-- 代码改动后按 [docs/AI_RULES.md](docs/AI_RULES.md) 输出 `🚦 Audit Report`，再跑客观验证。
-- 客观验证由 AI 执行；用户只负责主观体验和业务判断。
-- 客观验证默认：`npm run verify`。
-- Audit Report 为 🟢 且验证通过时，按 [docs/AI_RULES.md](docs/AI_RULES.md) 判断是否自动提交 / 推送；用户本轮明确禁止时遵从用户。
-- 阶段、功能、用户命令、API 契约或架构边界变化时，同步更新 [CONTEXT.md](CONTEXT.md) 或相关 `docs/`。
-- 版本化外部素材变更必须同步清单、不可变 tag、哈希、来源/再分发授权记录和全新安装验收；具体门禁见 [docs/RELEASE.md](docs/RELEASE.md)。
-- 面向开放协作的流程、安全、发布和维护职责分别见 [CONTRIBUTING.md](CONTRIBUTING.md)、[SECURITY.md](SECURITY.md)、[docs/RELEASE.md](docs/RELEASE.md) 与 [docs/MAINTAINERS.md](docs/MAINTAINERS.md)。
+## 执行与汇报
 
-## 汇报语言
+- 源码改动后按 `AI_RULES` 输出 `🚦 Audit Report`，再执行客观验证（默认 `npm run verify`）；客观项由 AI 验证，主观体验须保留给用户确认。
+- 只更新发生事实变化的权威文档：状态进 [CONTEXT.md](CONTEXT.md)，技术债进 `TECH_DEBT`，规划进 `ROADMAP`，契约进 API Contract，长期决策进 ADR。不要在多处复制。
+- 绿灯提交、推送、提交信息与 Git trailer 全部以 `AI_RULES` 为准。
+- 默认用中文汇报；代码标识、命令、路径、API 字段、日志与专有名词保留原文。
 
-- 默认使用中文向用户汇报进度、审查结论、验证结果和最终交付；用户明确要求其他语言时从其要求。
-- 代码标识、命令、文件路径、API 字段、日志原文和第三方专有名词按原文保留，避免为了中文化破坏可检索性或技术准确性。
-- 该规则以本文件为权威来源；工具专属入口只链接或摘要，不复制扩展版本。
+## 治理文档自治理
 
-## PowerShell 编码
-
-- Windows PowerShell 中读取中文文件或运行可能输出中文的命令前，默认先初始化 UTF-8 控制台编码。
-- 可在同一 PowerShell 会话中执行 `. .\scripts\dev\init-utf8-console.ps1`，或等价设置 `chcp 65001`、`[Console]::InputEncoding`、`[Console]::OutputEncoding`、`$OutputEncoding` 与 `PYTHONIOENCODING=utf-8`。
-- 读取仓库文本文件时，`Get-Content` 默认显式加 `-Encoding UTF8`，包括 `AGENTS.md`、`CONTEXT.md`、`LESSONS.md`、`README.md` 和 `docs/` 下的中文文档。
-- 只看到中文乱码时，优先按终端编码问题处理，不要反复向用户报告“再用 UTF-8 确认”。
-- 显式 UTF-8 读取后仍异常，才判断可能是文件本身编码或内容损坏。
-
-## 架构边界
-
-- 本仓库是 TypeScript monorepo：桌面壳、Web 前端、本地 API、共享包和 worker 同仓管理。
-- `apps/web` 负责交互、展示、任务提交和状态呈现；首屏必须是可使用的 NAS 风格 Web 桌面。
-- `apps/api` 负责本地 HTTP API、任务编排、资产访问和安全边界。
-- `workers/*` 负责下载、转码、PSD 批处理等长任务执行。
-- `packages/*` 存放共享契约、状态机、adapter、数据库边界和可复用工具。
-- UI 不直接调用 `yt-dlp`、`ffmpeg`、Photoshop、文件系统危险操作或系统命令。
-- 第三方工具调用必须经 adapter；命令参数构建、进程执行、进度解析分层处理。
-- Legacy/远端前端只提供布局、资产、视觉节奏和用户路径参考；旧 API 耦合、vendor、缓存、构建产物不得回流。
-
-## 前端体验
-
-- 保持左侧状态栏、桌面区、窗口层、启动器、右侧状态面板的空间关系。
-- 应用入口统一走 `apps/web/src/appRegistry.tsx`。
-- 样式按现有 `apps/web/src/styles/` 分区组织。
-- 用户可见错误、空态、加载态必须可读。
-- 文本不能在按钮、表格、窗口标题或窄屏布局中溢出。
-
-## TypeScript / React
-
-- 使用函数组件和 hooks。
-- 公共类型优先放在使用边界附近；跨模块共享类型再拆到 `packages/contracts`。
-- 避免用 `any` 逃避建模；处理未知数据时先做窄化。
-- 组件不实现媒体处理、文件系统或外部工具逻辑。
-
-## 规模与依赖
-
-- 单个源码文件超过 350 行：审查中说明是否仍单一职责。
-- 超过 450 行：继续追加逻辑前评估拆分方案。
-- 超过 500 行：默认视为维护风险，除低复杂度映射或静态数据外先拆分再扩展。
-- 新增运行时依赖前确认：现有能力是否足够、跨平台兼容性、许可证、打包体积和维护成本。
-
-## 提交与署名
-
-- 绿灯自动提交与推送细则见 [docs/AI_RULES.md](docs/AI_RULES.md)「绿灯自动提交与推送」。
-- commit message 的标题与正文统一使用中文；Conventional Commit 类型前缀和 Git trailer 键名保留英文规范。
-- AI 工具参与实质改动且工具未自动记录来源时，在 commit message 末尾追加对应 Git trailer，前方保留一个空行。
-- Git trailer 记录工具来源，不记录具体模型来源；历史提交中模型级署名不回改，后续按工具级映射统一。
-- 已确认 trailer：
-  - Claude Code：`Co-authored-by: Claude Code <noreply@anthropic.com>`
-  - Cursor：`Co-authored-by: Cursor <cursoragent@cursor.com>`
-  - Codex：`Co-authored-by: Codex <codex@openai.com>`
+- 改动治理文档时遵守 [docs/GOVERNANCE.md](docs/GOVERNANCE.md) 的单一事实源、篇幅预算和归档规则，并运行 `npm run docs:governance:check`。
+- `AGENTS.md`、`CONTEXT.md`、`LESSONS.md` 是强制加载面：只保留路由、当前决策和索引；历史、命令手册和长复盘进入权威文档或 `docs/archive/`。

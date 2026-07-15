@@ -43,7 +43,7 @@
 
 #### TD-021: Web Composer 长时高分辨率验收
 - **位置：** `apps/web/src/apps/web-composer/` + `workers/web-render-worker/`
-- **来源：** Phase 5.5 beta 验收剩余黄灯
+- **来源：** Phase 5.5 beta 验收待办
 - **目标阶段：** Web Composer 候选版本前
 - **阻断候选构建：** 是，若候选版本承诺离线或 4K/15 秒稳定导出
 - **验证方式：** 三套预设分别覆盖默认素材、工作区图片、工作区视频，在 16:9/4:3/1:1/9:16 下完成 PNG 与 MP4；4K 明确定义为 UHD `3840×2160`（不是 DCI `4096×2160`），重点记录 15 秒导出耗时、峰值内存、文件体积和失败提示
@@ -54,7 +54,7 @@
 
 #### TD-013: 浏览器多标签页桌面端真机验收
 - **位置：** `apps/desktop/src/browserViews.ts` + `apps/web/src/apps/browser/`
-- **来源：** CONTEXT.md 剩余黄灯
+- **来源：** Phase 4.5 桌面端验收待办
 - **目标阶段：** Phase 4.5 桌面端验收
 - **阻断候选构建：** 是，若 view 生命周期或下载归属在真机失败
 - **验证方式：** 桌面端真机覆盖新建/切换/关闭标签、后台下载归属、权限提示和取消下载隔离
@@ -65,7 +65,7 @@
 
 #### TD-015: PSD 真实 Photoshop 联调
 - **位置：** `packages/psd-core/` + `workers/psd-worker/` + `fixtures/psd/photoshop-workbench/`
-- **来源：** CONTEXT.md 剩余黄灯
+- **来源：** Phase 5 Photoshop 联调待办
 - **目标阶段：** Phase 5 深水区
 - **阻断候选构建：** 是，若候选版本承诺 PSD 图片或智能对象渲染
 - **验证方式：**
@@ -110,39 +110,9 @@
 
 ---
 
-## 已偿还债务（归档）
+## 已偿还债务
 
-### 2026-07-15
-
-- TD-029: Web Composer 预设页 logo/icon slot PNG 替换失败。已新增 `replaceSlotWithImage`，上传图片会同时更新 image 候选并切换 `activeKind: 'image'`；Lumora 文案型 Logo 与 VaultShield 图标型 Logo 的状态层回归、Lumora 渲染 `<img>` 回归已覆盖，避免继续显示默认文案或内置图标。
-- TD-027: 所有服务端 Job ID 与 PSD workorder ID 已改用带业务前缀的 UUID；同一冻结时钟下并发创建 100 个任务均成功且 ID 唯一，消除时间戳/数组长度碰撞导致的 SQLite 主键冲突。
-- Release matrix 并发发布风险已修复：三平台仅构建、烟测和上传 workflow artifact，单一 `publish` job 在全部通过后创建草稿、上传完整产物并转为正式 Release；已发布 tag 禁止覆盖。
-- TD-012: 纯 Web 模式下，浏览器 app 现在明确说明 Electron 会话边界，并提供“打开下载器”的可用替代路径；用户不会再被留在无法操作的空浏览器界面。
-- TD-022: 移除了没有任何执行路径的 `JobStatus.retrying`、状态转移、指标过滤与前端展示；失败自动重试改为未来显式设计的调度能力，而非伪装成已支持状态。
-- TD-024: 下载请求已收敛为共享 `FetchTaskDraft`。工作区输出目录、H.264/转码、Cookie 与有界批次并发都映射到调度器或 yt-dlp 参数；平台、通道和字幕策略统一自动处理，字幕仅请求原始语言的一份 SRT。未知字段和超界并发返回 4xx，服务端全局并发上限为 4。已补 API 与 downloader 回归测试。
-- TD-025: Job 运行中字段更新已从状态迁移中拆出，`patchIfStatus(..., 'running')` 原子持久化进度与更新时间；Browser Network 进度回归测试确认状态保持 `running`。
-- TD-026: Job 终态写入改为基于旧状态的数据库 compare-and-set。成功 Asset/日志仅在成功领取 `succeeded` 后创建；取消后到达的浏览器完成事件会保持 `canceled` 且不生成 Asset。已补竞态回归测试。
-
-### 2026-07-08
-
-- TD-016: macOS GPU 指标采集。`ioreg IOAccelerator` 已在 Apple Silicon（M 系列）机器上完成验收，GPU 利用率仪表在一般使用场景下显示正常；Intel Mac 跨机型验收跳过，当前降级文案（未检测到可用计数器）已足够。
-
-### 2026-07-07
-
-- TD-001: PowerShell 空输出误报 GPU 可用。已通过空输出解析保护修复，并补充单元测试。
-- TD-002: `parseDataRateText` 无法匹配波浪号前缀。已支持 `~4.20MiB/s` 等 yt-dlp 预估速率格式。
-- TD-003: `parseDataRateText` 接受不合法单位 `IB/s`。已改为枚举合法单位并补充测试。
-- TD-004: `sampleGpu` 缓存击穿竞态。已加入 in-flight Promise 缓存，缓存过期瞬间复用同一次采样。
-- TD-005: `parseDataRateText` 返回 0 无法区分解析失败。已改为 `number | null`，下载进度解析失败时不写入假 0 速率。
-- TD-006: `buildMetrics` 串行执行独立异步操作。已改为并发采样内存与 GPU。
-- TD-007: `sampleProjectNetworkRates` 两次遍历同一数组。已合并为单次 reduce。
-- TD-008: `formatBytesPerSecond` 缺少 GB/s 支持。已新增 GB/s 显示分支。
-- TD-009: `task.state` 对象频繁展开。已改为速率变化时才写入，解析失败时清理速率字段。
-- TD-017: 前后端应用 ID 契约漂移。已将 `packages/contracts` 与 `/api/apps` 对齐到前端 registry（`browser`、`fetcher` 等），并补充 API 测试。
-- TD-018: PSD manifest 类型重复且非文字 slot 会被隐式忽略。已将 PSD manifest/slot/render input 类型收敛到 `packages/contracts`，并在 API/worker/UI 明确当前仅支持文字 slot。
-- TD-010: `formatBytesPerSecond` 与 `formatSpeed` 重复实现。已提取为 `packages/shared/utils/formatBytesPerSecond.ts` 统一实现，API 和 Web 端均改为引用共享包。
-- TD-011: `cpuPrevious` 模块级全局状态。已将 CPU 采样状态封装为 `createCpuSampler()` 闭包，`sampleCpuPercent` 和 `resetCpuSamplerForTests` 保持原有公共 API 不变。
-- TD-014: Electron 生产打包结构与 API 子进程链路。已接入 API production runtime bundle、packaged Electron `ELECTRON_RUN_AS_NODE` 启动、`userData` 工作区/DB 默认路径、electron-builder 目录包资源和 macOS arm64 包内 API health 烟测；该项只证明结构入包与 API 子进程可启动，不代表 renderer 功能可用，后续阻断迁移为 TD-019。
+已偿债按月份归档到 [docs/archive/tech-debt/](archive/tech-debt/2026-07.md)，避免干扰活跃债务的读取和维护。
 
 ---
 
@@ -158,10 +128,10 @@
 1. **识别 → 记录：** 发现债务后立即记录到本文档，标注优先级和预估工作量
 2. **规划 → 认领：** 迭代规划时从 P0 → P1 → P2 顺序选择债务项，分配到对应的开发任务
 3. **修复 → 验证：** 修复后必须包含对应测试用例，跑通 `npm run verify`
-4. **归档 → 审计：** 移至「已偿还债务」，记录修复时间和 commit，供后续复盘
+4. **归档 → 审计：** 移至 `docs/archive/tech-debt/`，记录修复时间和 commit，供后续复盘
 
 ## 与现有体系的衔接
 
 - **红绿灯审查：** 🔴 阻断项中的系统性问题可转为 P0 技术债，🟡 优化项中需跨任务跟进的内容可转为 P1/P2
-- **[CONTEXT.md](../CONTEXT.md)：** P0 债务若影响阶段推进，应同步写入「当前阻断项」或「剩余黄灯」
-- **[LESSONS.md](../LESSONS.md)：** 债务偿还过程中的错误和经验应补充到压缩错题库
+- **[CONTEXT.md](../CONTEXT.md)：** P0 债务若影响阶段推进，应在「当前决策」中以 ID 和一句摘要标记
+- **[LESSONS.md](../LESSONS.md)：** 债务偿还过程中的可复发经验应补充到匹配的详情文件

@@ -1,35 +1,12 @@
-# Lessons Index
+# Lessons Router
 
-> 每轮开局读取的压缩错题集。只放会改变行动的短规则；长历史和完整复盘进入 `docs/archive/`。
+> 每轮只读本路由；按任务加载命中的详情（可多份）。不要为匹配关键词而预读全部错题。
 
-## 治理短规则
+| 任务关键词 | 加载详情 |
+| --- | --- |
+| 治理、文档、验证、用户限定范围 | [docs/lessons/governance.md](docs/lessons/governance.md) |
+| API、worker、下载、转码、PSD、Job、PathGrant、进度、打包 | [docs/lessons/runtime.md](docs/lessons/runtime.md) |
+| 前端、契约、mock、Legacy、纯 Web 降级 | [docs/lessons/frontend.md](docs/lessons/frontend.md) |
+| Windows、PowerShell、中文乱码 | [docs/lessons/windows.md](docs/lessons/windows.md) |
 
-- H-001：未跑客观验证不得把客观项标为完成；未经过用户体验确认不得把主观项标为完成。
-- H-002：治理入口只放规则和当前指针；长模板、长复盘和历史债务下沉到 `docs/` 或 `docs/archive/`。
-- H-003：文档与用户文案统一使用「NAS 风格 Web 桌面」，不要回写历史品牌词。
-- H-004：用户限定写入范围时，只改指定文件；需要同步其他文档时先说明为未执行项。
-
-## 实现踩坑
-
-- T-001：PowerShell 命令空输出不等于能力可用；系统指标采样先处理空值、非法值和降级文案。
-- T-002：CLI 进度解析要覆盖真实格式（如 `~4.20MiB/s`），但单位必须枚举白名单，不能用宽松匹配吞掉错拼。
-- T-003：解析失败返回 `null` 或显式错误，不写入假 `0`；否则下载速率、指标面板会把未知伪装成真实数据。
-- T-004：独立异步采样优先并发；高频采样要加 in-flight 缓存，避免缓存过期瞬间击穿。
-- T-005：前后端可见枚举（如 app id、PSD slot 类型）以 `packages/contracts` 为准，避免 registry、API 和 worker 漂移。
-- T-006：暂不支持的 PSD slot 必须显式拒绝，不能静默忽略 image / smart-object 这类用户以为已生效的输入。
-- T-007：API/Web 共享格式化逻辑放到共享包；不要让 `formatSpeed`、`formatBytesPerSecond` 这类显示规则双写分叉。
-- T-008：生产打包必须验证包内真实启动路径和 `/api/health`，不能只相信开发态路径或源码布局。
-- T-009：Fastify `close` 前必须先等待或取消所有异步 executor；没有统一 drain 屏障时不得直接关闭 SQLite，否则 worker 收尾会访问已关闭连接。
-- T-010：Job 进入终态默认回收绑定 PathGrant；若成功结果会由持久实体继续复用授权（如 PSD scan → WorkOrder → apply），必须显式保留或转移所有权，同时保证失败、取消和重启恢复路径仍会回收。
-
-## 迁移边界
-
-- M-001：Legacy 只提供布局、密度、资产和用户路径参考；旧 API 耦合、vendor、缓存、构建产物不得回流。
-- M-002：新增 UI 优先接 `packages/contracts` 与真实 API 契约；mock 只能作为测试夹具或迁移参考，并明确标注。
-- M-003：第三方能力必须走 adapter，命令参数构建、进程执行、进度解析、错误归一分层处理。
-- M-004：仅桌面端可用的能力在纯 Web 模式必须明确说明边界，并提供当前 Web 桌面中可完成的替代路径；不能只留“未连接”提示。
-
-## Windows / PowerShell
-
-- W-001：PowerShell 中出现中文乱码时，先初始化 UTF-8 或显式 UTF-8 读取；显式读取后仍异常，才判断文件编码或内容损坏。
-- W-002：本地文档入口为 `AGENTS.md`；外层启动或仓库发现阶段应显式 UTF-8 读取入口，再按其路由读取 `CONTEXT.md` / `LESSONS.md`，不要先用默认编码读中文文件再纠偏。
+未命中时不额外加载；新增可复发且会改变行动的经验时，写入唯一匹配的详情文件，长复盘进入 `docs/archive/`。

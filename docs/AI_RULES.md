@@ -1,6 +1,6 @@
 # AI 编码与审查规则
 
-> **用途：** 编码细节与红绿灯审查的完整规格。工作流入口见 [AGENTS.md](../AGENTS.md)；阶段状态见 [CONTEXT.md](../CONTEXT.md)。
+> **用途：** 编码细节与红绿灯审查的完整规格。工作流入口见 [AGENTS.md](../AGENTS.md)；阶段状态见 [CONTEXT.md](../CONTEXT.md)；治理文档维护见 [GOVERNANCE.md](GOVERNANCE.md)。
 
 ## 1. 红绿灯审查系统 (Traffic Light Audit)
 
@@ -56,8 +56,8 @@
 
 ### 与阶段文档的衔接
 
-- Audit Report 中的 🔴 阻断项，若影响阶段推进，应同步写入 [CONTEXT.md](../CONTEXT.md) 的「当前阻断项」
-- 🟡 优化项中可跨任务跟进的内容，可写入 [CONTEXT.md](../CONTEXT.md) 的「剩余黄灯」
+- Audit Report 中影响阶段推进的 🔴 项，应在 [CONTEXT.md](../CONTEXT.md)「当前决策」以 ID 和一句摘要标记；完整记录进入权威文档
+- 🟡 项中可跨任务跟进的内容进入 [TECH_DEBT.md](TECH_DEBT.md)，不要在 `CONTEXT` 复制详情
 - 总体评价为 🔴 时，不得将相关客观项标为完成；须先修复或明确降级方案
 
 ### 绿灯自动提交与推送
@@ -71,7 +71,7 @@
 执行顺序：
 
 ```text
-编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → git add → git commit → 按分支规则决定是否 git push
+编码 → 🚦 Audit Report → npm run verify → 按需更新唯一权威文档 → git add → git commit → 按分支规则决定是否 git push
 ```
 
 提交规范（与 [AGENTS.md](../AGENTS.md) 一致）：
@@ -99,8 +99,9 @@
 ## 2. 审查与验证顺序
 
 ```text
-思考（LESSONS.md）→ 编码 → 🚦 Audit Report → npm run verify → 按需同步 CONTEXT / docs → （🟢 则 git commit，按分支规则决定是否 push）
+思考（LESSONS 路由与命中详情）→ 编码 → 🚦 Audit Report → npm run verify → 按需更新唯一权威文档 → （🟢 则 git commit，按分支规则决定是否 push）
 ```
 
 - 未跑客观验证，不得把客观项标为完成
 - 主观验收项（NAS 风格、布局密度、交互路径）不由 typecheck/build 代替
+- 改动治理文档时，额外运行 `npm run docs:governance:check`；其预算、事实源和归档规则以 [GOVERNANCE.md](GOVERNANCE.md) 为准

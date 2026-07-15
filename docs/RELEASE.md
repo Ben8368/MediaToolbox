@@ -1,6 +1,6 @@
 # 发布流程
 
-本文定义发布前的工程检查。当前项目尚未进入稳定公开发布阶段；Electron 结构入包与 API 子进程链路已接入，但打包态 renderer / API / 静态资源功能链路仍受 [TECH_DEBT.md](TECH_DEBT.md) TD-019 阻断，发布流程仍以修复该阻断、候选构建真实路径验收、签名/公证准备和完整安装包验收为主。
+本文定义发布前的工程检查。当前项目尚未进入稳定公开发布阶段；Electron 打包态 renderer / API / 静态资源链路及自动化烟测已接入，TD-019 剩余首次三平台 tag Release 实跑验收。发布流程以该验收、签名/公证准备和完整安装包体验验收为主；当前公开分发仍受 [TECH_DEBT.md](TECH_DEBT.md) TD-023 的许可证与素材授权证据阻断。
 
 ## 版本策略
 
@@ -11,7 +11,7 @@
 
 ## 发布前检查
 
-1. 确认 [CONTEXT.md](../CONTEXT.md) 的当前阶段、阻断项、黄灯和下一步真实。
+1. 确认 [CONTEXT.md](../CONTEXT.md) 的阶段、当前决策、三项优先级和最后验证真实。
 2. 确认 [ROADMAP.md](ROADMAP.md) 与当前状态一致。
 3. 运行 `npm run verify`。
 4. 运行 `npm run assets:web-composer:verify`，确认固定版本的默认视频完整且 SHA-256 匹配。

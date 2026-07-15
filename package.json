@@ -27,7 +27,8 @@
     "test:scripts": "vitest run scripts/public-release-preflight.test.ts",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "verify": "npm run test && npm run typecheck && npm run build",
+    "docs:governance:check": "node scripts/governance-docs-check.mjs",
+    "verify": "npm run docs:governance:check && npm run test && npm run typecheck && npm run build",
     "release:preflight": "tsx scripts/release-preflight.ts",
     "release:preflight:public": "node scripts/public-release-preflight.mjs",
     "release:smoke:packaged": "tsx scripts/packaged-electron-smoke.ts"
