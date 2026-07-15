@@ -32,22 +32,31 @@ export function DownloaderAddForm({
   onClose,
 }: DownloaderAddFormProps) {
   return (
-    <div className="dl-add-form">
-      <div className="dl-field">
-        <label>下载链接</label>
-        <textarea
-          value={taskUrl}
-          onChange={(event) => onTaskUrlChange(event.target.value)}
-          placeholder={'输入视频 URL（YouTube、Bilibili 等）\n支持多行，每行一个链接'}
-          rows={4}
-          style={{ resize: 'vertical', minHeight: '80px' }}
-        />
-        <small className="dl-field-hint">平台与任务通道会按链接自动识别并分流；检测到字幕时，仅下载一份原始语言的 SRT 字幕。</small>
+    <div className="dl-add-form" aria-label="新建下载任务">
+      <div className="dl-form-section dl-form-section--source">
+        <div className="dl-field dl-field--source">
+          <div className="dl-field-heading">
+            <label htmlFor="download-task-url">下载链接</label>
+            <small>支持多条链接</small>
+          </div>
+          <textarea
+            id="download-task-url"
+            value={taskUrl}
+            onChange={(event) => onTaskUrlChange(event.target.value)}
+            placeholder={'输入视频 URL（YouTube、Bilibili 等）\n支持多行，每行一个链接'}
+            rows={4}
+            style={{ resize: 'vertical', minHeight: '80px' }}
+          />
+          <small className="dl-field-hint">平台与任务通道会按链接自动识别并分流；检测到字幕时，仅下载一份原始语言的 SRT 字幕。</small>
+        </div>
       </div>
 
-      <div className="dl-form-row">
+      <div className="dl-form-section dl-form-section--destination">
         <div className="dl-field dl-field--path">
-          <label>目标目录</label>
+          <div className="dl-field-heading">
+            <label>目标目录</label>
+            <small>{taskOutputDir ? '已选择自定义目录' : '使用默认目录'}</small>
+          </div>
           <div className="dl-path-field">
             <button
               type="button"
@@ -64,9 +73,16 @@ export function DownloaderAddForm({
             )}
           </div>
         </div>
-        <div className="dl-field">
-          <label>登录态</label>
+      </div>
+
+      <div className="dl-form-options">
+        <div className="dl-field dl-option-card">
+          <div className="dl-field-heading">
+            <label htmlFor="download-cookie-browser">登录态</label>
+            <small>可选</small>
+          </div>
           <select
+            id="download-cookie-browser"
             value={taskCookieBrowser}
             onChange={(event) => onTaskCookieBrowserChange(event.target.value as CookieBrowser)}
           >
@@ -76,22 +92,22 @@ export function DownloaderAddForm({
             <option value="safari">Safari</option>
             <option value="firefox">Firefox</option>
           </select>
-          <small className="dl-field-hint">遇到 YouTube 登录或机器人验证时，选择已登录的浏览器。使用浏览器登录态前需完全退出该浏览器，否则无法读取 Cookie；公开视频通常无需登录态。</small>
+          <small className="dl-field-hint">仅在遇到 YouTube 登录或机器人验证时选择；读取 Cookie 前需完全退出对应浏览器。</small>
         </div>
-      </div>
 
-      <div className="dl-field dl-compatible-format">
-        <label className="dl-checkbox-label">
-          <input
-            type="checkbox"
-            checked={taskCompatibleFormat}
-            onChange={(event) => onTaskCompatibleFormatChange(event.target.checked)}
-          />
-          <span>兼容格式（H.264 / MP4）</span>
-        </label>
-        <small className="dl-field-hint">
-          默认下载最高规格、不转码，并在合并音视频时优先使用 MKV 封装。勾选后会先下载最高规格，再转码为 H.264 / MP4。
-        </small>
+        <div className="dl-field dl-compatible-format dl-option-card">
+          <label className="dl-checkbox-label">
+            <input
+              type="checkbox"
+              checked={taskCompatibleFormat}
+              onChange={(event) => onTaskCompatibleFormatChange(event.target.checked)}
+            />
+            <span>兼容格式（H.264 / MP4）</span>
+          </label>
+          <small className="dl-field-hint">
+            默认保留最高规格，音视频合并优先使用 MKV；勾选后会转码为 H.264 / MP4。
+          </small>
+        </div>
       </div>
 
       <div className="dl-form-actions">

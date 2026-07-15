@@ -1,7 +1,7 @@
 const BASE = '/static/app/icons/default'
 
 export const APP_ICON_PATHS = {
-  browser:     `${BASE}/scry-browser.png`,
+  browser:     `${BASE}/scry-browser.svg`,
   fetcher:     `${BASE}/download-center.png`,
   fileManager: `${BASE}/file-manager.png`,
   'file-manager': `${BASE}/file-manager.png`,

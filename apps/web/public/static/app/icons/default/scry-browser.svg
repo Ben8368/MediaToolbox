@@ -1,28 +1,47 @@
-<svg width="224" height="224" viewBox="0 0 224 224" xmlns="http://www.w3.org/2000/svg">
+<svg width="224" height="224" viewBox="0 0 224 224" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="scry-bg" x1="112" y1="18" x2="112" y2="206" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#8B9BFF"/>
-      <stop offset="1" stop-color="#4F5FD8"/>
+    <linearGradient id="scry-bg" x1="24" y1="12" x2="200" y2="218" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172E63"/>
+      <stop offset="0.5" stop-color="#0B1837"/>
+      <stop offset="1" stop-color="#050B1B"/>
     </linearGradient>
-    <linearGradient id="scry-eye" x1="112" y1="70" x2="112" y2="154" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E6EAFF"/>
+    <linearGradient id="scry-orbit" x1="61" y1="55" x2="166" y2="171" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B9E8FF"/>
+      <stop offset="0.46" stop-color="#78A8FF"/>
+      <stop offset="1" stop-color="#7869F6"/>
     </linearGradient>
-    <filter id="scry-soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#2E3A9E" flood-opacity="0.28"/>
+    <linearGradient id="scry-core" x1="94" y1="80" x2="138" y2="145" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4FCFF"/>
+      <stop offset="1" stop-color="#9AD9FF"/>
+    </linearGradient>
+    <radialGradient id="scry-glow" cx="0" cy="0" r="1" gradientTransform="translate(112 112) rotate(90) scale(83)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3C8DFF" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#3C8DFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="scry-shadow" x="29" y="29" width="166" height="166" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#020616" flood-opacity="0.52"/>
+    </filter>
+    <filter id="scry-soft-glow" x="60" y="57" width="104" height="110" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4"/>
     </filter>
   </defs>
-  <rect width="224" height="224" rx="16" ry="16" fill="url(#scry-bg)"/>
-  <g filter="url(#scry-soft)" transform="translate(112 112) scale(0.82) translate(-128 -128)">
-    <path
-      d="M24 128s36-72 104-72 104 72 104 72-36 72-104 72S24 128 24 128z"
-      stroke="url(#scry-eye)"
-      stroke-width="14"
-      fill="none"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-    <circle cx="128" cy="128" r="34" stroke="url(#scry-eye)" stroke-width="14" fill="none"/>
-    <circle cx="128" cy="128" r="8" fill="#FFFFFF"/>
+  <rect x="8" y="8" width="208" height="208" rx="48" fill="#030818"/>
+  <rect x="12" y="12" width="200" height="200" rx="44" fill="url(#scry-bg)" stroke="rgba(185,232,255,0.18)" stroke-width="2"/>
+  <rect x="20" y="20" width="184" height="184" rx="37" fill="url(#scry-glow)"/>
+  <path d="M35 90C50 57 78 39 112 39C146 39 174 57 189 90" stroke="#9CD6FF" stroke-opacity="0.18" stroke-width="2" stroke-linecap="round"/>
+  <path d="M35 134C50 167 78 185 112 185C146 185 174 167 189 134" stroke="#8E82FF" stroke-opacity="0.17" stroke-width="2" stroke-linecap="round"/>
+  <g filter="url(#scry-shadow)">
+    <path d="M48 112C61.7 79.9 84.1 63.8 112 63.8C139.9 63.8 162.3 79.9 176 112C162.3 144.1 139.9 160.2 112 160.2C84.1 160.2 61.7 144.1 48 112Z" fill="#081633" stroke="url(#scry-orbit)" stroke-width="5"/>
+    <path d="M64 112C75.2 89.2 92 78.5 112 78.5C132 78.5 148.8 89.2 160 112C148.8 134.8 132 145.5 112 145.5C92 145.5 75.2 134.8 64 112Z" stroke="#BFEAFF" stroke-opacity="0.3" stroke-width="1.5"/>
+    <circle cx="112" cy="112" r="31" fill="#0B2046" stroke="url(#scry-orbit)" stroke-width="4"/>
+    <circle cx="112" cy="112" r="22" fill="url(#scry-core)"/>
+    <circle cx="112" cy="112" r="13" fill="#112B5A"/>
+    <circle cx="105" cy="104" r="5" fill="white" fill-opacity="0.92"/>
+    <circle cx="119" cy="121" r="2.5" fill="#CFF1FF" fill-opacity="0.72"/>
+  </g>
+  <path d="M112 64C139.9 64 162.3 79.9 176 112" stroke="#D5F3FF" stroke-opacity="0.48" stroke-width="2" stroke-linecap="round"/>
+  <g opacity="0.68" filter="url(#scry-soft-glow)">
+    <circle cx="72" cy="78" r="3" fill="#91D8FF"/>
+    <circle cx="157" cy="145" r="3" fill="#9A92FF"/>
   </g>
 </svg>
