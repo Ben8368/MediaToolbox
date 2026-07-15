@@ -140,20 +140,17 @@ export type HealthResponse = {
 export type FetchTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused' | 'partial'
 
 export type DownloadCookieBrowser = 'chrome' | 'edge' | 'safari' | 'firefox'
-export type DownloadSubtitleFormat = 'srt' | 'vtt'
-
-/** 客户端可提交的下载请求；服务端会补充批次标识和规范化的工作区输出路径。 */
+/**
+ * 客户端可提交的下载请求；服务端会补充批次标识和规范化的工作区输出路径。
+ * 字幕策略由下载器统一管理：检测到字幕时只保留一份原始语言的 SRT 字幕。
+ */
 export type FetchTaskDraft = {
   url?: string
   urls?: string[]
   mode?: 'video' | 'audio' | 'subtitles'
   output_dir?: string
-  write_subs?: boolean
-  write_auto_subs?: boolean
-  sub_langs?: string
   prefer_h264?: boolean
   no_transcode?: boolean
-  subtitle_format?: DownloadSubtitleFormat
   max_concurrent?: number
   cookies_from_browser?: DownloadCookieBrowser
 }

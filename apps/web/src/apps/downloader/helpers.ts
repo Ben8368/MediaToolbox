@@ -202,7 +202,9 @@ export function createOptimisticTask(url: string, payload: Record<string, unknow
 }
 
 export function buildRetryPayload(task: DownloadTask): Record<string, unknown> | null {
-  const params = task.params ?? {}
+  const params = Object.fromEntries(
+    Object.entries(task.params ?? {}).filter(([key]) => !['write_subs', 'write_auto_subs', 'sub_langs', 'subtitle_format'].includes(key)),
+  )
   const urls = Array.isArray(params.urls)
     ? params.urls
         .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -231,7 +233,7 @@ export function extractTaskDetailRows(task: DownloadTask): DetailRow[] {
 
   return [
     { label: '任务 ID', value: task.id },
-    { label: '平台模式', value: platform.label },
+    { label: '识别平台', value: platform.label },
     { label: '当前状态', value: task.status },
     { label: '当前阶段', value: stage },
     { label: '解析器', value: (info.extractor_key as string) || (info.extractor as string) || '-' },

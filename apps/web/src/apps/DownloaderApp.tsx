@@ -55,19 +55,12 @@ export function DownloaderApp() {
 
   // Submit task payloads (shared by single-URL and multi-URL paths)
   const submitTaskPayloads = useCallback(
-    async (urls: string[], route: 'auto' | 'ytdlp' = 'auto') => {
-      const wantSubs = form.selectedPlatform.supportsSubtitles && form.taskSubtitles
+    async (urls: string[]) => {
       const draft: FetchTaskDraft = {
         urls: urls,
         output_dir: form.taskOutputDir || '/Workspace/Downloads',
-        write_subs: wantSubs,
-        write_auto_subs: wantSubs,
-        sub_langs: 'original',
-        // 下载选项：编码优先级、是否转码、字幕格式
-        // convert_subs / preset 已由后端 argsBuilder 内部处理，前端无需下发
         prefer_h264: form.taskNoTranscode ? false : form.taskPreferH264,
         no_transcode: form.taskNoTranscode,
-        subtitle_format: form.taskSubtitleFormat,
         max_concurrent: 1,
         ...(form.taskCookieBrowser !== 'none' ? { cookies_from_browser: form.taskCookieBrowser } : {}),
       }
@@ -91,11 +84,8 @@ export function DownloaderApp() {
     [
       form.taskCookieBrowser,
       form.taskOutputDir,
-      form.selectedPlatform.supportsSubtitles,
-      form.taskSubtitles,
       form.taskPreferH264,
       form.taskNoTranscode,
-      form.taskSubtitleFormat,
       refreshLists,
       setOptimisticTasks,
       selection,
@@ -125,17 +115,11 @@ export function DownloaderApp() {
         .map((url) => url.trim())
         .filter((url) => url.length > 0)
 
-      if (form.taskChannel === 'auto') {
-        const analyses = await Promise.all(urls.map((url) => analyzeDownloadStrategy({ url, requested_route: 'auto' })))
-        const browserUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route === 'browser')
-        const ytdlpUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route !== 'browser')
-        if (ytdlpUrls.length) await submitTaskPayloads(ytdlpUrls, 'auto')
-        if (browserUrls.length) await submitBrowserDownloads(browserUrls)
-      } else if (form.taskChannel === 'browser') {
-        await submitBrowserDownloads(urls)
-      } else {
-        await submitTaskPayloads(urls, 'ytdlp')
-      }
+      const analyses = await Promise.all(urls.map((url) => analyzeDownloadStrategy({ url })))
+      const browserUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route === 'browser')
+      const ytdlpUrls = urls.filter((_url, index) => analyses[index]?.analysis?.route !== 'browser')
+      if (ytdlpUrls.length) await submitTaskPayloads(ytdlpUrls)
+      if (browserUrls.length) await submitBrowserDownloads(browserUrls)
       form.setTaskUrl('')
       form.setShowAddForm(false)
     } catch (err: unknown) {
@@ -219,26 +203,17 @@ export function DownloaderApp() {
           {form.showAddForm && (
             <DownloaderAddForm
               taskUrl={form.taskUrl}
-              taskChannel={form.taskChannel}
-              taskPlatform={form.taskPlatform}
-              taskSubtitles={form.taskSubtitles}
               taskOutputDir={form.taskOutputDir}
               taskCookieBrowser={form.taskCookieBrowser}
               taskPreferH264={form.taskPreferH264}
               taskNoTranscode={form.taskNoTranscode}
-              taskSubtitleFormat={form.taskSubtitleFormat}
-              selectedPlatform={form.selectedPlatform}
               addingTask={form.addingTask}
               submitError={form.submitError}
               onTaskUrlChange={form.setTaskUrl}
-              onTaskChannelChange={form.setTaskChannel}
-              onTaskPlatformChange={form.setTaskPlatform}
-              onTaskSubtitlesChange={form.setTaskSubtitles}
               onTaskOutputDirChange={form.setTaskOutputDir}
               onTaskCookieBrowserChange={confirmCookieBrowserChange}
               onTaskPreferH264Change={form.setTaskPreferH264}
               onTaskNoTranscodeChange={form.setTaskNoTranscode}
-              onTaskSubtitleFormatChange={form.setTaskSubtitleFormat}
               onOpenDirectoryPicker={() => form.setDirectoryPickerOpen(true)}
               onSubmit={submitNewTask}
               onClose={() => {

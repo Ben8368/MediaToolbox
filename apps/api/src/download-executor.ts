@@ -205,19 +205,13 @@ export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): Downl
   const urls = Array.isArray(params.urls) ? params.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   const url = typeof params.url === 'string' && params.url.trim().length > 0 ? params.url.trim() : (urls[0]?.trim() ?? '')
   const mode = params.mode === 'audio' ? 'audio' : params.mode === 'subtitles' ? 'subtitles' : 'video'
-  const subtitles = params.write_subs || mode === 'subtitles'
-    ? {
-        languages: (params.sub_langs || 'original').split(',').map((language) => language.trim()).filter(Boolean),
-        ...(params.write_auto_subs ? { auto: true } : {}),
-        ...(params.subtitle_format ? { format: params.subtitle_format } : {}),
-      }
-    : undefined
   const noTranscode = params.no_transcode === true
   return {
     url,
     mode,
     outputTemplate: buildOutputTemplate(state, params.output_dir),
-    ...(subtitles ? { subtitles } : {}),
+    // 字幕策略不由客户端选择：yt-dlp 检测到可用字幕时，仅保留原始语言的一份 SRT。
+    subtitles: { languages: ['original'], auto: true, format: 'srt' },
     ...(params.cookies_from_browser ? { cookiesFromBrowser: params.cookies_from_browser } : {}),
     ...(mode === 'video' ? { video: { preferH264: !noTranscode && params.prefer_h264 === true, recodeH264: !noTranscode && params.prefer_h264 === true } } : {}),
   }

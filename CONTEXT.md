@@ -11,7 +11,7 @@
 > - API 回归测试已按下载、转码、PSD 与重启恢复拆分，原 `app.test.ts` 从 1049 行降至 315 行。
 > - PSD scan 成功生成持久工单时会保留同 ID 输入 PathGrant 供后续 apply 使用；scan 失败/取消、API 重启恢复或 apply 终结时仍会吊销授权。
 > - Electron 生产 renderer 改由包内本地 API 同源托管，修复 `file://` 下路由、`/api` 与绝对静态资源无法协作的问题；已补同源 renderer、静态资源与 SPA 路由自动化覆盖。真实 Windows/macOS/Linux 目录包启动验收仍待执行。
-> - 下载请求已收敛为共享契约，输出目录、字幕、H.264/转码、浏览器 Cookie 与有界批次并发均进入 yt-dlp worker / 调度器；未知字段明确返回 4xx。
+> - 下载请求已收敛为共享契约，输出目录、H.264/转码、浏览器 Cookie 与有界批次并发均进入 yt-dlp worker / 调度器；平台、通道和字幕策略改由服务端自动处理（仅原始语言的一份 SRT 字幕），未知字段明确返回 4xx。
 > - Job 运行中进度改为独立 patch，状态终态写入改为数据库 compare-and-set；取消后到达的成功事件不会创建 Asset 或改写成功状态。
 > - 已移除未被调度器使用的 `retrying` Job 伪状态；纯 Web 打开浏览器 app 时会解释 Electron 会话边界，并提供下载器替代路径。
 > - Release workflow 已加入真实目录包 renderer 烟测：三平台 Electron 启动后检查根 renderer、同源 API、图标与 Web Composer 视频；首个 tag Release 跑通前仍保留 TD-019 发布验收。

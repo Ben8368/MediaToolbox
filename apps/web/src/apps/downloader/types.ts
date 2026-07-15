@@ -37,15 +37,11 @@ export interface TaskStats {
 }
 
 export type DownloadPlatform = 'auto' | 'youtube' | 'bilibili' | 'short_video'
-export type DownloadChannel = 'auto' | 'media' | 'browser'
 export type CookieBrowser = 'none' | 'chrome' | 'edge' | 'safari' | 'firefox'
-export type SubtitleFormat = 'srt' | 'vtt'
 
 export type PlatformOption = {
   value: DownloadPlatform
   label: string
-  hint: string
-  supportsSubtitles: boolean
 }
 
 export type CategoryKey = 'all' | 'downloading' | 'completed' | 'paused' | 'error'

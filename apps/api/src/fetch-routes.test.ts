@@ -119,21 +119,33 @@ describe('fetch routes', () => {
     expect(job.url).toBe('https://example.com/a')
   })
 
-  it('maps every supported download setting to the worker contract', () => {
+  it('always maps the automatic original-language subtitle policy to the worker contract', () => {
     const job = buildDownloadJob({
       id: 'task-settings', task_id: 'task-settings', title: 'task', source_url: 'https://example.com/a',
       status: 'pending', progress: 0, stage: 'pending', created_at: 1, updated_at: 1, started_at: null, completed_at: null,
       params: {
-        url: 'https://example.com/a', write_subs: true, write_auto_subs: true, sub_langs: 'zh-Hans,en',
-        subtitle_format: 'srt', prefer_h264: true, no_transcode: false, cookies_from_browser: 'chrome',
+        url: 'https://example.com/a', prefer_h264: true, no_transcode: false, cookies_from_browser: 'chrome',
       },
     } satisfies FetchTaskRecord)
 
     expect(job).toMatchObject({
-      subtitles: { languages: ['zh-Hans', 'en'], auto: true, format: 'srt' },
+      subtitles: { languages: ['original'], auto: true, format: 'srt' },
       cookiesFromBrowser: 'chrome',
       video: { preferH264: true, recodeH264: true },
     })
+  })
+
+  it('rejects removed manual subtitle options', async () => {
+    const app = await buildApiServer()
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { url: 'https://example.com/video', write_subs: false },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ ok: false, message: '请求参数不符合 API 契约。' })
+    await app.close()
   })
 
   it('clearing fetch task records also removes corresponding jobs', async () => {

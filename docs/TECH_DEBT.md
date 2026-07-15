@@ -119,7 +119,7 @@
 - Release matrix 并发发布风险已修复：三平台仅构建、烟测和上传 workflow artifact，单一 `publish` job 在全部通过后创建草稿、上传完整产物并转为正式 Release；已发布 tag 禁止覆盖。
 - TD-012: 纯 Web 模式下，浏览器 app 现在明确说明 Electron 会话边界，并提供“打开下载器”的可用替代路径；用户不会再被留在无法操作的空浏览器界面。
 - TD-022: 移除了没有任何执行路径的 `JobStatus.retrying`、状态转移、指标过滤与前端展示；失败自动重试改为未来显式设计的调度能力，而非伪装成已支持状态。
-- TD-024: 下载请求已收敛为共享 `FetchTaskDraft`。工作区输出目录、字幕/格式、H.264/转码、Cookie 与有界批次并发都映射到调度器或 yt-dlp 参数；未知字段和超界并发返回 4xx，服务端全局并发上限为 4。已补 API 与 downloader 回归测试。
+- TD-024: 下载请求已收敛为共享 `FetchTaskDraft`。工作区输出目录、H.264/转码、Cookie 与有界批次并发都映射到调度器或 yt-dlp 参数；平台、通道和字幕策略统一自动处理，字幕仅请求原始语言的一份 SRT。未知字段和超界并发返回 4xx，服务端全局并发上限为 4。已补 API 与 downloader 回归测试。
 - TD-025: Job 运行中字段更新已从状态迁移中拆出，`patchIfStatus(..., 'running')` 原子持久化进度与更新时间；Browser Network 进度回归测试确认状态保持 `running`。
 - TD-026: Job 终态写入改为基于旧状态的数据库 compare-and-set。成功 Asset/日志仅在成功领取 `succeeded` 后创建；取消后到达的浏览器完成事件会保持 `canceled` 且不生成 Asset。已补竞态回归测试。
 

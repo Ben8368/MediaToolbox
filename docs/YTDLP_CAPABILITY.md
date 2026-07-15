@@ -3,6 +3,8 @@
 ## 结论
 
 - 下载器默认采用智能路由：`yt-dlp` 优先，Browser Network 后备。
+- 下载表单不提供平台或任务通道指定：服务端按链接自动识别并分流。
+- 媒体下载会自动检测字幕；检测到时只请求一份原始语言的 SRT 字幕，不提供语言、是否下载或格式选择。
 - `yt-dlp` 优先处理视频、音频、字幕、播放列表、直播和媒体元数据等媒体解析场景。
 - Browser Network 优先处理静态文件、图片、登录态网页下载、跳转链下载和需要真实 Chromium session 的后备场景。
 - 是否支持某个站点不能只靠硬编码平台名判断；`yt-dlp` 官方说明也要求以实际 extractor 试解析为准。
@@ -22,4 +24,3 @@
 3. 其余 URL 先交给 `yt-dlp` / download worker。
 4. Browser Network 的 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS 请求由 Electron 主进程使用 Chromium session 承载。
 5. Web UI 不允许直接注入 `cookie`、`user-agent`、`sec-*`、`host`、`origin`、`referer` 等浏览器敏感头，避免把真实浏览器态暴露给前端。
-
