@@ -63,7 +63,11 @@ export function createPreviewSessionId() {
 }
 
 export function previewRuntimeUrl(sessionId: string) {
-  const url = new URL('web-composer-preview.html', document.baseURI)
+  // Resolve against the site origin rather than document.baseURI: the preview
+  // runtime is always served from the site root (web-composer-preview.html),
+  // but document.baseURI reflects the current route path (e.g. /preset/lumora),
+  // which would otherwise mis-resolve this relative reference.
+  const url = new URL('/web-composer-preview.html', window.location.origin)
   url.searchParams.set('session', sessionId)
   return url.href
 }
