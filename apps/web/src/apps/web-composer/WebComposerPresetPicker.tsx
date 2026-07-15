@@ -1,98 +1,25 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { WebComposerPresetId } from '@mediatoolbox/contracts'
 import { createPortal } from 'react-dom'
 
 import { useWindowHeaderPortalTarget } from '@/windowHeaderPortal'
-import { previewRuntimeUrl } from './model'
-import {
-  getWebComposerMessageTargetOrigin,
-  isWebComposerMessageOriginAllowed,
-  WEB_COMPOSER_CHANNEL,
-  type WebComposerPreviewUpdateMessage,
-} from './previewMessages'
 import type { PresetDefinition } from './presets/types'
 import { presets } from './presets'
 
+const thumbnailCopy = {
+  lumora: { eyebrow: 'LUMORA', title: 'Find your\nnext path', action: 'Explore' },
+  vaultshield: { eyebrow: 'VAULTSHIELD', title: 'Lock Down Your\nPasswords\nwith Ironclad Security', action: 'Get It Free' },
+  viktor: { eyebrow: 'VIKTOR', title: 'VIKTOR\nSTUDIO', action: 'View projects' },
+} as const
+
 function PresetThumbnail({ preset }: { preset: PresetDefinition }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const sessionId = useMemo(
-    () => `wc-thumb-${preset.id}-${Math.random().toString(36).slice(2, 10)}`,
-    // intentionally stable for preset lifetime, not reactive to preset object
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [preset.id],
-  )
-  const src = useMemo(() => previewRuntimeUrl(sessionId), [sessionId])
-  const expectedOrigin = useMemo(() => new URL(src).origin, [src])
-  const [containerW, setContainerW] = useState(0)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setContainerW(entry.contentRect.width)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== iframeRef.current?.contentWindow) return
-      if (!isWebComposerMessageOriginAllowed(event.origin, expectedOrigin)) return
-      const d = event.data
-      if (
-        d?.channel === WEB_COMPOSER_CHANNEL
-        && d?.sessionId === sessionId
-        && d?.type === 'ready'
-      ) setReady(true)
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [sessionId, expectedOrigin])
-
-  const scale = containerW > 0 ? Math.min(containerW / preset.designSize.width, 1) : 0
-
-  useEffect(() => {
-    if (!ready || scale <= 0) return
-    const message: WebComposerPreviewUpdateMessage = {
-      channel: WEB_COMPOSER_CHANNEL,
-      sessionId,
-      type: 'update',
-      presetId: preset.id,
-      presetVersion: preset.version,
-      state: preset.defaults,
-      width: preset.designSize.width,
-      height: preset.designSize.height,
-      mode: 'preview',
-      selectedSlotId: null,
-      displayScale: scale,
-    }
-    iframeRef.current?.contentWindow?.postMessage(
-      message,
-      getWebComposerMessageTargetOrigin(expectedOrigin),
-    )
-  }, [ready, scale, sessionId, expectedOrigin, preset])
+  const copy = thumbnailCopy[preset.id]
 
   return (
-    <div
-      ref={containerRef}
-      className="wc-preset-thumb"
-    >
-      {scale > 0 && (
-        <iframe
-          ref={iframeRef}
-          src={src}
-          title={`${preset.name} 预览`}
-          sandbox="allow-scripts allow-same-origin"
-          style={{
-            width: preset.designSize.width,
-            height: preset.designSize.height,
-            transform: `scale(${scale})`,
-          }}
-        />
-      )}
+    <div className={`wc-preset-thumb wc-preset-thumb--${preset.id}`} aria-hidden="true">
+      <span className="wc-preset-thumb__eyebrow">{copy.eyebrow}</span>
+      <strong className="wc-preset-thumb__title">{copy.title}</strong>
+      <span className="wc-preset-thumb__action">{copy.action}</span>
     </div>
   )
 }
