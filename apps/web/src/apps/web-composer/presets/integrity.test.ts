@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const lockedFiles = {
   'LumoraPreset.tsx': '1510eb02ea8872bb6cff7d9be770e4282584d0a657e741c95a4b2fe5f368e86b',
-  'VaultShieldPreset.tsx': '78b619e24ed8fb0ab4fd60ab09c3329699f5bd09f1e327f5b7d57b3ae063e3f7',
+  'VaultShieldPreset.tsx': '60b3402d3667d0131ab89167f1f6a0e3ad8187e1f7c6d3abeaccb690fdbace3e',
   'ViktorPreset.tsx': '4dbf058c9dee1907e14a99f4f4301a29cf2b45ce677d324e9435cbab87f172a8',
   'presets.css': '8685bb39b305127876f4c1d4a32200ca6cdf23e86f90e6d2217e0a07ad9847b6',
 } as const

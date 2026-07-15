@@ -7,6 +7,7 @@ import { Menu, X } from 'lucide-react'
 import { MediaBackground, PresetSlotContent, slotElementProps } from './shared'
 import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
+import { isVaultShieldHeadingIconVisible } from './vaultShieldTitle'
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 28 },
@@ -123,24 +124,30 @@ export function VaultShieldPreset({ state, viewport }: { state: PresetState; vie
       <section className="vault-hero">
         <div className="vault-copy">
           <motion.h1 variants={fadeUp} custom={0} initial="hidden" animate="visible">
-            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.zap', viewport)}>
-              <PresetSlotContent state={state} slotId="hero.icon.zap" viewport={viewport} iconClassName="vault-inline-icon" />
-            </span>
+            {isVaultShieldHeadingIconVisible(state, 'hero.icon.zap') && (
+              <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.zap', viewport)}>
+                <PresetSlotContent state={state} slotId="hero.icon.zap" viewport={viewport} iconClassName="vault-inline-icon" />
+              </span>
+            )}
             <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.start', viewport)}>
               <PresetSlotContent state={state} slotId="hero.heading.start" viewport={viewport} />
             </span>{' '}
             <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.middle', viewport)}>
               <PresetSlotContent state={state} slotId="hero.heading.middle" viewport={viewport} />
             </span>
-            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.lock', viewport)}>
-              <PresetSlotContent state={state} slotId="hero.icon.lock" viewport={viewport} iconClassName="vault-inline-icon" />
-            </span>
+            {isVaultShieldHeadingIconVisible(state, 'hero.icon.lock') && (
+              <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.lock', viewport)}>
+                <PresetSlotContent state={state} slotId="hero.icon.lock" viewport={viewport} iconClassName="vault-inline-icon" />
+              </span>
+            )}
             <span className="wc-preset-slot-inline" {...slotElementProps(state, 'hero.heading.end', viewport)}>
               <PresetSlotContent state={state} slotId="hero.heading.end" viewport={viewport} />
             </span>
-            <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.fingerprint', viewport)}>
-              <PresetSlotContent state={state} slotId="hero.icon.fingerprint" viewport={viewport} iconClassName="vault-inline-icon" />
-            </span>
+            {isVaultShieldHeadingIconVisible(state, 'hero.icon.fingerprint') && (
+              <span className="wc-preset-slot-inline wc-preset-slot-icon" {...slotElementProps(state, 'hero.icon.fingerprint', viewport)}>
+                <PresetSlotContent state={state} slotId="hero.icon.fingerprint" viewport={viewport} iconClassName="vault-inline-icon" />
+              </span>
+            )}
           </motion.h1>
           <motion.p variants={fadeUp} custom={1} initial="hidden" animate="visible" {...slotElementProps(state, 'hero.subtext', viewport)}>
             <PresetSlotContent state={state} slotId="hero.subtext" viewport={viewport} />

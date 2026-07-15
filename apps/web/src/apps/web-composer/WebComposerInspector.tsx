@@ -2,7 +2,8 @@ import type { WebComposerPresetState } from '@mediatoolbox/contracts'
 
 import { ResizableAppSidebar } from '@/components/ResizableAppSidebar'
 import type { PresetDefinition } from './presets/types'
-import { setSlotVisibility } from './slotState'
+import { updateVaultShieldHeadingText } from './presets/vaultShieldTitle'
+import { setSlotVisibility, updateSlotText } from './slotState'
 import { WebComposerCanvasInspector } from './WebComposerCanvasInspector'
 import { WebComposerElementOutline } from './WebComposerElementOutline'
 import {
@@ -68,6 +69,11 @@ export function WebComposerInspector({
                 state={state}
                 metrics={metrics}
                 onStateChange={onStateChange}
+                onTextChange={(slotId, patch) => onStateChange(
+                  preset.id === 'vaultshield'
+                    ? updateVaultShieldHeadingText(state, slotId, patch)
+                    : updateSlotText(state, slotId, patch),
+                )}
               />
             </>
           ) : (

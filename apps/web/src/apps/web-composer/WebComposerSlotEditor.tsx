@@ -6,6 +6,7 @@ import type {
   WebComposerSlotContentKind,
   WebComposerSlotManifest,
   WebComposerSlotValue,
+  WebComposerTextContent,
 } from '@mediatoolbox/contracts'
 
 import { filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
@@ -129,12 +130,14 @@ export function WebComposerSlotEditor({
   state,
   metrics,
   onStateChange,
+  onTextChange,
 }: {
   slot: WebComposerSlotManifest
   value: WebComposerSlotValue
   state: WebComposerPresetState
   metrics?: WebComposerSlotMetrics | null
   onStateChange: (state: WebComposerPresetState) => void
+  onTextChange?: (slotId: string, patch: Partial<WebComposerTextContent>) => void
 }) {
   const titleId = useId()
   const [uploadStatus, setUploadStatus] = useState('')
@@ -220,13 +223,17 @@ export function WebComposerSlotEditor({
               <textarea
                 value={value.text.value}
                 maxLength={textEditor.maxLength}
-                onChange={(event) => onStateChange(updateSlotText(state, slot.id, { value: event.currentTarget.value }))}
+                onChange={(event) => onTextChange
+                  ? onTextChange(slot.id, { value: event.currentTarget.value })
+                  : onStateChange(updateSlotText(state, slot.id, { value: event.currentTarget.value }))}
               />
             ) : (
               <input
                 value={value.text.value}
                 maxLength={textEditor.maxLength}
-                onChange={(event) => onStateChange(updateSlotText(state, slot.id, { value: event.currentTarget.value }))}
+                onChange={(event) => onTextChange
+                  ? onTextChange(slot.id, { value: event.currentTarget.value })
+                  : onStateChange(updateSlotText(state, slot.id, { value: event.currentTarget.value }))}
               />
             )}
           </label>
