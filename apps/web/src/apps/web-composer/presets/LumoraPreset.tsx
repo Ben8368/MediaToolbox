@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 
-import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, slotElementProps } from './shared'
+import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, resolveBuiltInBackgroundSource, slotElementProps } from './shared'
 import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
 
@@ -23,17 +23,6 @@ export const lumoraVideos = [
     src: "/static/web-composer/videos/lumora-quiet-dawn.mp4"
   }
 ];
-
-export function resolveLumoraBackgroundSource(activeVideo: number, backgroundSrc?: string) {
-  const selectedVideo = lumoraVideos[activeVideo] ?? lumoraVideos[0]
-
-  // The manifest's initial background value is Golden Hour. It establishes the
-  // default for the editable media slot, but must not override a different
-  // built-in scene selected from the switcher.
-  if (!backgroundSrc || backgroundSrc === lumoraVideos[0].src) return selectedVideo.src
-
-  return backgroundSrc
-}
 
 const trainOverlaySrc = "/static/web-composer/lumora-train-overlay.png";
 
@@ -66,7 +55,7 @@ export function LumoraPreset({ state, viewport }: { state: PresetState; viewport
     <section className="lumora-preset preset-canvas" style={{ fontFamily: state.theme.headingFont }}>
       <div className="lumora-video-stack" {...slotElementProps(state, 'background', viewport)}>
         {lumoraVideos.map((video, index) => {
-          const source = resolveLumoraBackgroundSource(index, background?.src);
+          const source = resolveBuiltInBackgroundSource(lumoraVideos, index, background?.src);
           return background?.kind === "image" && index === activeVideo ? (
             <img
               key={video.src}

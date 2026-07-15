@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Menu, X } from 'lucide-react'
 
-import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, slotElementProps } from './shared'
+import { getMedia, getMediaProps, getSlot, getText, PresetSlotContent, resolveBuiltInBackgroundSource, slotElementProps } from './shared'
 import type { PresetViewport } from './shared'
 import type { PresetState } from './types'
 
@@ -94,7 +94,8 @@ export function ViktorPreset({ state, viewport }: { state: PresetState; viewport
     >
       <div className="viktor-bg-stack" aria-label="背景素材" {...slotElementProps(state, 'background', viewport)}>
         {viktorVideos.map((video, index) => {
-          const source = background?.src && index === activeIndex ? background.src : videoSources[index] ?? video.src;
+          const resolvedSource = resolveBuiltInBackgroundSource(viktorVideos, index, background?.src);
+          const source = resolvedSource === video.src ? videoSources[index] ?? resolvedSource : resolvedSource;
           return background?.kind === "image" && index === activeIndex ? (
             <img
               key={video.src}

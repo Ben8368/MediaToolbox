@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const lockedFiles = {
-  'LumoraPreset.tsx': 'c93d330e8c4bec965a8a8dee939dbc8196648fc55a05a5b57783f2bb731e5dd2',
+  'LumoraPreset.tsx': '67ddfac07e1baa112d5e5c3bd46c8a36901d6f96a939860baee12a28eaf5df6d',
   'VaultShieldPreset.tsx': '4f1f4bedc003b4ecd7bc46421bab7d0d0af119362d5233b5d4694981c5178365',
-  'ViktorPreset.tsx': '4dbf058c9dee1907e14a99f4f4301a29cf2b45ce677d324e9435cbab87f172a8',
+  'ViktorPreset.tsx': '7600f7482f6ff60ed5de756ae7c01c75d6c23f65150fa7c372bc8ce7efd8cdb5',
   'presets.css': '51c9e3104bd5879bafe6d73cf4f9802651f6424843a718035516eba777548a18',
 } as const
 

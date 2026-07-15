@@ -33,6 +33,22 @@ export function getMedia(state: WebComposerPresetState, slotId = 'background') {
   return state.slots[slotId]?.media
 }
 
+export function resolveBuiltInBackgroundSource(
+  sources: readonly { src: string }[],
+  activeIndex: number,
+  backgroundSrc?: string,
+) {
+  const defaultSource = sources[0]
+  const selectedSource = sources[activeIndex] ?? defaultSource
+
+  // A manifest default establishes the initial editable background, rather
+  // than pinning the switcher to its first built-in scene. Explicit user
+  // replacements always take precedence over the switcher.
+  if (!backgroundSrc || backgroundSrc === defaultSource?.src) return selectedSource?.src ?? ''
+
+  return backgroundSrc
+}
+
 function canvasScale(viewport: PresetViewport) {
   return {
     x: viewport.width / viewport.designWidth,
