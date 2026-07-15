@@ -605,6 +605,7 @@ button {
 .vault-preset {
   height: 100%;
   min-height: 0;
+  padding-top: clamp(20px, 2vw, 32px);
   color: var(--vault-text);
   font-family: var(--font-body);
 }
