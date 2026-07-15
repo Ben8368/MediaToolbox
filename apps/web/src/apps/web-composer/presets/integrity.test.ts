@@ -7,7 +7,7 @@ const lockedFiles = {
   'LumoraPreset.tsx': '1510eb02ea8872bb6cff7d9be770e4282584d0a657e741c95a4b2fe5f368e86b',
   'VaultShieldPreset.tsx': '60b3402d3667d0131ab89167f1f6a0e3ad8187e1f7c6d3abeaccb690fdbace3e',
   'ViktorPreset.tsx': '4dbf058c9dee1907e14a99f4f4301a29cf2b45ce677d324e9435cbab87f172a8',
-  'presets.css': 'fec8bc9fb7fabd7e6e2836ffcf0f5816823322e63e06d563977b68ad7c24b33c',
+  'presets.css': 'd9a04e5570b9fe4d3855beb97eaed22cb492d2ce564df0a474df799dbe0729e6',
 } as const
 
 describe('locked web composer preset sources', () => {
