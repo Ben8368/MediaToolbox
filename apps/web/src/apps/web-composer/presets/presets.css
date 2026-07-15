@@ -603,10 +603,11 @@ button {
 }
 
 .vault-preset {
-  --vault-safe-inset: clamp(20px, 2vw, 32px);
+  --vault-top-inset: clamp(20px, 2vw, 32px);
+  --vault-edge-inset: clamp(28px, 3vw, 56px);
   height: 100%;
   min-height: 0;
-  padding-top: var(--vault-safe-inset);
+  padding-top: var(--vault-top-inset);
   color: var(--vault-text);
   font-family: var(--font-body);
 }
@@ -629,7 +630,7 @@ button {
 .vault-hero {
   width: 100%;
   margin: 0;
-  padding-inline: var(--vault-safe-inset);
+  padding-inline: var(--vault-edge-inset);
 }
 
 .vault-nav-inner {
