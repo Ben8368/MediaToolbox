@@ -13,6 +13,7 @@ import { registerSystemRoutes } from './routes/system.js'
 import { registerTranscodeRoutes } from './routes/transcode.js'
 import { registerFontsRoutes } from './routes/fonts.js'
 import { registerWebComposerRoutes } from './routes/web-composer.js'
+import { registerRendererRoutes } from './renderer-routes.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
@@ -38,8 +39,16 @@ function messageFromError(error: ApiErrorLike, statusCode: number) {
   return error.message || '请求失败。'
 }
 
-export async function buildApiServer() {
-  const app = Fastify({ logger: true })
+export type ApiServerOptions = {
+  rendererRoot?: string
+}
+
+export async function buildApiServer(options: ApiServerOptions = {}) {
+  const app = Fastify({
+    logger: true,
+    // 不剥离未知字段：调用方必须收到可读 4xx，不能把可见设置静默吞掉。
+    ajv: { customOptions: { removeAdditional: false } },
+  })
   const state = createApiState()
   await hydrateNotificationState(state)
 
@@ -65,6 +74,7 @@ export async function buildApiServer() {
   registerPsdRoutes(app, state)
   registerPathGrantRoutes(app, state)
   registerWebComposerRoutes(app, state)
+  registerRendererRoutes(app, options.rendererRoot ?? process.env['MEDIATOOLBOX_RENDERER_DIR'])
 
   return app
 }

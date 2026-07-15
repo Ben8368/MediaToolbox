@@ -7,6 +7,12 @@ export type YtdlpRequest = {
   subtitles?: {
     languages: string[]
     auto?: boolean
+    format?: 'srt' | 'vtt'
+  }
+  cookiesFromBrowser?: 'chrome' | 'edge' | 'safari' | 'firefox'
+  video?: {
+    preferH264?: boolean
+    recodeH264?: boolean
   }
 }
 
@@ -17,13 +23,23 @@ export function buildYtdlpArgs(request: YtdlpRequest): string[] {
     args.push('--extract-audio', '--audio-format', 'mp3')
   }
 
+  if (request.mode === 'video' && request.video?.preferH264) {
+    args.push('--format', 'bestvideo[vcodec^=avc1]+bestaudio/best[vcodec^=avc1]/best')
+  }
+  if (request.mode === 'video' && request.video?.recodeH264) {
+    args.push('--recode-video', 'mp4')
+  }
+
   if (request.mode === 'subtitles' || request.subtitles) {
     args.push('--write-subs')
     if (request.subtitles?.auto) args.push('--write-auto-subs')
     if (request.subtitles?.languages.length) {
       args.push('--sub-langs', request.subtitles.languages.join(','))
     }
+    if (request.subtitles?.format) args.push('--convert-subs', request.subtitles.format)
   }
+
+  if (request.cookiesFromBrowser) args.push('--cookies-from-browser', request.cookiesFromBrowser)
 
   args.push(request.url)
   return args

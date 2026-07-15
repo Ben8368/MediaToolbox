@@ -55,7 +55,7 @@ export function createDesktopShellConfig(env: NodeJS.ProcessEnv): DesktopShellCo
     host,
     apiPort,
     apiUrl,
-    webUrl: env.MEDIATOOLBOX_WEB_URL ?? 'http://127.0.0.1:5173',
+    webUrl: env.MEDIATOOLBOX_WEB_URL ?? (mode === 'production' ? apiUrl : 'http://127.0.0.1:5173'),
     autoStartApi: env.MEDIATOOLBOX_DESKTOP_START_API === 'true' || (mode === 'production' && env.MEDIATOOLBOX_DESKTOP_START_API !== 'false'),
     desktopAuthToken: env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN?.trim() || createDesktopAuthToken(),
   }
@@ -63,6 +63,11 @@ export function createDesktopShellConfig(env: NodeJS.ProcessEnv): DesktopShellCo
 
 export function isElectronRuntime() {
   return Boolean(process.versions.electron)
+}
+
+/** 仅供已打包应用的 CI 烟测使用；常规用户启动绝不进入该路径。 */
+export function isPackagedSmokeMode(env: NodeJS.ProcessEnv): boolean {
+  return env.MEDIATOOLBOX_PACKAGED_SMOKE === '1'
 }
 
 export function toPublicDesktopShellConfig(config: DesktopShellConfig): PublicDesktopShellConfig {
@@ -118,6 +123,7 @@ export function createLocalApiLaunchCommand(
       NODE_ENV: 'production',
       MEDIATOOLBOX_WORKSPACE_DIR: env.MEDIATOOLBOX_WORKSPACE_DIR ?? path.join(userDataPath, 'workspace'),
       MEDIATOOLBOX_DB_PATH: env.MEDIATOOLBOX_DB_PATH ?? path.join(userDataPath, 'mediatoolbox.db'),
+      MEDIATOOLBOX_RENDERER_DIR: path.join(paths.resourcesPath, 'renderer'),
       ...(nodePath ? { NODE_PATH: nodePath } : {}),
     }
     if (!explicitNodeBin) runtimeEnv.ELECTRON_RUN_AS_NODE = '1'
@@ -223,9 +229,11 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
     apiProcess = null
   })
 
+  if (apiProcess) await waitForApi(config.apiUrl)
   const mainWindow = createMainWindow(electron, config)
   registerIpcHandlers(electron, config, () => apiProcess, mainWindow, runtimeEnv, runtimePaths)
   createTray(electron)
+  if (isPackagedSmokeMode(process.env)) void runPackagedSmoke(electron, mainWindow)
 
   electron.app.on('activate', () => {
     if (electron.BrowserWindow.getAllWindows().length === 0) createMainWindow(electron, config)
@@ -235,14 +243,46 @@ export async function runDesktopShell(config = createDesktopShellConfig(process.
   })
 }
 
+async function runPackagedSmoke(electron: ElectronModule, window: import('electron').BrowserWindow): Promise<void> {
+  try {
+    await waitForRendererLoad(window.webContents)
+    const result = await window.webContents.executeJavaScript(`
+      Promise.all(['/api/health', '/static/app/icons/default/setting.png', '/static/web-composer/videos/vaultshield-hero.mp4'].map(async (pathname) => {
+        const response = await fetch(pathname, { method: 'HEAD' })
+        return [pathname, response.ok]
+      })).then((checks) => Object.fromEntries(checks))
+    `) as Record<string, boolean>
+    const failed = Object.entries(result).filter(([, ok]) => !ok).map(([pathname]) => pathname)
+    if (failed.length > 0) throw new Error(`目录包资源不可用：${failed.join(', ')}`)
+    console.log('MEDIATOOLBOX_PACKAGED_SMOKE_OK')
+  } catch (error) {
+    console.error('MEDIATOOLBOX_PACKAGED_SMOKE_FAILED', error)
+    process.exitCode = 1
+  } finally {
+    electron.app.quit()
+  }
+}
+
+function waitForRendererLoad(webContents: import('electron').WebContents, timeoutMs = 15_000): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Renderer 加载超时。')), timeoutMs)
+    webContents.once('did-finish-load', () => {
+      clearTimeout(timer)
+      resolve()
+    })
+    webContents.once('did-fail-load', (_event, _errorCode, errorDescription) => {
+      clearTimeout(timer)
+      reject(new Error(`Renderer 加载失败：${String(errorDescription)}`))
+    })
+  })
+}
+
 function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) {
   const preloadPath = electron.app.isPackaged
     ? path.join(electron.app.getAppPath(), 'src', 'preload.cjs')
     : path.join(rootDir, 'apps', 'desktop', 'src', 'preload.cjs')
 
-  const rendererUrl = electron.app.isPackaged
-    ? pathToFileURL(path.join(process.resourcesPath, 'renderer', 'index.html')).toString()
-    : config.webUrl
+  const rendererUrl = electron.app.isPackaged ? config.apiUrl : config.webUrl
 
   const win = new electron.BrowserWindow({
     width: 1440,
@@ -268,6 +308,23 @@ function createMainWindow(electron: ElectronModule, config: DesktopShellConfig) 
   })
   void win.loadURL(rendererUrl)
   return win
+}
+
+async function waitForApi(apiUrl: string, timeoutMs = 10_000): Promise<void> {
+  const healthUrl = new URL('/api/health', apiUrl).toString()
+  const deadline = Date.now() + timeoutMs
+  let lastError: unknown
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(healthUrl)
+      if (response.ok) return
+    } catch (error) {
+      lastError = error
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  const detail = lastError instanceof Error ? `：${lastError.message}` : ''
+  throw new Error(`本地 API 启动超时${detail}`)
 }
 
 function registerIpcHandlers(

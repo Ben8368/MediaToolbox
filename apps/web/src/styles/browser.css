@@ -566,6 +566,17 @@
   line-height: 1.6;
 }
 
+.browser-empty__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  color: rgba(255,255,255,.68);
+  font-size: 12px;
+}
+
 .browser-cookies {
   max-height: 170px;
   min-height: 0;

@@ -45,6 +45,22 @@ describe('buildYtdlpArgs', () => {
       'https://example.com/video',
     ])
   })
+
+  it('maps H264, subtitle format, and browser-cookie options safely', () => {
+    expect(buildYtdlpArgs({
+      url: 'https://example.com/video',
+      mode: 'video',
+      outputTemplate: '%(title)s.%(ext)s',
+      video: { preferH264: true, recodeH264: true },
+      subtitles: { languages: ['zh-Hans'], auto: true, format: 'srt' },
+      cookiesFromBrowser: 'chrome',
+    })).toEqual(expect.arrayContaining([
+      '--format', 'bestvideo[vcodec^=avc1]+bestaudio/best[vcodec^=avc1]/best',
+      '--recode-video', 'mp4',
+      '--convert-subs', 'srt',
+      '--cookies-from-browser', 'chrome',
+    ]))
+  })
 })
 
 describe('parseYtdlpProgressLine', () => {

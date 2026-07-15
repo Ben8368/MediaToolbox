@@ -54,7 +54,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const activeTasks = state.fetchTasks.filter((task) => !isTerminalTask(task))
   const activeBrowserDownloads = state.browserDownloads.filter((download) => download.status === 'pending' || download.status === 'running')
   const jobs = await state.db.jobs.list()
-  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'retrying' || job.status === 'paused')
+  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'paused')
   const networkRates = sampleProjectNetworkRates(state)
   state.networkSample = networkRates.nextSample
   const [memory, gpu] = await Promise.all([memorySnapshot(), sampleGpu()])
@@ -125,7 +125,7 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
           status_label: jobStatusLabel(job.status),
           stage: job.errorMessage || job.kind,
           progress: job.progress ? Math.round((job.progress.current / Math.max(job.progress.total, 1)) * 100) : 0,
-          can_cancel: job.status === 'queued' || job.status === 'running' || job.status === 'retrying',
+          can_cancel: job.status === 'queued' || job.status === 'running',
         })),
     ],
     task_summary: {
@@ -187,7 +187,6 @@ export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
 function jobStatusLabel(status: string): string {
   if (status === 'queued') return '排队中'
   if (status === 'running') return '运行中'
-  if (status === 'retrying') return '重试中'
   if (status === 'paused') return '暂停'
   return status
 }

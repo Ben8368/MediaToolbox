@@ -7,9 +7,9 @@ import type {
   BrowserNetworkRequestStatus,
   JobRecord,
 } from '@mediatoolbox/contracts'
-import { canTransitionJob, transitionJob } from '@mediatoolbox/job-core'
 
 import type { ApiState } from '../state.js'
+import { patchRunningJob, updateJobRecord } from '../job-utils.js'
 import { addLog, nowSeconds } from '../utils.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
@@ -134,21 +134,23 @@ export async function syncDownloadJob(state: ApiState, download: BrowserNetworkD
   const job = await state.db.jobs.findById(download.job_id)
   if (!job) return
 
-  const withProgress: JobRecord = {
-    ...job,
-    progress: {
-      current: download.received_bytes,
-      total: download.total_bytes || Math.max(download.received_bytes, 1),
-      unit: 'bytes',
-    },
+  const progress = {
+    current: download.received_bytes,
+    total: download.total_bytes || Math.max(download.received_bytes, 1),
+    unit: 'bytes' as const,
   }
+  const withProgress: JobRecord = { ...job, progress }
   if (download.error) withProgress.errorMessage = download.error
 
   const nextStatus = toJobStatus(download.status)
-  const updated = canTransitionJob(withProgress.status, nextStatus)
-    ? transitionJob(withProgress, nextStatus)
-    : withProgress
-  await state.db.jobs.update(updated)
+  const updated = nextStatus === 'running'
+    ? await patchRunningJob(state, job.id, { progress, ...(withProgress.errorMessage ? { errorMessage: withProgress.errorMessage } : {}) })
+    : await updateJobRecord(state, job.id, nextStatus, { progress, ...(withProgress.errorMessage ? { errorMessage: withProgress.errorMessage } : {}) })
+  if (!updated) {
+    const latest = await state.db.jobs.findById(download.job_id)
+    if (latest) reconcileDownloadStatus(download, latest.status)
+    return
+  }
 
   if (download.status === 'succeeded') {
     await createDownloadAsset(state, download)
@@ -164,21 +166,23 @@ export async function syncBrowserRequestJob(state: ApiState, record: BrowserNetw
   const job = await state.db.jobs.findById(record.job_id)
   if (!job) return
 
-  const withProgress: JobRecord = {
-    ...job,
-    progress: {
-      current: record.response_bytes,
-      total: Math.max(record.response_bytes, 1),
-      unit: 'bytes',
-    },
+  const progress = {
+    current: record.response_bytes,
+    total: Math.max(record.response_bytes, 1),
+    unit: 'bytes' as const,
   }
+  const withProgress: JobRecord = { ...job, progress }
   if (record.error) withProgress.errorMessage = record.error
 
   const nextStatus = toBrowserRequestJobStatus(record.status)
-  const updated = canTransitionJob(withProgress.status, nextStatus)
-    ? transitionJob(withProgress, nextStatus)
-    : withProgress
-  await state.db.jobs.update(updated)
+  const updated = nextStatus === 'running'
+    ? await patchRunningJob(state, job.id, { progress, ...(withProgress.errorMessage ? { errorMessage: withProgress.errorMessage } : {}) })
+    : await updateJobRecord(state, job.id, nextStatus, { progress, ...(withProgress.errorMessage ? { errorMessage: withProgress.errorMessage } : {}) })
+  if (!updated) {
+    const latest = await state.db.jobs.findById(record.job_id)
+    if (latest) reconcileBrowserRequestStatus(record, latest.status)
+    return
+  }
 
   if (record.status === 'succeeded') {
     addLog(state.db, 'INFO', 'browser-network', `浏览器网络请求完成：${record.method} ${record.url}`)
@@ -186,6 +190,22 @@ export async function syncBrowserRequestJob(state: ApiState, record: BrowserNetw
     addLog(state.db, 'ERROR', 'browser-network', `浏览器网络请求失败：${record.method} ${record.url}`)
   } else if (record.status === 'canceled') {
     addLog(state.db, 'WARNING', 'browser-network', `浏览器网络请求取消：${record.method} ${record.url}`)
+  }
+}
+
+function reconcileDownloadStatus(download: BrowserNetworkDownloadRecord, status: JobRecord['status']): void {
+  if (status === 'succeeded' || status === 'failed' || status === 'canceled') {
+    download.status = status
+    download.completed_at = nowSeconds()
+    download.updated_at = download.completed_at
+  }
+}
+
+function reconcileBrowserRequestStatus(record: BrowserNetworkRequestRecord, status: JobRecord['status']): void {
+  if (status === 'succeeded' || status === 'failed' || status === 'canceled') {
+    record.status = status
+    record.completed_at = nowSeconds()
+    record.updated_at = record.completed_at
   }
 }
 

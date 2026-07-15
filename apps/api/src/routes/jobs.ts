@@ -50,6 +50,18 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
 
     if (job.kind.startsWith('download.')) {
       abortDownload(job.id)
+    } else if (job.kind === 'media.transcode') {
+      abortTranscode(job.id)
+    } else if (job.kind === 'psd.scan' || job.kind === 'psd.apply') {
+      abortPsdJob(job.id)
+    } else if (job.kind === 'web.render.image' || job.kind === 'web.render.video') {
+      abortWebComposerRender(job.id)
+    }
+
+    const canceled = await updateJobRecord(state, job.id, 'canceled')
+    if (!canceled) return { ok: true, message: '任务已处于终态，无需取消。' }
+
+    if (job.kind.startsWith('download.')) {
       const task = state.fetchTasks.find((item) => item.id === job.id || item.task_id === job.id)
       if (task && !isTerminalTask(task)) {
         task.status = 'cancelled'
@@ -59,21 +71,13 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
       }
     } else if (job.kind === 'browser.download') {
       const download = state.browserDownloads.find((item) => item.job_id === job.id)
-      if (download && download.status !== 'succeeded' && download.status !== 'failed' && download.status !== 'canceled') {
+      if (download) {
         download.status = 'canceled'
         download.updated_at = nowSeconds()
         download.completed_at = download.updated_at
         download.error = '统一任务中心请求取消浏览器下载。'
       }
-    } else if (job.kind === 'media.transcode') {
-      abortTranscode(job.id)
-    } else if (job.kind === 'psd.scan' || job.kind === 'psd.apply') {
-      abortPsdJob(job.id)
-    } else if (job.kind === 'web.render.image' || job.kind === 'web.render.video') {
-      abortWebComposerRender(job.id)
     }
-
-    await updateJobRecord(state, job.id, 'canceled')
     addLog(state.db, 'WARNING', 'jobs', `取消任务：${job.title}`)
     return { ok: true }
   })

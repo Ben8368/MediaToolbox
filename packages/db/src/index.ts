@@ -1,4 +1,4 @@
-import type { AssetRecord, JobRecord, LogEntry, PathGrantRecord, TrashEntry, WorkOrder } from '@mediatoolbox/contracts'
+import type { AssetRecord, JobRecord, JobStatus, LogEntry, PathGrantRecord, TrashEntry, WorkOrder } from '@mediatoolbox/contracts'
 
 export type MediaToolboxDatabase = {
   jobs: {
@@ -6,6 +6,10 @@ export type MediaToolboxDatabase = {
     findById(id: string): Promise<JobRecord | undefined>
     list(): Promise<JobRecord[]>
     update(job: JobRecord): Promise<void>
+    /** Compare-and-set write. The record is persisted only when it still has expectedStatus. */
+    updateIfStatus(job: JobRecord, expectedStatus: JobStatus): Promise<boolean>
+    /** Patch volatile execution fields without treating a progress event as a state transition. */
+    patchIfStatus(id: string, expectedStatus: JobStatus, patch: Partial<Pick<JobRecord, 'progress' | 'errorMessage'>>, updatedAt: number): Promise<boolean>
     delete(id: string): Promise<void>
   }
   assets: {

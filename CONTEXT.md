@@ -4,7 +4,12 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-15
-> - 全仓工程审查确认 Electron 打包态 renderer / API / 静态资源链路存在候选构建阻断，并识别下载契约、Job 运行进度和取消终态竞态；已登记 TD-019、TD-024、TD-025、TD-026。
+> - Electron 生产 renderer 改由包内本地 API 同源托管，修复 `file://` 下路由、`/api` 与绝对静态资源无法协作的问题；已补同源 renderer、静态资源与 SPA 路由自动化覆盖。真实 Windows/macOS/Linux 目录包启动验收仍待执行。
+> - 下载请求已收敛为共享契约，输出目录、字幕、H.264/转码、浏览器 Cookie 与有界批次并发均进入 yt-dlp worker / 调度器；未知字段明确返回 4xx。
+> - Job 运行中进度改为独立 patch，状态终态写入改为数据库 compare-and-set；取消后到达的成功事件不会创建 Asset 或改写成功状态。
+> - 已移除未被调度器使用的 `retrying` Job 伪状态；纯 Web 打开浏览器 app 时会解释 Electron 会话边界，并提供下载器替代路径。
+> - Release workflow 已加入真实目录包 renderer 烟测：三平台 Electron 启动后检查根 renderer、同源 API、图标与 Web Composer 视频；首个 tag Release 跑通前仍保留 TD-019 发布验收。
+> - 全仓工程审查曾识别 Electron 打包态 renderer / API / 静态资源链路、下载契约、Job 运行进度和取消终态竞态；其中 TD-024、TD-025、TD-026 已于本轮偿还，TD-019 转为三平台目录包验收项。
 > - Web Composer 字体/图片已随源码本地化，8 个默认 MP4 已迁移到固定 SHA-256 的 `web-composer-assets-v1` Release Asset；根开发入口、Web 开发和构建均接入素材 `ensure`。
 > - 源码/视频资源包边界已补充 ADR、维护责任、安全、发布、PR 与回滚治理；公开分发仍需补齐项目许可证和逐项素材授权记录。
 > - GitHub CI 已显式准备 `ffmpeg` 并升级官方 checkout/setup-node action，避免 hosted runner 工具缺失和 Node 20 action 警告。
@@ -24,11 +29,11 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-14 本轮 `npm run verify` 已通过；API 60、Web 66、DB 21、Desktop 9 项测试及其余 workspace 测试、类型检查、生产构建全部成功，GitHub CI 失败对应的真实 ffmpeg 转码/VMAF 回归均在本地通过。Web Composer 素材包校验与根 `predev` ensure 通过，workflow YAML 和本地 Markdown 链接已解析检查；预览区直接点选的最终主观手感仍待验收。
+- **验证：** 2026-07-15 本轮 `npm run verify` 已通过；API 66、Web 74、DB 23、Desktop 11 项测试及其余 workspace 测试、类型检查、生产构建全部成功。Web Composer 素材包校验与根 `predev` ensure 通过，workflow YAML 和本地 Markdown 链接已解析检查；预览区直接点选的最终主观手感仍待验收。
 
 ## 当前阻断项
 
-- Electron 打包态通过 `file://` 加载 renderer，但当前 `BrowserRouter`、同源 `/api` 与运行时绝对 `/static/...` 无法形成可用生产链路；目录包的结构入包和 API health 烟测不能替代 renderer 功能烟测。详见 TD-019。
+- 无代码级阻断。Electron 候选发布前仍必须等待 Windows、macOS、Linux 的 tag Release workflow 实际跑通目录包启动、renderer/API/静态资源功能烟测；该发布验收项详见 TD-019。
 
 ## 剩余黄灯
 
@@ -36,7 +41,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 - Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
-- Electron 签名、公证与完整安装包发布验收须在 TD-019 renderer / API / 静态资源阻断修复后继续。
+- Electron 签名、公证与完整安装包发布验收须在 TD-019 的三平台目录包功能烟测后继续。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
 - Web Composer 默认视频的 Release Asset 分发与远端下载验收已通过；4K/15 秒长时视频压力验收仍待补齐。
 - Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
@@ -45,21 +50,16 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 **已迁移至技术债追踪：**
 - TD-021: Web Composer 默认素材离线资源包与 4K/15 秒压力验收
 - TD-023: Web Composer 默认视频来源与再分发授权
-- TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
 - TD-019: Electron 打包态 renderer / API / 静态资源链路不可用
-- TD-024: 下载器可见设置未进入 worker 契约
-- TD-025: Job 运行中进度被状态机自迁移拒绝
-- TD-026: Job 取消与完成之间缺少原子终态裁决
 - TD-015: PSD 真实 Photoshop 联调（本机命令路径、复杂 batchPlay、image/smart-object slot）
 - TD-016: macOS GPU 指标采集（Apple Silicon 已验收归档）
 
 ## 下一步
 
-1. 修复 TD-019：统一 Electron 生产 renderer 路由、API 通道与静态资源基址，并新增真实目录包 renderer 功能烟测。
-2. 修复 TD-024、TD-025、TD-026：收口下载请求契约、Job 运行进度持久化和取消/完成原子终态裁决。
-3. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
-4. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
+1. 验收 TD-019：触发下一次 tag Release，确认 Windows、macOS、Linux 三个 job 的目录包 renderer 烟测通过，并保留根页面、`/api/health`、图标和 Web Composer 视频检查日志；随后继续签名、公证与人工安装体验验收。
+2. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
+4. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和错误页重试路径。
 5. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/scan` → 工单编辑 → `POST /api/psd/workorders/{id}/apply` 的异步执行、取消和外部路径授权闭环。
 6. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
 7. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view）；TD-019 通过后继续签名、公证与完整安装包验收。
@@ -77,6 +77,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 | `npm run dev:api` | 单独启动本地 API 服务 |
 | `npm run dev:desktop` | 启动桌面壳开发入口 |
 | `npm run assets:web-composer:verify` | 校验 Web Composer 默认视频素材包 |
+| `npm run release:smoke:packaged` | 对已生成的本机 Electron 目录包执行 renderer / API / 静态资源烟测 |
 | `npm run typecheck` | workspace 类型检查 |
 | `npm run test` | workspace 测试 |
 | `npm run verify` | 客观验证 |

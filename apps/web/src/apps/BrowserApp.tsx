@@ -8,6 +8,7 @@ import { useWindowStore } from '@/windowStore'
 
 export function BrowserApp() {
   const windows = useWindowStore((store) => store.windows)
+  const openWindow = useWindowStore((store) => store.openWindow)
   const maxZ = useMemo(() => Math.max(0, ...windows.map((window) => window.zIndex)), [windows])
   const browserWindow = windows.find((window) => window.appType === 'browser')
   const isActive = Boolean(browserWindow && browserWindow.zIndex === maxZ)
@@ -146,11 +147,21 @@ export function BrowserApp() {
                       重试
                     </button>
                   </>
+                ) : hasBridge ? (
+                  <>
+                    <div className="browser-empty__mark">WWW</div>
+                    <strong>输入地址开始浏览</strong>
+                    <p>{isActive ? status.text : '点击浏览器窗口后会显示真实网页内容。'}</p>
+                  </>
                 ) : (
                   <>
                     <div className="browser-empty__mark">WWW</div>
-                    <strong>{hasBridge ? '输入地址开始浏览' : '桌面端能力未连接'}</strong>
-                    <p>{hasBridge ? (isActive ? status.text : '点击浏览器窗口后会显示真实网页内容。') : '真浏览器需要 Electron preload 与主进程 IPC 支持，纯 Web 模式不会创建本机浏览器视图。'}</p>
+                    <strong>请在桌面客户端中使用真浏览器</strong>
+                    <p>纯 Web 模式不能创建本机浏览器视图，也不会读取浏览器 Cookie 或会话。媒体下载仍可在当前 Web 桌面中完成。</p>
+                    <div className="browser-empty__fallback">
+                      <span>需要下载视频、音频或字幕？</span>
+                      <button className="mt-btn mt-btn--primary" type="button" onClick={() => openWindow('fetcher')}>打开下载器</button>
+                    </div>
                   </>
                 )}
               </div>

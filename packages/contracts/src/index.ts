@@ -29,7 +29,7 @@ export type JobKind =
   | 'web.render.image'
   | 'web.render.video'
 
-export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'retrying' | 'canceled'
+export type JobStatus = 'queued' | 'running' | 'paused' | 'succeeded' | 'failed' | 'canceled'
 
 export type JobProgress = {
   current: number
@@ -138,6 +138,25 @@ export type HealthResponse = {
 }
 
 export type FetchTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused' | 'partial'
+
+export type DownloadCookieBrowser = 'chrome' | 'edge' | 'safari' | 'firefox'
+export type DownloadSubtitleFormat = 'srt' | 'vtt'
+
+/** 客户端可提交的下载请求；服务端会补充批次标识和规范化的工作区输出路径。 */
+export type FetchTaskDraft = {
+  url?: string
+  urls?: string[]
+  mode?: 'video' | 'audio' | 'subtitles'
+  output_dir?: string
+  write_subs?: boolean
+  write_auto_subs?: boolean
+  sub_langs?: string
+  prefer_h264?: boolean
+  no_transcode?: boolean
+  subtitle_format?: DownloadSubtitleFormat
+  max_concurrent?: number
+  cookies_from_browser?: DownloadCookieBrowser
+}
 
 export type FetchTaskRecord = {
   id: string

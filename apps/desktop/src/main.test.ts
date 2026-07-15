@@ -5,6 +5,7 @@ import {
   createDesktopShellConfig,
   createLocalApiLaunchCommand,
   isAllowedExternalUrl,
+  isPackagedSmokeMode,
   resolveAppIconPath,
   toPublicDesktopShellConfig,
   type DesktopRuntimePaths,
@@ -42,8 +43,13 @@ describe('desktop local API launch command', () => {
     expect(launch.env.NODE_ENV).toBe('production')
     expect(launch.env.MEDIATOOLBOX_WORKSPACE_DIR).toBe(path.join(runtimePaths.userDataPath!, 'workspace'))
     expect(launch.env.MEDIATOOLBOX_DB_PATH).toBe(path.join(runtimePaths.userDataPath!, 'mediatoolbox.db'))
+    expect(launch.env.MEDIATOOLBOX_RENDERER_DIR).toBe(path.join(runtimePaths.resourcesPath, 'renderer'))
     expect(launch.env.NODE_PATH).toBe(path.join(runtimePaths.appPath!, 'node_modules'))
     expect(launch.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN).toBe(config.desktopAuthToken)
+  })
+
+  it('uses the local API origin for the packaged renderer', () => {
+    expect(createDesktopShellConfig({ NODE_ENV: 'production', API_PORT: '4701' }).webUrl).toBe('http://127.0.0.1:4701')
   })
 
   it('uses an explicit node binary without Electron run-as-node', () => {
@@ -75,5 +81,11 @@ describe('desktop local API launch command', () => {
     expect(isAllowedExternalUrl('http://127.0.0.1:5173')).toBe(true)
     expect(isAllowedExternalUrl('file:///C:/secret.txt')).toBe(false)
     expect(isAllowedExternalUrl('javascript:alert(1)')).toBe(false)
+  })
+
+  it('only enables the packaged smoke flow through its explicit CI flag', () => {
+    expect(isPackagedSmokeMode({})).toBe(false)
+    expect(isPackagedSmokeMode({ MEDIATOOLBOX_PACKAGED_SMOKE: '0' })).toBe(false)
+    expect(isPackagedSmokeMode({ MEDIATOOLBOX_PACKAGED_SMOKE: '1' })).toBe(true)
   })
 })

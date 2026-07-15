@@ -1,5 +1,5 @@
 import { apiRequest, apiUrl } from '@/api/http'
-import type { DownloadStrategyResponse, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
+import type { DownloadStrategyResponse, FetchTaskDraft, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 export async function analyzeDownloadStrategy(draft: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }) {
   return apiRequest<DownloadStrategyResponse>('/api/downloads/analyze', {
@@ -8,7 +8,7 @@ export async function analyzeDownloadStrategy(draft: { url: string; requested_ro
   })
 }
 
-export async function submitFetch(draft: Record<string, unknown>) {
+export async function submitFetch(draft: FetchTaskDraft) {
   return apiRequest<SubmitFetchResponse>('/api/fetch/tasks', {
     method: 'POST',
     body: JSON.stringify(draft),

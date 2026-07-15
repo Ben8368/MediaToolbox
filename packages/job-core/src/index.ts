@@ -2,9 +2,8 @@ import type { JobKind, JobRecord, JobStatus } from '@mediatoolbox/contracts'
 
 const allowedTransitions: Record<JobStatus, JobStatus[]> = {
   queued: ['running', 'canceled'],
-  running: ['paused', 'succeeded', 'failed', 'retrying', 'canceled'],
+  running: ['paused', 'succeeded', 'failed', 'canceled'],
   paused: ['queued', 'running', 'canceled'],
-  retrying: ['queued', 'running', 'failed', 'canceled'],
   succeeded: [],
   failed: ['queued'],
   canceled: [],
@@ -16,8 +15,7 @@ export function canTransitionJob(from: JobStatus, to: JobStatus): boolean {
 
 /**
  * 判断一个状态是否是"本次运行已经结束"，用于清理绑定资源（如 PathGrant）。
- * 注意：`failed` 状态在状态机里允许转回 `queued`（预留重试路径），
- * 但当前没有任何代码真正实现这条重试路径，所以在资源清理语境下仍视为终态。
+ * `failed` 是本次运行的终态；后续若引入重试，需要以新的调度策略显式创建或重入任务。
  */
 export function isTerminalJobStatus(status: JobStatus): boolean {
   return status === 'succeeded' || status === 'failed' || status === 'canceled'

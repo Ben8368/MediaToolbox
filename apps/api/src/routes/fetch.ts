@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { createJobRecord } from '@mediatoolbox/job-core'
-import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStrategyResponse, FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
+import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStrategyResponse, FetchTaskDraft, FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
@@ -9,7 +9,9 @@ import { executeDownload, abortDownload, updateDownloadJob, scheduleDownload } f
 import { readWorkspaceFileForDownload } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
-function titleFromDraft(draft: Record<string, unknown>) {
+type InternalFetchTaskDraft = FetchTaskDraft & { batch_id: string }
+
+function titleFromDraft(draft: FetchTaskDraft) {
   const urls = Array.isArray(draft.urls) ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   const source = urls[0] ?? (typeof draft.url === 'string' ? draft.url : '')
   if (!source) return '待接入下载任务'
@@ -21,12 +23,12 @@ function titleFromDraft(draft: Record<string, unknown>) {
   }
 }
 
-function taskSourceFromDraft(draft: Record<string, unknown>) {
+function taskSourceFromDraft(draft: FetchTaskDraft) {
   const urls = Array.isArray(draft.urls) ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   return urls.length ? urls.join(', ') : String(draft.url || '')
 }
 
-function urlsFromDraft(draft: Record<string, unknown>): string[] {
+function urlsFromDraft(draft: FetchTaskDraft): string[] {
   const urls = Array.isArray(draft.urls)
     ? draft.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
     : []
@@ -34,11 +36,11 @@ function urlsFromDraft(draft: Record<string, unknown>): string[] {
   return typeof draft.url === 'string' && draft.url.trim() ? [draft.url.trim()] : []
 }
 
-function draftForSingleUrl(draft: Record<string, unknown>, url: string): Record<string, unknown> {
-  return { ...draft, url, urls: [url] }
+function draftForSingleUrl(draft: FetchTaskDraft, url: string, batchId: string): InternalFetchTaskDraft {
+  return { ...draft, url, urls: [url], batch_id: batchId }
 }
 
-function createFetchTask(id: string, draft: Record<string, unknown>, createdAt: number): FetchTaskRecord {
+function createFetchTask(id: string, draft: InternalFetchTaskDraft, createdAt: number): FetchTaskRecord {
   return {
     id,
     task_id: id,
@@ -66,15 +68,16 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     }),
   )
 
-  app.post<{ Body: Record<string, unknown>; Reply: SubmitFetchResponse }>('/api/fetch/tasks', { schema: fetchTaskSubmitSchema }, async (request) => {
+  app.post<{ Body: FetchTaskDraft; Reply: SubmitFetchResponse }>('/api/fetch/tasks', { schema: fetchTaskSubmitSchema }, async (request) => {
     const createdAt = nowSeconds()
-    const urls = urlsFromDraft(request.body)
+    const draft = normalizeFetchTaskDraft(request.body, state)
+    const urls = urlsFromDraft(draft)
     if (urls.length === 0) throw new Error('下载任务至少需要一个 URL。')
     const tasks: FetchTaskRecord[] = []
 
     for (const [index, url] of urls.entries()) {
       const id = `fetch-${createdAt}-${state.fetchTasks.length + index + 1}`
-      tasks.push(createFetchTask(id, draftForSingleUrl(request.body, url), createdAt))
+      tasks.push(createFetchTask(id, draftForSingleUrl(draft, url, `fetch-batch-${createdAt}-${state.fetchTasks.length + 1}`), createdAt))
     }
 
     state.fetchTasks.unshift(...tasks)
@@ -102,15 +105,14 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     const task = state.fetchTasks.find((item) => item.id === request.params.id || item.task_id === request.params.id)
     if (task && !isTerminalTask(task)) {
       abortDownload(task.id)
-      // 状态由 executeDownload 的 AbortError 分支更新；这里做保底同步
-      if (!isTerminalTask(task)) {
+      const canceled = await updateDownloadJob(state, task.id, 'canceled')
+      if (canceled) {
         task.status = 'cancelled'
         task.stage = '已取消'
         task.updated_at = nowSeconds()
         task.completed_at = task.updated_at
       }
-      await updateDownloadJob(state, task.id, 'canceled')
-      addLog(state.db, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
+      if (canceled) addLog(state.db, 'WARNING', 'downloader', `取消下载任务：${task.title}`)
     }
     return { ok: true }
   })
@@ -168,6 +170,24 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
       .type('application/octet-stream')
       .send(file.stream)
   })
+}
+
+function normalizeFetchTaskDraft(draft: FetchTaskDraft, state: ApiState): FetchTaskDraft {
+  const supportedKeys = new Set([
+    'url', 'urls', 'mode', 'output_dir', 'write_subs', 'write_auto_subs', 'sub_langs',
+    'prefer_h264', 'no_transcode', 'subtitle_format', 'max_concurrent', 'cookies_from_browser',
+  ])
+  const unknownKey = Object.keys(draft).find((key) => !supportedKeys.has(key))
+  if (unknownKey) {
+    const error = new Error(`不支持的下载参数：${unknownKey}`)
+    ;(error as Error & { statusCode?: number }).statusCode = 400
+    throw error
+  }
+  return {
+    ...draft,
+    output_dir: normalizeWorkspacePath(draft.output_dir || `${state.workspaceRoot}/Downloads`, state.workspaceRoot),
+    max_concurrent: draft.max_concurrent ?? 1,
+  }
 }
 
 function analyzeDownloadStrategy(url: string, requestedRoute: 'auto' | 'ytdlp' | 'browser'): DownloadStrategyAnalysis {

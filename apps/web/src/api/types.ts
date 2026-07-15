@@ -20,6 +20,7 @@ import type {
   RuntimeMetricsSlice,
   SetWorkspaceResponse,
   SubmitFetchResponse,
+  FetchTaskDraft,
   TaskListResponse,
   TranscodeCommandPreviewResponse,
   TrashListResponse,
@@ -62,7 +63,7 @@ export type TranscodeJobDraft = {
 
 /** 前端 API 契约：mock 与真实服务实现均需满足此接口 */
 export interface MediaToolboxApi {
-  submitFetch(draft: Record<string, unknown>): Promise<SubmitFetchResponse>
+  submitFetch(draft: FetchTaskDraft): Promise<SubmitFetchResponse>
   analyzeDownloadStrategy(draft: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }): Promise<DownloadStrategyResponse>
   getActiveTasks(): Promise<TaskListResponse>
   getWeeklyHistory(): Promise<TaskListResponse>

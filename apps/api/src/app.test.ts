@@ -143,6 +143,20 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('rejects unsupported and unbounded download settings instead of silently ignoring them', async () => {
+    const app = await buildApiServer()
+    const unsupported = await app.inject({
+      method: 'POST', url: '/api/fetch/tasks', payload: { url: 'https://example.com/video', transport: 'browser-network' },
+    })
+    const unbounded = await app.inject({
+      method: 'POST', url: '/api/fetch/tasks', payload: { url: 'https://example.com/video', max_concurrent: 5 },
+    })
+
+    expect(unsupported.statusCode).toBe(400)
+    expect(unbounded.statusCode).toBe(400)
+    await app.close()
+  })
+
   it('rejects workspace path escapes before real filesystem access is added', async () => {
     const app = await buildApiServer()
 
@@ -222,6 +236,48 @@ describe('api skeleton contract', () => {
     } satisfies FetchTaskRecord)
 
     expect(job.url).toBe('https://example.com/a')
+  })
+
+  it('maps every supported download setting to the worker contract', () => {
+    const job = buildDownloadJob({
+      id: 'task-settings', task_id: 'task-settings', title: 'task', source_url: 'https://example.com/a',
+      status: 'pending', progress: 0, stage: 'pending', created_at: 1, updated_at: 1, started_at: null, completed_at: null,
+      params: {
+        url: 'https://example.com/a', write_subs: true, write_auto_subs: true, sub_langs: 'zh-Hans,en',
+        subtitle_format: 'srt', prefer_h264: true, no_transcode: false, cookies_from_browser: 'chrome',
+      },
+    } satisfies FetchTaskRecord)
+
+    expect(job).toMatchObject({
+      subtitles: { languages: ['zh-Hans', 'en'], auto: true, format: 'srt' },
+      cookiesFromBrowser: 'chrome',
+      video: { preferH264: true, recodeH264: true },
+    })
+  })
+
+  it('serves a packaged renderer on the same origin as the local API', async () => {
+    const rendererRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-renderer-'))
+    try {
+      await fs.mkdir(path.join(rendererRoot, 'assets'))
+      await fs.writeFile(path.join(rendererRoot, 'index.html'), '<!doctype html><title>MediaToolbox</title>')
+      await fs.writeFile(path.join(rendererRoot, 'assets', 'main.js'), 'console.log("renderer")')
+      const app = await buildApiServer({ rendererRoot })
+
+      const root = await app.inject({ method: 'GET', url: '/' })
+      const route = await app.inject({ method: 'GET', url: '/preset/lumora' })
+      const asset = await app.inject({ method: 'GET', url: '/assets/main.js' })
+      const assetHead = await app.inject({ method: 'HEAD', url: '/assets/main.js' })
+      const api = await app.inject({ method: 'GET', url: '/api/health' })
+
+      expect(root.body).toContain('MediaToolbox')
+      expect(route.body).toContain('MediaToolbox')
+      expect(asset.headers['content-type']).toContain('text/javascript')
+      expect(assetHead.statusCode).toBe(200)
+      expect(api.json()).toMatchObject({ ok: true, service: 'mediatoolbox-api' })
+      await app.close()
+    } finally {
+      await fs.rm(rendererRoot, { recursive: true, force: true })
+    }
   })
 
   it('clearing fetch task records also removes corresponding jobs', async () => {

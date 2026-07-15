@@ -16,9 +16,10 @@
 3. 运行 `npm run verify`。
 4. 运行 `npm run assets:web-composer:verify`，确认固定版本的默认视频完整且 SHA-256 匹配。
 5. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、Web Composer 视频、图标来源和发布签名/公证环境提示。
-6. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
-7. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
-8. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
+6. 已生成本机目录包时，运行 `npm run release:smoke:packaged`；tag Release 会在三个 runner 上自动执行等价烟测。
+7. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
+8. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
+9. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
 
 ## Web Composer 素材包
 
@@ -40,7 +41,7 @@
 - 不把开发模式启动等同于发布构建。
 - 不把 `apps/web` 构建通过等同于桌面端可发布。
 - 不把 electron-builder 目录包通过等同于完整安装包可分发。
-- TD-019 修复前，不得把结构入包或包内 `/api/health` 通过等同于 renderer 可用；候选构建必须启动真实桌面窗口验证根路由、API 请求和代表性静态资源。
+- 候选构建必须启动真实桌面窗口验证根路由、API 请求和代表性静态资源；不可把结构入包或单独 `/api/health` 通过等同于 renderer 可用。
 - 桌面端候选构建必须记录操作系统、Node.js 版本、Electron 版本、本地 API 启动方式和已验收路径。
 
 当前 Electron 发布预检覆盖：
@@ -52,7 +53,7 @@
 - macOS / Windows / Linux 目标和 artifact 命名是否已配置。
 - `CSC_LINK` / `CSC_NAME`、`APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD`、`APPLE_TEAM_ID` 等签名与公证环境变量是否已准备；缺失时为警告，设置 `MEDIATOOLBOX_RELEASE_STRICT=1` 或传入 `--strict` 可将警告视为失败。
 
-以上 preflight 当前只覆盖配置与文件存在性，不启动真实 renderer；TD-019 要求补充目录包 UI 功能烟测后，才能把 Electron 候选构建视为可运行。
+以上 preflight 仍只覆盖配置与文件存在性。tag Release workflow 会在发布前为 Windows、macOS、Linux 生成目录包，启动其中的 Electron 窗口并验证根 renderer、同源 `/api/health`、图标和代表性 Web Composer 视频；Linux runner 使用 `xvfb`。该三平台烟测首次成功前，候选构建仍不视为已运行验收。
 
 GitHub CI 的真实转码回归依赖系统 `ffmpeg`。CI workflow 必须在三个 runner 上显式安装并运行 `ffmpeg -version`，不能依赖 hosted image 的隐式预装状态。
 

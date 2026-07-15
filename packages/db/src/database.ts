@@ -121,6 +121,43 @@ export class SqliteDatabase implements MediaToolboxDatabase {
       )
     },
 
+    updateIfStatus: async (job: JobRecord, expectedStatus: JobRecord['status']): Promise<boolean> => {
+      const stmt = this.db.prepare(`
+        UPDATE jobs
+        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?
+        WHERE id = ? AND status = ?
+      `)
+      const result = stmt.run(
+        job.kind,
+        job.status,
+        job.title,
+        job.progress ? JSON.stringify(job.progress) : null,
+        job.updatedAt,
+        job.errorMessage ?? null,
+        job.id,
+        expectedStatus,
+      )
+      return result.changes === 1
+    },
+
+    patchIfStatus: async (id: string, expectedStatus: JobRecord['status'], patch: Partial<Pick<JobRecord, 'progress' | 'errorMessage'>>, updatedAt: number): Promise<boolean> => {
+      const stmt = this.db.prepare(`
+        UPDATE jobs
+        SET progress_json = COALESCE(?, progress_json),
+            error_message = COALESCE(?, error_message),
+            updated_at = ?
+        WHERE id = ? AND status = ?
+      `)
+      const result = stmt.run(
+        patch.progress ? JSON.stringify(patch.progress) : null,
+        patch.errorMessage ?? null,
+        updatedAt,
+        id,
+        expectedStatus,
+      )
+      return result.changes === 1
+    },
+
     delete: async (id: string): Promise<void> => {
       const stmt = this.db.prepare('DELETE FROM jobs WHERE id = ?')
       stmt.run(id)

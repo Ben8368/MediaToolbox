@@ -64,6 +64,24 @@ describe('jobs', () => {
     const found = await db.jobs.findById('job-1')
     expect(found?.errorMessage).toBe('network timeout')
   })
+
+  it('uses status compare-and-set for terminal writes', async () => {
+    const job = makeJob({ status: 'running' })
+    await db.jobs.create(job)
+
+    await expect(db.jobs.updateIfStatus({ ...job, status: 'canceled', updatedAt: 2000 }, 'running')).resolves.toBe(true)
+    await expect(db.jobs.updateIfStatus({ ...job, status: 'succeeded', updatedAt: 2001 }, 'running')).resolves.toBe(false)
+    await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ status: 'canceled' })
+  })
+
+  it('patches progress only while the job is running', async () => {
+    const job = makeJob({ status: 'running' })
+    await db.jobs.create(job)
+
+    await expect(db.jobs.patchIfStatus(job.id, 'running', { progress: { current: 20, total: 100, unit: 'percent' } }, 2000)).resolves.toBe(true)
+    await expect(db.jobs.patchIfStatus(job.id, 'queued', { progress: { current: 30, total: 100, unit: 'percent' } }, 2001)).resolves.toBe(false)
+    await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ progress: { current: 20, total: 100, unit: 'percent' }, updatedAt: 2000 })
+  })
 })
 
 const makeAsset = (overrides?: Partial<AssetRecord>): AssetRecord => ({

@@ -4,7 +4,8 @@ const port = Number(process.env.PORT ?? 3701)
 const host = normalizeLoopbackHost(process.env.HOST)
 
 async function main() {
-  const app = await buildApiServer()
+  const rendererRoot = process.env.MEDIATOOLBOX_RENDERER_DIR
+  const app = await buildApiServer(rendererRoot ? { rendererRoot } : {})
 
   try {
     await app.listen({ host, port })

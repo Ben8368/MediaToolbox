@@ -54,6 +54,17 @@ jobs:
         run: npm run release:preflight
 
       - name: Package Electron app
+        run: npx electron-builder ${{ matrix.eb_flag }} --publish never
+        working-directory: apps/desktop
+
+      - name: Install virtual display for Linux renderer smoke
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes xvfb
+
+      - name: Smoke test packaged renderer
+        run: npm run release:smoke:packaged
+
+      - name: Publish Electron release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder ${{ matrix.eb_flag }} --publish always

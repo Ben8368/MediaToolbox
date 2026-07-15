@@ -16,7 +16,17 @@ export async function updateJobRecord(
 ): Promise<boolean> {
   const current = await state.db.jobs.findById(jobId)
   if (!current || !canTransitionJob(current.status, nextStatus)) return false
-  await state.db.jobs.update({ ...transitionJob(current, nextStatus), ...extras })
+  const updated = await state.db.jobs.updateIfStatus({ ...transitionJob(current, nextStatus), ...extras }, current.status)
+  if (!updated) return false
   if (isTerminalJobStatus(nextStatus)) await revokeGrantsBoundToJob(state, jobId)
   return true
+}
+
+/** 运行中进度、日志等字段更新不属于状态迁移；仅允许仍在运行的任务写入。 */
+export async function patchRunningJob(
+  state: ApiState,
+  jobId: string,
+  extras: Partial<Pick<JobRecord, 'progress' | 'errorMessage'>>,
+): Promise<boolean> {
+  return state.db.jobs.patchIfStatus(jobId, 'running', extras, Math.floor(Date.now() / 1000))
 }

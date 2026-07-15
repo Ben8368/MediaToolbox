@@ -1,5 +1,6 @@
+import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { FetchTaskRecord } from '@mediatoolbox/contracts'
+import type { FetchTaskDraft, FetchTaskRecord } from '@mediatoolbox/contracts'
 import { runDownloadWorkerJob, type DownloadWorkerJob } from '@mediatoolbox/download-worker'
 import { YtdlpRunError, YtdlpToolNotFoundError, type YtdlpProgressEvent } from '@mediatoolbox/downloader'
 import { parseDataRateText } from './system-sampler.js'
@@ -12,31 +13,52 @@ import { updateJobRecord } from './job-utils.js'
 const activeAbortControllers = new Map<string, AbortController>()
 let activeDownloadCount = 0
 const downloadQueue: Array<{ task: FetchTaskRecord; state: ApiState }> = []
+const activeDownloadCountsByBatch = new Map<string, number>()
 
 function drainQueue(): void {
   while (downloadQueue.length > 0) {
-    const entry = downloadQueue[0]
-    if (!entry || activeDownloadCount >= entry.state.maxConcurrentDownloads) break
-    downloadQueue.shift()
-    activeDownloadCount++
-    void executeDownload(entry.task, entry.state).finally(() => {
-      activeDownloadCount--
-      drainQueue()
-    })
+    const index = downloadQueue.findIndex((entry) => activeDownloadCount < entry.state.maxConcurrentDownloads && canStartBatch(entry.task))
+    if (index < 0) return
+    const [entry] = downloadQueue.splice(index, 1)
+    if (entry) startScheduledDownload(entry)
   }
 }
 
 export function scheduleDownload(task: FetchTaskRecord, state: ApiState): void {
-  if (activeDownloadCount < state.maxConcurrentDownloads) {
-    activeDownloadCount++
-    void executeDownload(task, state).finally(() => {
-      activeDownloadCount--
-      drainQueue()
-    })
+  if (activeDownloadCount < state.maxConcurrentDownloads && canStartBatch(task)) {
+    startScheduledDownload({ task, state })
   } else {
     task.stage = `排队中（第 ${downloadQueue.length + 1} 位）`
     downloadQueue.push({ task, state })
   }
+}
+
+function startScheduledDownload(entry: { task: FetchTaskRecord; state: ApiState }): void {
+  const batchId = batchIdForTask(entry.task)
+  activeDownloadCount++
+  activeDownloadCountsByBatch.set(batchId, (activeDownloadCountsByBatch.get(batchId) ?? 0) + 1)
+  void executeDownload(entry.task, entry.state).finally(() => {
+    activeDownloadCount--
+    const remaining = (activeDownloadCountsByBatch.get(batchId) ?? 1) - 1
+    if (remaining > 0) activeDownloadCountsByBatch.set(batchId, remaining)
+    else activeDownloadCountsByBatch.delete(batchId)
+    drainQueue()
+  })
+}
+
+function batchIdForTask(task: FetchTaskRecord): string {
+  const params = task.params as Record<string, unknown>
+  return typeof params.batch_id === 'string' ? params.batch_id : task.id
+}
+
+function batchLimitForTask(task: FetchTaskRecord): number {
+  const params = task.params as Record<string, unknown>
+  const requested = typeof params.max_concurrent === 'number' ? params.max_concurrent : 1
+  return Math.max(1, Math.min(4, Math.floor(requested)))
+}
+
+function canStartBatch(task: FetchTaskRecord): boolean {
+  return (activeDownloadCountsByBatch.get(batchIdForTask(task)) ?? 0) < batchLimitForTask(task)
 }
 
 export function abortDownload(taskId: string): void {
@@ -56,27 +78,30 @@ export function abortDownload(taskId: string): void {
 }
 
 export async function updateDownloadJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof updateJobRecord>[2]) {
-  await updateJobRecord(state, taskId, nextStatus)
+  return updateJobRecord(state, taskId, nextStatus)
 }
 
 export async function executeDownload(task: FetchTaskRecord, state: ApiState): Promise<void> {
   const controller = new AbortController()
   activeAbortControllers.set(task.id, controller)
 
+  const started = await updateDownloadJob(state, task.id, 'running')
+  if (!started) return
   task.status = 'running'
   task.started_at = nowSeconds()
   task.updated_at = task.started_at
   task.stage = '准备下载'
-  await updateDownloadJob(state, task.id, 'running')
   addLog(state.db, 'INFO', 'downloader', `开始下载：${task.title}`)
 
   try {
     const job = buildDownloadJob(task, state)
+    await fs.mkdir(path.dirname(job.outputTemplate), { recursive: true })
     const outputFiles = new Set<string>()
 
     const result = await runDownloadWorkerJob(job, {
       signal: controller.signal,
       onEvent: (event: YtdlpProgressEvent) => {
+        if (controller.signal.aborted) return
         task.updated_at = nowSeconds()
         if (event.type === 'progress') {
           task.progress = event.percent
@@ -117,13 +142,19 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
     activeAbortControllers.delete(task.id)
 
     if (result.status === 'canceled') {
-      task.status = 'cancelled'
-      task.stage = '已取消'
-      task.completed_at = nowSeconds()
-      task.updated_at = task.completed_at
-      await updateDownloadJob(state, task.id, 'canceled')
-      addLog(state.db, 'WARNING', 'downloader', `下载已取消：${task.title}`)
+      if (await updateDownloadJob(state, task.id, 'canceled')) {
+        task.status = 'cancelled'
+        task.stage = '已取消'
+        task.completed_at = nowSeconds()
+        task.updated_at = task.completed_at
+        addLog(state.db, 'WARNING', 'downloader', `下载已取消：${task.title}`)
+      }
     } else {
+      const completed = await updateDownloadJob(state, task.id, 'succeeded')
+      if (!completed) {
+        await cleanupDownloadOutputFiles(outputFiles, state)
+        return
+      }
       task.status = 'completed'
       task.progress = 100
       task.stage = '下载完成'
@@ -136,7 +167,6 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
         args: result.args,
         exitCode: result.exitCode,
       }
-      await updateDownloadJob(state, task.id, 'succeeded')
       addLog(state.db, 'INFO', 'downloader', `下载完成：${task.title}`)
     }
   } catch (error) {
@@ -145,40 +175,66 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
     task.updated_at = task.completed_at
 
     if (error instanceof YtdlpToolNotFoundError) {
+      const failed = await updateDownloadJob(state, task.id, 'failed')
+      if (!failed) return
       task.status = 'failed'
       task.stage = '未找到 yt-dlp'
       task.error = '未找到可用的 yt-dlp，请确认已安装并在 PATH 中。'
-      await updateDownloadJob(state, task.id, 'failed')
       addLog(state.db, 'ERROR', 'downloader', `下载失败（yt-dlp 缺失）：${task.title}`)
     } else if (error instanceof YtdlpRunError) {
+      const failed = await updateDownloadJob(state, task.id, 'failed')
+      if (!failed) return
       task.status = 'failed'
       task.stage = `失败：${error.normalized.message}`
       task.error = error.normalized.message
-      await updateDownloadJob(state, task.id, 'failed')
       addLog(state.db, 'ERROR', 'downloader', `下载失败：${task.title} — ${error.normalized.message}`)
     } else {
       const message = error instanceof Error ? error.message : String(error)
+      const failed = await updateDownloadJob(state, task.id, 'failed')
+      if (!failed) return
       task.status = 'failed'
       task.stage = '执行出错'
       task.error = message
-      await updateDownloadJob(state, task.id, 'failed')
       addLog(state.db, 'ERROR', 'downloader', `下载出错：${task.title} — ${message}`)
     }
   }
 }
 
 export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): DownloadWorkerJob {
-  const params = task.params as Record<string, unknown>
+  const params = task.params as FetchTaskDraft
   const urls = Array.isArray(params.urls) ? params.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   const url = typeof params.url === 'string' && params.url.trim().length > 0 ? params.url.trim() : (urls[0]?.trim() ?? '')
   const mode = params.mode === 'audio' ? 'audio' : params.mode === 'subtitles' ? 'subtitles' : 'video'
-  return { url, mode, outputTemplate: buildOutputTemplate(state) }
+  const subtitles = params.write_subs || mode === 'subtitles'
+    ? {
+        languages: (params.sub_langs || 'original').split(',').map((language) => language.trim()).filter(Boolean),
+        ...(params.write_auto_subs ? { auto: true } : {}),
+        ...(params.subtitle_format ? { format: params.subtitle_format } : {}),
+      }
+    : undefined
+  const noTranscode = params.no_transcode === true
+  return {
+    url,
+    mode,
+    outputTemplate: buildOutputTemplate(state, params.output_dir),
+    ...(subtitles ? { subtitles } : {}),
+    ...(params.cookies_from_browser ? { cookiesFromBrowser: params.cookies_from_browser } : {}),
+    ...(mode === 'video' ? { video: { preferH264: !noTranscode && params.prefer_h264 === true, recodeH264: !noTranscode && params.prefer_h264 === true } } : {}),
+  }
 }
 
-function buildOutputTemplate(state?: ApiState): string {
+function buildOutputTemplate(state?: ApiState, outputDir?: string): string {
   if (!state) return '%(title)s.%(ext)s'
-  const root = state.physicalWorkspaceRoot.replace(/\\/g, '/')
-  return `${root}/Downloads/%(title)s.%(ext)s`
+  const virtualOutputDir = outputDir || `${state.workspaceRoot}/Downloads`
+  const physicalOutputDir = path.resolve(state.physicalWorkspaceBase, virtualOutputDir.replace(/^\/Workspace\/?/, ''))
+  return path.join(physicalOutputDir, '%(title)s.%(ext)s')
+}
+
+async function cleanupDownloadOutputFiles(outputFiles: Set<string>, state: ApiState): Promise<void> {
+  await Promise.all([...outputFiles].map(async (virtualPath) => {
+    const physicalPath = path.resolve(state.physicalWorkspaceBase, virtualPath.replace(/^\/Workspace\/?/, ''))
+    await fs.unlink(physicalPath).catch(() => undefined)
+  }))
 }
 
 function rememberOutputFile(outputFiles: Set<string>, state: ApiState, outputPath: string): void {

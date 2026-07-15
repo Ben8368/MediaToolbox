@@ -80,12 +80,14 @@ export async function executePsdScan(
       workOrderCreated = false
     }
     if (isAbortError(error, controller.signal)) {
-      await updateJobRecord(state, job.id, 'canceled')
-      addLog(state.db, 'WARNING', 'psd', `PSD 扫描已取消：${job.title}`)
+      if (await updateJobRecord(state, job.id, 'canceled')) {
+        addLog(state.db, 'WARNING', 'psd', `PSD 扫描已取消：${job.title}`)
+      }
     } else {
       const message = psdErrorMessage(error)
-      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
-      addLog(state.db, 'ERROR', 'psd', `PSD 扫描出错：${job.title} — ${message}`)
+      if (await updateJobRecord(state, job.id, 'failed', { errorMessage: message })) {
+        addLog(state.db, 'ERROR', 'psd', `PSD 扫描出错：${job.title} — ${message}`)
+      }
     }
   } finally {
     activeAbortControllers.delete(job.id)
@@ -124,12 +126,14 @@ export async function executePsdApply(
     }
   } catch (error) {
     if (isAbortError(error, controller.signal)) {
-      await updateJobRecord(state, job.id, 'canceled')
-      addLog(state.db, 'WARNING', 'psd', `PSD 应用已取消：${job.title}`)
+      if (await updateJobRecord(state, job.id, 'canceled')) {
+        addLog(state.db, 'WARNING', 'psd', `PSD 应用已取消：${job.title}`)
+      }
     } else {
       const message = psdErrorMessage(error)
-      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
-      addLog(state.db, 'ERROR', 'psd', `PSD 应用出错：${job.title} — ${message}`)
+      if (await updateJobRecord(state, job.id, 'failed', { errorMessage: message })) {
+        addLog(state.db, 'ERROR', 'psd', `PSD 应用出错：${job.title} — ${message}`)
+      }
     }
   } finally {
     activeAbortControllers.delete(job.id)

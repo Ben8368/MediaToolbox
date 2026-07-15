@@ -203,8 +203,7 @@
   background: rgba(255,255,255,.34);
 }
 
-.transcode-status--running,
-.transcode-status--retrying {
+.transcode-status--running {
   background: #54ffb7;
 }
 

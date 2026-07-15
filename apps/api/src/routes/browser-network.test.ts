@@ -65,6 +65,50 @@ describe('browser network API contract', () => {
     await app.close()
   })
 
+  it('keeps a canceled browser download canceled when a late completion arrives', async () => {
+    const app = await buildAuthedApiServer()
+    const created = await app.inject({
+      method: 'POST', url: '/api/browser-network/downloads', headers: browserNetworkHeaders,
+      payload: {
+        id: 'browser-cancel-race', source_url: 'https://example.com/file.zip', filename: 'file.zip',
+        target_path: '/Workspace/Downloads/file.zip', view_id: 'browser', session_id: 'browser-session', total_bytes: 100,
+      },
+    })
+    const download = created.json<{ download: { id: string; job_id: string } }>().download
+    await app.inject({ method: 'POST', url: `/api/jobs/${download.job_id}/cancel` })
+    const lateCompletion = await app.inject({
+      method: 'PATCH', url: `/api/browser-network/downloads/${download.id}`, headers: browserNetworkHeaders,
+      payload: { status: 'succeeded', received_bytes: 100, total_bytes: 100 },
+    })
+    const job = await app.inject({ method: 'GET', url: `/api/jobs/${download.job_id}` })
+    const assets = await app.inject({ method: 'GET', url: '/api/assets' })
+
+    expect(lateCompletion.json()).toMatchObject({ download: { status: 'canceled' } })
+    expect(job.json()).toMatchObject({ job: { status: 'canceled' } })
+    expect(assets.json()).toMatchObject({ assets: [] })
+    await app.close()
+  })
+
+  it('persists running browser-download progress without a self-transition', async () => {
+    const app = await buildAuthedApiServer()
+    const created = await app.inject({
+      method: 'POST', url: '/api/browser-network/downloads', headers: browserNetworkHeaders,
+      payload: {
+        id: 'browser-progress-patch', source_url: 'https://example.com/file.zip', filename: 'file.zip',
+        target_path: '/Workspace/Downloads/file.zip', view_id: 'browser', session_id: 'browser-session', total_bytes: 100,
+      },
+    })
+    const download = created.json<{ download: { id: string; job_id: string } }>().download
+    await app.inject({
+      method: 'PATCH', url: `/api/browser-network/downloads/${download.id}`, headers: browserNetworkHeaders,
+      payload: { received_bytes: 50, total_bytes: 100 },
+    })
+    const job = await app.inject({ method: 'GET', url: `/api/jobs/${download.job_id}` })
+
+    expect(job.json()).toMatchObject({ job: { status: 'running', progress: { current: 50, total: 100, unit: 'bytes' } } })
+    await app.close()
+  })
+
   it('analyzes download routing with yt-dlp preferred and browser fallback', async () => {
     const app = await buildApiServer()
 

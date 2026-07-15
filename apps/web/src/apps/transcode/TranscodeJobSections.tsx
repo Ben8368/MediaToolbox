@@ -6,7 +6,6 @@ const STATUS_LABELS: Record<JobRecord['status'], string> = {
   paused: '暂停',
   succeeded: '完成',
   failed: '失败',
-  retrying: '重试',
   canceled: '取消',
 }
 

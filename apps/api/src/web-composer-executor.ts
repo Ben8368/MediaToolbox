@@ -3,7 +3,7 @@ import fs from 'node:fs/promises'
 import { persistWebComposerPng, runWebRenderVideoJob } from '@mediatoolbox/web-render-worker'
 import type { JobRecord } from '@mediatoolbox/contracts'
 
-import { updateJobRecord } from './job-utils.js'
+import { patchRunningJob, updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 
@@ -40,7 +40,8 @@ async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebCompo
 export async function executeWebComposerCapture(job: JobRecord, capture: WebComposerCaptureJob, state: ApiState): Promise<void> {
   const controller = new AbortController()
   activeAbortControllers.set(job.id, controller)
-  await updateJobRecord(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
+  const started = await updateJobRecord(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
+  if (!started) return
   addLog(state.db, 'INFO', 'web-composer', `开始导出：${job.title}`)
 
   try {
@@ -60,34 +61,42 @@ export async function executeWebComposerCapture(job: JobRecord, capture: WebComp
       }, {
         signal: controller.signal,
         onProgress: (progress) => {
-          void updateJobRecord(state, job.id, 'running', { progress })
+          void patchRunningJob(state, job.id, { progress })
         },
         onLog: (line, stream) => {
           if (line.trim()) addLog(state.db, stream === 'stderr' ? 'WARNING' : 'INFO', 'web-render', `[${job.id}] ${line}`)
         },
       })
       if (result.status === 'canceled') {
-        await updateJobRecord(state, job.id, 'canceled')
-        addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
+        if (await updateJobRecord(state, job.id, 'canceled')) {
+          addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
+        }
         return
       }
     }
 
     if (controller.signal.aborted) {
       await updateJobRecord(state, job.id, 'canceled')
+      await fs.unlink(capture.physicalOutputPath).catch(() => undefined)
+      return
+    }
+    const completed = await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+    if (!completed) {
+      await fs.unlink(capture.physicalOutputPath).catch(() => undefined)
       return
     }
     await addOutputAsset(state, job, capture)
-    await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
     addLog(state.db, 'INFO', 'web-composer', `导出完成：${capture.virtualOutputPath}`)
   } catch (error) {
     if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
-      await updateJobRecord(state, job.id, 'canceled')
-      addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
+      if (await updateJobRecord(state, job.id, 'canceled')) {
+        addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
+      }
     } else {
       const message = error instanceof Error ? error.message : String(error)
-      await updateJobRecord(state, job.id, 'failed', { errorMessage: message })
-      addLog(state.db, 'ERROR', 'web-composer', `导出失败：${job.title} — ${message}`)
+      if (await updateJobRecord(state, job.id, 'failed', { errorMessage: message })) {
+        addLog(state.db, 'ERROR', 'web-composer', `导出失败：${job.title} — ${message}`)
+      }
     }
   } finally {
     activeAbortControllers.delete(job.id)

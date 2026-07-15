@@ -21,6 +21,7 @@ import { useDownloaderSelection } from '@/apps/downloader/useDownloaderSelection
 import { useDownloaderTaskData } from '@/apps/downloader/useDownloaderTaskData'
 import { DirectoryPickerDialog } from '@/apps/FileManagerApp'
 import type { CookieBrowser } from '@/apps/downloader/types'
+import type { FetchTaskDraft } from '@mediatoolbox/contracts'
 
 const COOKIE_BROWSER_LABELS: Record<CookieBrowser, string> = {
   none: '不使用浏览器登录态',
@@ -56,17 +57,15 @@ export function DownloaderApp() {
   const submitTaskPayloads = useCallback(
     async (urls: string[], route: 'auto' | 'ytdlp' = 'auto') => {
       const wantSubs = form.selectedPlatform.supportsSubtitles && form.taskSubtitles
-      const draft = {
+      const draft: FetchTaskDraft = {
         urls: urls,
-        download_route: route,
-        transport: 'browser-network',
-        output_dir: form.taskOutputDir || 'downloads',
+        output_dir: form.taskOutputDir || '/Workspace/Downloads',
         write_subs: wantSubs,
         write_auto_subs: wantSubs,
         sub_langs: 'original',
         // 下载选项：编码优先级、是否转码、字幕格式
         // convert_subs / preset 已由后端 argsBuilder 内部处理，前端无需下发
-        prefer_h264: form.taskPreferH264,
+        prefer_h264: form.taskNoTranscode ? false : form.taskPreferH264,
         no_transcode: form.taskNoTranscode,
         subtitle_format: form.taskSubtitleFormat,
         max_concurrent: 1,

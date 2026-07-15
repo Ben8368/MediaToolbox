@@ -9,6 +9,7 @@ import type { ProjectNetworkSample } from './system-sampler.js'
 import { formatLogTime } from './utils.js'
 
 export const WORKSPACE_ROOT = '/Workspace'
+const MAX_GLOBAL_DOWNLOAD_CONCURRENCY = 4
 
 export type ApiFile = {
   name: string
@@ -61,7 +62,7 @@ export function createApiState(): ApiState {
     workspaceRoot: WORKSPACE_ROOT,
     physicalWorkspaceBase,
     physicalWorkspaceRoot,
-    maxConcurrentDownloads: os.cpus().length,
+    maxConcurrentDownloads: Math.max(1, Math.min(os.cpus().length, MAX_GLOBAL_DOWNLOAD_CONCURRENCY)),
     fetchTasks: [],
     browserDownloads: [],
     browserRequests: [],

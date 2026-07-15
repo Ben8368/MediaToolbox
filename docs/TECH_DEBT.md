@@ -18,53 +18,17 @@
 
 新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方分级列表。
 
-### 🔴 P0 — 候选构建阻断（1 项）
+### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（5 项）
 
-#### TD-019: Electron 打包态 renderer / API / 静态资源链路不可用
-- **位置：** `apps/desktop/src/main.ts` + `apps/web/src/main.tsx` + `apps/web/src/api/http.ts` + `apps/web/src/icon-library/appIcons.ts` + `.github/workflows/release.yml` + `scripts/release-preflight.ts`
-- **来源：** 全仓工程审查（2026-07-15）；承接 TD-014 偿还后的 Electron 候选构建验收
-- **目标阶段：** 任何 Electron 内部候选构建前
-- **阻断候选构建：** 是
-- **验证方式：** 生成真实目录包并启动桌面窗口，确认根页面可见、renderer 能访问包内本地 API、图标/壁纸/Web Composer 视频可加载；在 Windows、macOS、Linux 至少各覆盖一个目标包，并把 renderer 功能烟测接入 release preflight 或 CI
-- **问题：** 打包态使用 `file://.../renderer/index.html`，但前端使用 `BrowserRouter`，文件 pathname 无法命中 `/`；API 基址缺省为同源 `/api`，在 `file://` 下无法访问本地 Fastify；运行时仍有多处绝对 `/static/...`；release workflow 未建立可用的生产 API 通道，preflight 只检查文件存在。仅注入 `VITE_API_BASE_URL` 也不足以解决 `file://` 到 HTTP API 的跨源边界
-- **影响：** 目录包可能启动主进程和 API 子进程，但 renderer 空白、API 不可达或主要静态资源缺失，不能据此宣称“可运行目录包”
-- **建议方案：** 先确定统一的生产加载与 API 通道（例如同源 localhost 托管、受控自定义协议或 preload API bridge），再统一静态资源基址与路由策略；完成 renderer 功能烟测后再继续签名、公证和完整安装包验收
-- **估算工作量：** 跨 desktop / web / API / release 的中等改造与三平台验收
-
-### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（8 项）
-
-#### TD-024: 下载器可见设置未进入 worker 契约
-- **位置：** `apps/web/src/apps/DownloaderApp.tsx` + `apps/api/src/schemas.ts` + `apps/api/src/routes/fetch.ts` + `apps/api/src/download-executor.ts` + `apps/api/src/state.ts` + `packages/downloader/src/args.ts`
-- **来源：** 全仓工程审查（2026-07-15）
-- **目标阶段：** 下载器稳定版候选构建前
-- **阻断候选构建：** 是，若保留当前输出目录、字幕、编码偏好和浏览器 Cookie 等可见设置
-- **验证方式：** 以非默认输出目录、字幕、编码偏好、浏览器 Cookie 和批量并发值提交任务，断言共享请求契约、API 校验、worker job 与最终 yt-dlp 参数一致；覆盖不支持字段的显式 4xx 拒绝和批量并发上限
-- **问题：** 前端提交 `output_dir`、字幕、编码偏好、`cookies_from_browser` 与 `max_concurrent` 等字段，schema 也接受并将其保存在 `task.params`，但 `buildDownloadJob()` 只消费 URL、mode 和固定输出模板；客户端提交的 `max_concurrent: 1` 被忽略，服务端使用 CPU 逻辑核数作为全局下载并发上限
-- **影响：** 用户选择可能静默失效；批量任务在 16 核环境可同时启动 16 个 yt-dlp/ffmpeg 流程，造成错误预期和资源峰值
-- **建议方案：** 将下载请求类型收敛到共享契约；支持的字段完整映射到安全的 worker 参数，不支持的字段显式拒绝或从 UI 移除；为全局与单批次并发建立有界、可配置的服务端策略
-- **估算工作量：** contracts / schema / executor / downloader 参数构建与集成测试的中等改造
-
-#### TD-025: Job 运行中进度被状态机自迁移拒绝
-- **位置：** `packages/job-core/src/index.ts` + `apps/api/src/job-utils.ts` + `apps/api/src/transcode-executor.ts` + `apps/api/src/web-composer-executor.ts`
-- **来源：** 全仓工程审查（2026-07-15）
-- **目标阶段：** 转码与 Web Composer 视频候选构建前
-- **阻断候选构建：** 是，若候选版本承诺可见的实时进度
-- **验证方式：** 注入至少两个 worker 中间进度事件，轮询 Job 数据库并确认 `running` 状态不变且 progress/updatedAt 持续更新，最终再进入成功或取消状态
-- **问题：** 进度回调调用 `running -> running`，但状态机不允许自迁移，`updateJobRecord()` 因而返回 `false`；当前调用方没有处理失败结果
-- **影响：** 转码和 Web Composer 视频导出进度会长期显示 0，完成时突然跳到 100，且现有测试未覆盖该链路
-- **建议方案：** 将“状态迁移”和“同状态字段 patch”拆成不同数据库入口，保留状态机约束的同时允许原子更新 progress/updatedAt；补 executor 到数据库再到系统指标响应的集成测试
-- **估算工作量：** Job repository / executor 小到中等改造与回归测试
-
-#### TD-026: Job 取消与完成之间缺少原子终态裁决
-- **位置：** `apps/api/src/job-utils.ts` + `packages/db/src/database.ts` + `apps/api/src/download-executor.ts` + `apps/api/src/transcode-executor.ts` + `apps/api/src/web-composer-executor.ts` + `apps/api/src/routes/browser-network-model.ts`
-- **来源：** 全仓工程审查（2026-07-15）
-- **目标阶段：** 统一 Job 取消能力候选构建前
-- **阻断候选构建：** 是，若候选版本承诺取消后不会产生成功记录或成功资产
-- **验证方式：** 用可控 barrier 构造“worker 已完成但终态尚未写入”与“成功副作用执行前取消”两类竞态，断言数据库只有一个终态，`canceled` Job 不创建成功 Asset、不记录成功日志，内存下载任务与 Job 状态一致
-- **问题：** 取消入口立即写入 `canceled`，执行器稍后仍可能完成；成功迁移被拒后，部分路径仍创建 Asset、写成功日志或把内存下载任务标成完成。Job repository 的更新只有 `WHERE id = ?`，没有基于旧状态的 compare-and-set
-- **影响：** 同一任务可能同时表现为“已取消”和“已完成”，生成幽灵 Asset、错误成功日志或不一致的下载记录；绑定资源也可能早于真实进程结束被回收
-- **建议方案：** 引入基于允许旧状态的原子 compare-and-set，或显式拆分 `cancel_requested` 与执行器终态；只有成功取得终态写入权后才能执行成功 Asset/日志等副作用，并为已产生的临时输出定义清理策略
-- **估算工作量：** Job repository、各 executor 与 Browser Network 状态同步的中等改造
+#### TD-019: Electron 目录包跨平台 renderer 功能烟测
+- **位置：** `apps/desktop/src/main.ts` + `apps/api/src/renderer-routes.ts` + `.github/workflows/release.yml` + `scripts/release-preflight.ts`
+- **来源：** 全仓工程审查（2026-07-15）；原 P0 代码阻断已修复
+- **目标阶段：** Electron 候选发布前
+- **阻断候选构建：** 是，直至完成三平台真实目录包验收
+- **已完成：** 打包态 renderer 改为本地 Fastify 同源托管；生产窗口加载 `apiUrl`；API 提供静态资源与 SPA fallback；自动化覆盖根页面、预设路由、静态 JS、真实 `/api/health`、运行时资源路径与 API 启动环境。Release workflow 现会先生成每个平台真实目录包，启动 Electron 窗口并检查根页面、同源 API、图标与代表性 Web Composer 视频，全部通过后才执行发布。
+- **剩余验证：** 等待下一次 tag Release 在 Windows、macOS、Linux runner 实际跑通该门禁，并保存三平台日志/产物；签名、公证与人工安装体验另按发布流程验收。
+- **影响：** 在该 workflow 首次成功前，不能宣称三平台候选包已实际运行。
+- **估算工作量：** 主要为首次三平台 CI 验收与后续签名/安装体验确认。
 
 #### TD-023: Web Composer 默认视频来源与再分发授权
 - **位置：** `assets/web-composer/` + `docs/RELEASE.md` + `SECURITY.md`
@@ -87,17 +51,6 @@
 - **影响：** 高规格视频导出可能较慢或触发捕获超时
 - **建议方案：** 为高规格捕获建立分级预设、耗时提示和压力测试基线
 - **估算工作量：** 资产治理与桌面压力验收为主
-
-#### TD-012: 浏览器 app 纯 Web 模式降级体验
-- **位置：** `apps/web/src/apps/browser/`
-- **来源：** CONTEXT.md 剩余黄灯
-- **目标阶段：** Phase 4.5 后续体验补齐
-- **阻断候选构建：** 否
-- **验证方式：** Web 模式手动打开浏览器 app，确认降级提示或替代路径可读且不可误操作
-- **问题：** 浏览器 app 目前为单窗口 beta 能力；纯 Web 模式仅显示桌面端能力未连接提示
-- **影响：** Web 模式用户无法使用浏览器能力，体验不完整
-- **建议方案：** 设计 Web 模式下的降级方案（如代理模式、iframe 沙箱或明确引导用户切换到桌面端）
-- **估算工作量：** 需要架构设计决策，10-20 行 UI 条件渲染
 
 #### TD-013: 浏览器多标签页桌面端真机验收
 - **位置：** `apps/desktop/src/browserViews.ts` + `apps/web/src/apps/browser/`
@@ -132,17 +85,6 @@
 
 ### 🟢 P2 — 长期规划
 
-#### TD-022: JobStatus.retrying 是预留死状态
-- **位置：** `packages/contracts/src/index.ts`（`JobStatus` 类型）、`packages/job-core/src/index.ts`（状态转移表）、`apps/api/src/routes/system.ts`（过滤、can_cancel、状态标签）、`apps/web/src/apps/TranscodeApp.tsx`（展示文案）
-- **来源：** 代码审查（2026-07-14），两份独立 review 报告共同指出
-- **目标阶段：** 实现失败重试能力时一并处理，暂无阶段绑定
-- **阻断候选构建：** 否
-- **验证方式：** 若实现重试，需补充真正把 job 转入 `retrying` 再转回 `running`/`queued` 的集成测试；若决定移除，需确认 `packages/contracts`、`job-core`、`apps/api`、`apps/web` 四处引用同步清理且 `npm run verify` 通过
-- **问题：** `JobStatus` 类型、`job-core` 的转移表（`running -> retrying`、`retrying -> queued/running/failed/canceled`）和前端展示文案都包含 `retrying`，但全仓库没有任何代码路径真正把 job 转换成这个状态——它只被读取（过滤活跃任务、判断可取消、状态标签翻译），从未被写入。`docs/ARCHITECTURE.md` 描述的"失败重试和恢复"目前对 `retrying` 状态而言是未实现的承诺。
-- **影响：** 不影响现有功能正确性（没有代码依赖这个状态真的会被触发），但可能误导后续开发者以为重试机制已经存在
-- **建议方案：** 两个选项均可：(a) 实现真正的重试机制，在 ffmpeg/yt-dlp/PSD 等 executor 失败时转入 `retrying` 并按策略退避重试；(b) 如果短期不打算做失败自动重试，从类型系统和展示代码中移除 `retrying`，回归到实际支持的状态集合。本轮暂不动代码，只记录决策留痕。
-- **估算工作量：** 选项 (a) 属于中等功能开发；选项 (b) 是几行类型和过滤逻辑的清理
-
 #### TD-020: PSD fixture 边界场景覆盖
 - **位置：** `fixtures/psd/photoshop-workbench/`
 - **来源：** PSD 工作台后端测试完善规划（2026-07-09）
@@ -158,6 +100,14 @@
 ---
 
 ## 已偿还债务（归档）
+
+### 2026-07-15
+
+- TD-012: 纯 Web 模式下，浏览器 app 现在明确说明 Electron 会话边界，并提供“打开下载器”的可用替代路径；用户不会再被留在无法操作的空浏览器界面。
+- TD-022: 移除了没有任何执行路径的 `JobStatus.retrying`、状态转移、指标过滤与前端展示；失败自动重试改为未来显式设计的调度能力，而非伪装成已支持状态。
+- TD-024: 下载请求已收敛为共享 `FetchTaskDraft`。工作区输出目录、字幕/格式、H.264/转码、Cookie 与有界批次并发都映射到调度器或 yt-dlp 参数；未知字段和超界并发返回 4xx，服务端全局并发上限为 4。已补 API 与 downloader 回归测试。
+- TD-025: Job 运行中字段更新已从状态迁移中拆出，`patchIfStatus(..., 'running')` 原子持久化进度与更新时间；Browser Network 进度回归测试确认状态保持 `running`。
+- TD-026: Job 终态写入改为基于旧状态的数据库 compare-and-set。成功 Asset/日志仅在成功领取 `succeeded` 后创建；取消后到达的浏览器完成事件会保持 `canceled` 且不生成 Asset。已补竞态回归测试。
 
 ### 2026-07-08
 

@@ -4,7 +4,7 @@ import type { JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
-import { updateJobRecord } from './job-utils.js'
+import { patchRunningJob, updateJobRecord } from './job-utils.js'
 
 const activeAbortControllers = new Map<string, AbortController>()
 
@@ -20,10 +20,14 @@ export async function updateTranscodeJob(
   progress?: JobRecord['progress'],
   errorMessage?: string,
 ) {
-  await updateJobRecord(state, jobId, nextStatus, {
+  return updateJobRecord(state, jobId, nextStatus, {
     ...(progress ? { progress } : {}),
     ...(errorMessage ? { errorMessage } : {}),
   })
+}
+
+function patchTranscodeProgress(state: ApiState, jobId: string, progress: JobRecord['progress']) {
+  return progress ? patchRunningJob(state, jobId, { progress }) : Promise.resolve(false)
 }
 
 export async function executeTranscode(
@@ -35,14 +39,15 @@ export async function executeTranscode(
   const controller = new AbortController()
   activeAbortControllers.set(job.id, controller)
 
-  await updateTranscodeJob(state, job.id, 'running')
+  const started = await updateTranscodeJob(state, job.id, 'running')
+  if (!started) return
   addLog(state.db, 'INFO', 'transcode', `开始转码：${job.title}`)
 
   try {
     const result = await runTranscodeWorkerJob(workerJob, {
       signal: controller.signal,
       onProgress: (progress) => {
-        void updateTranscodeJob(state, job.id, 'running', progress)
+        void patchTranscodeProgress(state, job.id, progress)
       },
       onLog: (line, stream) => {
         if (!line.trim()) return
@@ -54,10 +59,15 @@ export async function executeTranscode(
     activeAbortControllers.delete(job.id)
 
     if (result.status === 'canceled') {
-      await updateTranscodeJob(state, job.id, 'canceled')
-      addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+      if (await updateTranscodeJob(state, job.id, 'canceled')) {
+        addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+      }
     } else {
-      await updateTranscodeJob(state, job.id, 'succeeded', { current: 100, total: 100, unit: 'percent' })
+      const completed = await updateTranscodeJob(state, job.id, 'succeeded', { current: 100, total: 100, unit: 'percent' })
+      if (!completed) {
+        await fs.unlink(workerJob.outputPath).catch(() => undefined)
+        return
+      }
       await state.db.assets.create({
         id: `asset-${job.id}`,
         kind: (workerJob.preset === 'audio-mp3' || workerJob.preset === 'audio-aac') ? 'audio' : 'video',
@@ -75,15 +85,19 @@ export async function executeTranscode(
     activeAbortControllers.delete(job.id)
 
     if (error instanceof FfmpegToolNotFoundError) {
-      await updateTranscodeJob(state, job.id, 'failed', undefined, '未找到可用的 ffmpeg，请确认已安装并在 PATH 中。')
-      addLog(state.db, 'ERROR', 'transcode', `转码失败（ffmpeg 缺失）：${job.title}`)
+      if (await updateTranscodeJob(state, job.id, 'failed', undefined, '未找到可用的 ffmpeg，请确认已安装并在 PATH 中。')) {
+        addLog(state.db, 'ERROR', 'transcode', `转码失败（ffmpeg 缺失）：${job.title}`)
+      }
     } else if (error instanceof FfmpegRunError) {
-      await updateTranscodeJob(state, job.id, 'failed', undefined, error.normalized.message)
-      addLog(state.db, 'ERROR', 'transcode', `转码失败：${job.title} — ${error.normalized.message}`)
+      if (await updateTranscodeJob(state, job.id, 'failed', undefined, error.normalized.message)) {
+        addLog(state.db, 'ERROR', 'transcode', `转码失败：${job.title} — ${error.normalized.message}`)
+      }
     } else {
       const message = error instanceof Error ? error.message : String(error)
-      await updateTranscodeJob(state, job.id, 'failed', undefined, message)
-      addLog(state.db, 'ERROR', 'transcode', `转码出错：${job.title} — ${message}`)
+      if (await updateTranscodeJob(state, job.id, 'failed', undefined, message)) {
+        addLog(state.db, 'ERROR', 'transcode', `转码出错：${job.title} — ${message}`)
+      }
     }
   }
 }
+import fs from 'node:fs/promises'
