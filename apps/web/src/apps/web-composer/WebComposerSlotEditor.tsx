@@ -18,6 +18,7 @@ import {
   setSlotActiveKind,
   setSlotOffset,
   setSlotVisibility,
+  replaceSlotWithImage,
   updateSlotIcon,
   updateSlotImage,
   updateSlotMedia,
@@ -154,7 +155,12 @@ export function WebComposerSlotEditor({
       if (!result.ok || !result.path) throw new Error(result.message || '素材导入失败。')
       const src = filebrowserFileDownloadUrl(result.path)
       if (target === 'image') {
-        onStateChange(updateSlotImage(state, slot.id, { src }))
+        onStateChange(replaceSlotWithImage(state, slot.id, {
+          src,
+          alt: result.name || file.name,
+          width: value.image?.width ?? (metrics?.width ? Math.round(metrics.width) : null),
+          height: value.image?.height ?? (metrics?.height ? Math.round(metrics.height) : null),
+        }))
       } else {
         const mediaEditor = slot.editors.media
         const detectedKind = file.type.startsWith('video/') ? 'video' : 'image'

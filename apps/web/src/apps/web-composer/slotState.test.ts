@@ -6,6 +6,7 @@ import type {
 
 import {
   clampSlotNumber,
+  replaceSlotWithImage,
   setSlotActiveKind,
   setSlotOffset,
   setSlotVisibility,
@@ -41,6 +42,35 @@ const textSlot: WebComposerSlotValue = {
     iconId: 'sparkles',
     size: 24,
     color: null,
+  },
+}
+
+const logoSlot: WebComposerSlotValue = {
+  ...textSlot,
+  image: {
+    src: '',
+    alt: 'Logo',
+    width: null,
+    height: null,
+    fit: 'contain',
+  },
+}
+
+const iconLogoSlot: WebComposerSlotValue = {
+  activeKind: 'icon',
+  visible: true,
+  offset: { x: 0, y: 0 },
+  icon: {
+    iconId: 'vault-logo',
+    size: null,
+    color: null,
+  },
+  image: {
+    src: '',
+    alt: 'Logo',
+    width: null,
+    height: null,
+    fit: 'contain',
   },
 }
 
@@ -91,5 +121,31 @@ describe('web composer slot state', () => {
     expect(hidden.slots.heading?.text?.value).toBe('Heading')
     expect(restored.slots.heading?.visible).toBe(true)
     expect(restored.slots.heading?.text?.value).toBe('Heading')
+  })
+
+  it('replaces text-backed logo slots with an active image candidate', () => {
+    const state = createState(logoSlot)
+    const next = replaceSlotWithImage(state, 'heading', {
+      src: '/api/filebrowser/file?path=%2FWorkspace%2Flogo.png',
+      alt: 'logo.png',
+    })
+
+    expect(next.slots.heading?.activeKind).toBe('image')
+    expect(next.slots.heading?.image?.src).toBe('/api/filebrowser/file?path=%2FWorkspace%2Flogo.png')
+    expect(next.slots.heading?.image?.alt).toBe('logo.png')
+    expect(next.slots.heading?.text?.value).toBe('Heading')
+    expect(next.slots.heading?.icon?.iconId).toBe('sparkles')
+  })
+
+  it('replaces icon-backed logo slots with an active image candidate', () => {
+    const state = createState(iconLogoSlot)
+    const next = replaceSlotWithImage(state, 'heading', {
+      src: '/api/filebrowser/file?path=%2FWorkspace%2Fbrand.png',
+      alt: 'brand.png',
+    })
+
+    expect(next.slots.heading?.activeKind).toBe('image')
+    expect(next.slots.heading?.image?.src).toBe('/api/filebrowser/file?path=%2FWorkspace%2Fbrand.png')
+    expect(next.slots.heading?.icon?.iconId).toBe('vault-logo')
   })
 })

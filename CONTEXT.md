@@ -21,6 +21,7 @@
 > - GitHub CI 已显式准备 `ffmpeg` 并升级官方 checkout/setup-node action，避免 hosted runner 工具缺失和 Node 20 action 警告。
 > - PathGrant 生命周期、统一 Job 取消与 PSD scan/apply 可取消异步执行已收口。
 > - Web Composer Slot v2、统一可调侧栏、Browser Network 多标签事件隔离和 Electron 生产打包基础链路均已接入，剩余事项进入下方验收清单。
+> - Web Composer 预设页 logo/icon slot 指定 PNG 替换已修复：上传图片会同步切换到 image 分支，Lumora 文案型 Logo 与 VaultShield 图标型 Logo 场景已补回归覆盖；TD-029 已归档。
 > - 后续 Phase 11 已规划独立的「社交场景生成工作台」：先以微信对话的项目编辑、长图 PNG 与自动播放 MP4 验证闭环，不改变现有网页合成工作台边界。
 
 ## 项目定位
@@ -35,7 +36,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-15 `npm run verify` 已通过：35 个测试文件、206 项测试全部通过，workspace TypeScript 类型检查与构建全部通过；`npm run release:preflight:public` 按设计拒绝缺少根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json` 的公开发布，但不影响内部候选构建。
+- **验证：** 2026-07-15 `npm run verify` 已通过：35 个测试文件、209 项测试全部通过，workspace TypeScript 类型检查与构建全部通过；`npm run release:preflight:public` 按设计拒绝缺少根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json` 的公开发布，但不影响内部候选构建。
 
 ## 当前阻断项
 

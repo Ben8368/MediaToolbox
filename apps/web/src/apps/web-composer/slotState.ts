@@ -123,6 +123,18 @@ export function updateSlotImage(
   ))
 }
 
+export function replaceSlotWithImage(
+  state: WebComposerPresetState,
+  slotId: string,
+  patch: Partial<WebComposerImageContent>,
+) {
+  return updateSlotValue(state, slotId, (value) => (
+    value.image
+      ? { ...value, activeKind: 'image', image: { ...value.image, ...patch } }
+      : value
+  ))
+}
+
 export function updateSlotMedia(
   state: WebComposerPresetState,
   slotId: string,

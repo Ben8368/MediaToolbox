@@ -114,6 +114,7 @@
 
 ### 2026-07-15
 
+- TD-029: Web Composer 预设页 logo/icon slot PNG 替换失败。已新增 `replaceSlotWithImage`，上传图片会同时更新 image 候选并切换 `activeKind: 'image'`；Lumora 文案型 Logo 与 VaultShield 图标型 Logo 的状态层回归、Lumora 渲染 `<img>` 回归已覆盖，避免继续显示默认文案或内置图标。
 - TD-027: 所有服务端 Job ID 与 PSD workorder ID 已改用带业务前缀的 UUID；同一冻结时钟下并发创建 100 个任务均成功且 ID 唯一，消除时间戳/数组长度碰撞导致的 SQLite 主键冲突。
 - Release matrix 并发发布风险已修复：三平台仅构建、烟测和上传 workflow artifact，单一 `publish` job 在全部通过后创建草稿、上传完整产物并转为正式 Release；已发布 tag 禁止覆盖。
 - TD-012: 纯 Web 模式下，浏览器 app 现在明确说明 Electron 会话边界，并提供“打开下载器”的可用替代路径；用户不会再被留在无法操作的空浏览器界面。
