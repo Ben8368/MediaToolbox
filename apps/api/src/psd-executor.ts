@@ -130,7 +130,6 @@ export async function executePsdApply(
         job.id,
         'succeeded',
         { progress: { current: 100, total: 100, unit: 'percent' } },
-        { revokeGrantsOnTerminal: false },
       )
       if (completed) addLog(state.db, 'INFO', 'psd', `PSD 应用完成：${workOrder.id}，${result.appliedCount} 个图层已应用`)
     } else {
