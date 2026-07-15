@@ -13,8 +13,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  governance:
+    name: Verify public distribution rights
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Verify project license and asset provenance
+        run: npm run release:preflight:public
+
   build:
-    name: Build (${{ matrix.os }})
+    name: Build and smoke (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -64,13 +79,7 @@ jobs:
       - name: Smoke test packaged renderer
         run: npm run release:smoke:packaged
 
-      - name: Publish Electron release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder ${{ matrix.eb_flag }} --publish always
-        working-directory: apps/desktop
-
-      - name: Upload artifacts
+      - name: Upload platform artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
@@ -79,6 +88,49 @@ jobs:
             apps/desktop/dist/*.dmg
             apps/desktop/dist/*.AppImage
             apps/desktop/dist/*.zip
+            apps/desktop/dist/*.blockmap
             apps/desktop/dist/latest*.yml
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
+
+  publish:
+    name: Publish coordinated release
+    needs: [governance, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: dist-*
+          path: release-artifacts
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          mapfile -d '' artifacts < <(find release-artifacts -type f -print0)
+          if (( ${#artifacts[@]} == 0 )); then
+            echo 'No release artifacts were downloaded.' >&2
+            exit 1
+          fi
+          duplicate_names=$(printf '%s\n' "${artifacts[@]##*/}" | sort | uniq -d)
+          if [[ -n "$duplicate_names" ]]; then
+            echo 'Duplicate release artifact names are not allowed:' >&2
+            echo "$duplicate_names" >&2
+            exit 1
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            is_draft=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)
+            if [[ "$is_draft" != "true" ]]; then
+              echo "Release $GITHUB_REF_NAME is already published; use a new tag instead of replacing immutable artifacts." >&2
+              exit 1
+            fi
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+          fi
+          gh release upload "$GITHUB_REF_NAME" "${artifacts[@]}" --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false

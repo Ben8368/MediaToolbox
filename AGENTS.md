@@ -43,6 +43,12 @@
 - 版本化外部素材变更必须同步清单、不可变 tag、哈希、来源/再分发授权记录和全新安装验收；具体门禁见 [docs/RELEASE.md](docs/RELEASE.md)。
 - 面向开放协作的流程、安全、发布和维护职责分别见 [CONTRIBUTING.md](CONTRIBUTING.md)、[SECURITY.md](SECURITY.md)、[docs/RELEASE.md](docs/RELEASE.md) 与 [docs/MAINTAINERS.md](docs/MAINTAINERS.md)。
 
+## 汇报语言
+
+- 默认使用中文向用户汇报进度、审查结论、验证结果和最终交付；用户明确要求其他语言时从其要求。
+- 代码标识、命令、文件路径、API 字段、日志原文和第三方专有名词按原文保留，避免为了中文化破坏可检索性或技术准确性。
+- 该规则以本文件为权威来源；工具专属入口只链接或摘要，不复制扩展版本。
+
 ## PowerShell 编码
 
 - Windows PowerShell 中读取中文文件或运行可能输出中文的命令前，默认先初始化 UTF-8 控制台编码。

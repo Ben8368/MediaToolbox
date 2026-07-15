@@ -19,6 +19,8 @@
 - T-006：暂不支持的 PSD slot 必须显式拒绝，不能静默忽略 image / smart-object 这类用户以为已生效的输入。
 - T-007：API/Web 共享格式化逻辑放到共享包；不要让 `formatSpeed`、`formatBytesPerSecond` 这类显示规则双写分叉。
 - T-008：生产打包必须验证包内真实启动路径和 `/api/health`，不能只相信开发态路径或源码布局。
+- T-009：Fastify `close` 前必须先等待或取消所有异步 executor；没有统一 drain 屏障时不得直接关闭 SQLite，否则 worker 收尾会访问已关闭连接。
+- T-010：Job 进入终态默认回收绑定 PathGrant；若成功结果会由持久实体继续复用授权（如 PSD scan → WorkOrder → apply），必须显式保留或转移所有权，同时保证失败、取消和重启恢复路径仍会回收。
 
 ## 迁移边界
 

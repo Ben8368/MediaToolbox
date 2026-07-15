@@ -4,6 +4,12 @@
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
 > **最近更新：** 2026-07-15
+> - API Job、PSD workorder 与 Electron Browser Network 上报 ID 已统一为带业务前缀的 UUID；冻结时钟并发回归覆盖 100 个任务。
+> - API 启动会原子恢复 SQLite 遗留的 `queued` / `running` / `paused` 孤儿任务：标记为 `failed`、记录重启原因并吊销绑定 PathGrant；自动重试、断点续跑和 executor 安全关闭屏障仍列入 TD-028。
+> - Release workflow 已改为三平台只构建、目录包烟测和上传 workflow artifact，单一 `publish` job 在授权门禁与三平台构建全部通过后发布；已发布 tag 禁止覆盖。
+> - 公开发布新增 `npm run release:preflight:public`，自动核验根 `LICENSE` 与默认视频逐项来源/再分发授权记录；当前证据尚缺，因此公开 tag Release 会被有意阻止。
+> - API 回归测试已按下载、转码、PSD 与重启恢复拆分，原 `app.test.ts` 从 1049 行降至 315 行。
+> - PSD scan 成功生成持久工单时会保留同 ID 输入 PathGrant 供后续 apply 使用；scan 失败/取消、API 重启恢复或 apply 终结时仍会吊销授权。
 > - Electron 生产 renderer 改由包内本地 API 同源托管，修复 `file://` 下路由、`/api` 与绝对静态资源无法协作的问题；已补同源 renderer、静态资源与 SPA 路由自动化覆盖。真实 Windows/macOS/Linux 目录包启动验收仍待执行。
 > - 下载请求已收敛为共享契约，输出目录、字幕、H.264/转码、浏览器 Cookie 与有界批次并发均进入 yt-dlp worker / 调度器；未知字段明确返回 4xx。
 > - Job 运行中进度改为独立 patch，状态终态写入改为数据库 compare-and-set；取消后到达的成功事件不会创建 Asset 或改写成功状态。
@@ -29,11 +35,11 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - **API：** `apps/api`，Fastify 本地服务已对齐下载、浏览器网络、文件浏览、网页合成、系统指标、日志、通知和 jobs 的最小契约。
 - **共享包：** `packages/contracts`、`job-core`、`process-manager`、`downloader`、`ffmpeg`、`psd-core`、`media-core`、`db`、`ui` 已建立第一版边界。
 - **Workers：** `download-worker`、`transcode-worker`、`web-render-worker`、`psd-worker` 已有真实工具入口或可注入执行边界。
-- **验证：** 2026-07-15 本轮 `npm run verify` 已通过；API 66、Web 74、DB 23、Desktop 11 项测试及其余 workspace 测试、类型检查、生产构建全部成功。Web Composer 素材包校验与根 `predev` ensure 通过，workflow YAML 和本地 Markdown 链接已解析检查；预览区直接点选的最终主观手感仍待验收。
+- **验证：** 2026-07-15 `npm run verify` 已通过：35 个测试文件、206 项测试全部通过，workspace TypeScript 类型检查与构建全部通过；`npm run release:preflight:public` 按设计拒绝缺少根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json` 的公开发布，但不影响内部候选构建。
 
 ## 当前阻断项
 
-- 无代码级阻断。Electron 候选发布前仍必须等待 Windows、macOS、Linux 的 tag Release workflow 实际跑通目录包启动、renderer/API/静态资源功能烟测；该发布验收项详见 TD-019。
+- 无内部开发代码级阻断。公开 tag Release 当前会被授权门禁阻止：仓库缺少根 `LICENSE` 和 8 个默认 MP4 的逐项 `PROVENANCE.json`；证据补齐后才能执行 TD-019 的三平台 tag workflow 实跑验收。
 
 ## 剩余黄灯
 
@@ -57,8 +63,9 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 下一步
 
-1. 验收 TD-019：触发下一次 tag Release，确认 Windows、macOS、Linux 三个 job 的目录包 renderer 烟测通过，并保留根页面、`/api/health`、图标和 Web Composer 视频检查日志；随后继续签名、公证与人工安装体验验收。
-2. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
+1. 先选择项目公开许可证并补齐 8 个默认 MP4 的逐项来源、版权方、许可证与再分发证据；无法确认授权的素材必须替换，并通过 `npm run release:preflight:public`。
+2. 再验收 TD-019：触发新 tag Release，确认 Windows、macOS、Linux 三个 build job 和单一 publish job 跑通，并保留 renderer、`/api/health`、图标和 Web Composer 视频检查日志；随后继续签名、公证与人工安装体验验收。
+3. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
 4. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和错误页重试路径。
 5. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/scan` → 工单编辑 → `POST /api/psd/workorders/{id}/apply` 的异步执行、取消和外部路径授权闭环。
 6. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。

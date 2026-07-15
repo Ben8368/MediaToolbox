@@ -23,11 +23,13 @@
     "assets:web-composer:install": "tsx scripts/web-composer-assets.ts install",
     "assets:web-composer:pack": "tsx scripts/web-composer-assets.ts pack",
     "psd:roundtrip": "tsx scripts/psd-roundtrip.ts",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run test:scripts && npm run test --workspaces --if-present",
+    "test:scripts": "vitest run scripts/public-release-preflight.test.ts",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "verify": "npm run test && npm run typecheck && npm run build",
     "release:preflight": "tsx scripts/release-preflight.ts",
+    "release:preflight:public": "node scripts/public-release-preflight.mjs",
     "release:smoke:packaged": "tsx scripts/packaged-electron-smoke.ts"
   },
   "devDependencies": {

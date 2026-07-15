@@ -18,15 +18,15 @@
 
 新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方分级列表。
 
-### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（5 项）
+### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（6 项）
 
 #### TD-019: Electron 目录包跨平台 renderer 功能烟测
 - **位置：** `apps/desktop/src/main.ts` + `apps/api/src/renderer-routes.ts` + `.github/workflows/release.yml` + `scripts/release-preflight.ts`
 - **来源：** 全仓工程审查（2026-07-15）；原 P0 代码阻断已修复
 - **目标阶段：** Electron 候选发布前
 - **阻断候选构建：** 是，直至完成三平台真实目录包验收
-- **已完成：** 打包态 renderer 改为本地 Fastify 同源托管；生产窗口加载 `apiUrl`；API 提供静态资源与 SPA fallback；自动化覆盖根页面、预设路由、静态 JS、真实 `/api/health`、运行时资源路径与 API 启动环境。Release workflow 现会先生成每个平台真实目录包，启动 Electron 窗口并检查根页面、同源 API、图标与代表性 Web Composer 视频，全部通过后才执行发布。
-- **剩余验证：** 等待下一次 tag Release 在 Windows、macOS、Linux runner 实际跑通该门禁，并保存三平台日志/产物；签名、公证与人工安装体验另按发布流程验收。
+- **已完成：** 打包态 renderer 改为本地 Fastify 同源托管；生产窗口加载 `apiUrl`；API 提供静态资源与 SPA fallback；自动化覆盖根页面、预设路由、静态 JS、真实 `/api/health`、运行时资源路径与 API 启动环境。Release workflow 现由三平台 matrix 分别构建、启动真实目录包并检查根页面、同源 API、图标与代表性 Web Composer 视频；三个 job 全部通过后，单一 `publish` job 才汇总产物、执行公开分发授权门禁并发布，禁止三个 runner 并发改写同一 Release。
+- **剩余验证：** 等待下一次 tag Release 在 Windows、macOS、Linux runner 实际跑通该门禁，并验证单一发布 job 的产物汇总；签名、公证与人工安装体验另按发布流程验收。
 - **影响：** 在该 workflow 首次成功前，不能宣称三平台候选包已实际运行。
 - **估算工作量：** 主要为首次三平台 CI 验收与后续签名/安装体验确认。
 
@@ -38,7 +38,7 @@
 - **验证方式：** 为 8 个默认 MP4 逐项记录原始来源、版权方、许可证或书面再分发授权及兼容素材包版本，并确认仓库 `LICENSE` 与产品发布范围一致
 - **问题：** 当前清单已固定归档与逐文件 SHA-256，但仓库没有可审计的逐项素材来源和再分发授权记录，也尚未选择项目公开许可证
 - **影响：** 技术完整性可验证，但公开分发的版权与许可边界无法审计
-- **建议方案：** 补齐逐文件 NOTICE/来源清单；无法确认授权的素材在公开候选版本前替换为自有或明确可再分发素材
+- **建议方案：** 补齐根 `LICENSE` 和 `assets/web-composer/PROVENANCE.json` 逐文件来源清单；无法确认授权的素材在公开候选版本前替换为自有或明确可再分发素材。`npm run release:preflight:public` 与 tag Release 的单一发布 job 已将两项证据设为硬门禁。
 - **估算工作量：** 资料确认与必要素材替换为主
 
 #### TD-021: Web Composer 长时高分辨率验收
@@ -46,7 +46,7 @@
 - **来源：** Phase 5.5 beta 验收剩余黄灯
 - **目标阶段：** Web Composer 候选版本前
 - **阻断候选构建：** 是，若候选版本承诺离线或 4K/15 秒稳定导出
-- **验证方式：** 三套预设分别覆盖默认素材、工作区图片、工作区视频，在 16:9/4:3/1:1/9:16 下完成 PNG 与 MP4；重点记录 4K/15 秒耗时、内存、文件体积和失败提示
+- **验证方式：** 三套预设分别覆盖默认素材、工作区图片、工作区视频，在 16:9/4:3/1:1/9:16 下完成 PNG 与 MP4；4K 明确定义为 UHD `3840×2160`（不是 DCI `4096×2160`），重点记录 15 秒导出耗时、峰值内存、文件体积和失败提示
 - **问题：** 基础 PNG 和 1 秒 1080p H.264 MP4 已通过；字体已提升为 Web 前端共享资源，默认视频已迁移到固定 SHA-256 的版本化 Release Asset，远端全新安装已通过，但 4K/长时捕获基线仍待完成
 - **影响：** 高规格视频导出可能较慢或触发捕获超时
 - **建议方案：** 为高规格捕获建立分级预设、耗时提示和压力测试基线
@@ -83,6 +83,17 @@
 - **估算工作量：** Phase 5 深水区任务，20-50 行核心逻辑 + 真机联调
 
 
+#### TD-028: Job 可重试调度与安全关闭屏障
+- **位置：** `apps/api/src/job-recovery.ts` + `apps/api/src/*-executor.ts` + `packages/job-core/`
+- **来源：** 全仓技术债复核（2026-07-15）
+- **目标阶段：** 长任务可靠性迭代
+- **阻断候选构建：** 否；若承诺进程重启后自动续跑则是
+- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；API 启动会将 SQLite 遗留的 `queued` / `running` / `paused` 孤儿任务原子标记为 `failed`，写入明确中断原因和审计日志，并吊销绑定 PathGrant。
+- **剩余问题：** 当前仍不自动重试、没有 attempt/checkpoint/幂等输出 token；Fastify 关闭也没有等待所有 executor 停止后再关闭数据库的统一屏障。
+- **影响：** API 重启后不会继续显示永久运行中的假任务，但用户仍需手动重提；直接引入关库 hook 会与异步 executor 收尾竞争。
+- **建议方案：** 先建立 executor registry 与 graceful drain，再设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
+- **估算工作量：** 中等，需要数据库契约、调度器、executor 和重启/关闭集成测试协同修改。
+
 ### 🟢 P2 — 长期规划
 
 #### TD-020: PSD fixture 边界场景覆盖
@@ -103,6 +114,8 @@
 
 ### 2026-07-15
 
+- TD-027: 所有服务端 Job ID 与 PSD workorder ID 已改用带业务前缀的 UUID；同一冻结时钟下并发创建 100 个任务均成功且 ID 唯一，消除时间戳/数组长度碰撞导致的 SQLite 主键冲突。
+- Release matrix 并发发布风险已修复：三平台仅构建、烟测和上传 workflow artifact，单一 `publish` job 在全部通过后创建草稿、上传完整产物并转为正式 Release；已发布 tag 禁止覆盖。
 - TD-012: 纯 Web 模式下，浏览器 app 现在明确说明 Electron 会话边界，并提供“打开下载器”的可用替代路径；用户不会再被留在无法操作的空浏览器界面。
 - TD-022: 移除了没有任何执行路径的 `JobStatus.retrying`、状态转移、指标过滤与前端展示；失败自动重试改为未来显式设计的调度能力，而非伪装成已支持状态。
 - TD-024: 下载请求已收敛为共享 `FetchTaskDraft`。工作区输出目录、字幕/格式、H.264/转码、Cookie 与有界批次并发都映射到调度器或 yt-dlp 参数；未知字段和超界并发返回 4xx，服务端全局并发上限为 4。已补 API 与 downloader 回归测试。

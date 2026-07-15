@@ -15,8 +15,8 @@
 2. 确认 [ROADMAP.md](ROADMAP.md) 与当前状态一致。
 3. 运行 `npm run verify`。
 4. 运行 `npm run assets:web-composer:verify`，确认固定版本的默认视频完整且 SHA-256 匹配。
-5. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、Web Composer 视频、图标来源和发布签名/公证环境提示。
-6. 已生成本机目录包时，运行 `npm run release:smoke:packaged`；tag Release 会在三个 runner 上自动执行等价烟测。
+5. 运行 `npm run release:preflight`，确认 Electron runtime bundle、renderer 资源、Web Composer 视频、图标来源和发布签名/公证环境提示；公开发布还必须运行 `npm run release:preflight:public`，确认根 `LICENSE` 和逐项素材来源/再分发授权证据完整。
+6. 已生成本机目录包时，运行 `npm run release:smoke:packaged`；tag Release 会在三个 runner 上自动执行等价烟测，三平台全部通过后才由单一发布 job 汇总并发布产物。
 7. 对涉及桌面壳、浏览器 session、PathGrant、下载、转码或 Photoshop 的改动执行对应真实路径验收。
 8. 检查仓库不包含 `.env`、凭据、客户素材、缓存、日志或构建产物。
 9. 如涉及安全边界变化，更新 [SECURITY.md](../SECURITY.md) 或新增 [ADR](ADR/README.md)。
@@ -31,7 +31,7 @@
 - 素材清单变更必须在同一改动中记录兼容的预设/产品范围、来源与再分发授权，并完成本地归档安装、远端全新安装和逐文件校验。
 - 已被任一源码版本引用的素材 Release Asset 必须长期保留；若需要迁移，先发布新版本并验证，再更新源码清单。禁止删除仍被已发布源码或产品引用的旧归档。
 - 回滚优先恢复到上一个仍可下载且哈希匹配的清单版本；不得通过跳过哈希、改用浮动 URL 或覆盖旧 tag 回滚。
-- 当前仓库和默认视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐 `LICENSE` 与逐项素材授权记录。
+- 当前仓库和默认视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json` 逐项素材授权记录，`npm run release:preflight:public` 会阻止证据缺失的 tag Release。
 - 完整操作与本地覆盖参数见 [素材包说明](../assets/web-composer/README.md)。
 
 ## 候选构建
@@ -53,7 +53,7 @@
 - macOS / Windows / Linux 目标和 artifact 命名是否已配置。
 - `CSC_LINK` / `CSC_NAME`、`APPLE_ID`、`APPLE_APP_SPECIFIC_PASSWORD`、`APPLE_TEAM_ID` 等签名与公证环境变量是否已准备；缺失时为警告，设置 `MEDIATOOLBOX_RELEASE_STRICT=1` 或传入 `--strict` 可将警告视为失败。
 
-以上 preflight 仍只覆盖配置与文件存在性。tag Release workflow 会在发布前为 Windows、macOS、Linux 生成目录包，启动其中的 Electron 窗口并验证根 renderer、同源 `/api/health`、图标和代表性 Web Composer 视频；Linux runner 使用 `xvfb`。该三平台烟测首次成功前，候选构建仍不视为已运行验收。
+常规 preflight 覆盖配置与文件存在性；公开发布 preflight 额外核验项目许可证和素材清单逐项授权证据。tag Release workflow 会先在 Windows、macOS、Linux 分别生成目录包，启动其中的 Electron 窗口并验证根 renderer、同源 `/api/health`、图标和代表性 Web Composer 视频；Linux runner 使用 `xvfb`。matrix job 只上传 workflow artifact，不直接写 GitHub Release；三平台全部通过后，单一 `publish` job 创建草稿、汇总上传并转为正式 Release，已发布 tag 不允许覆盖。该流程首次成功前，候选构建仍不视为已运行验收。
 
 GitHub CI 的真实转码回归依赖系统 `ffmpeg`。CI workflow 必须在三个 runner 上显式安装并运行 `ffmpeg -version`，不能依赖 hosted image 的隐式预装状态。
 
