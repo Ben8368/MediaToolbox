@@ -16,9 +16,55 @@
 
 ## 未偿还债务
 
-新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方阶段黄灯迁移列表。
+新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方分级列表。
 
-### 🟡 P1 — 从 CONTEXT.md 黄灯迁移（6 项）
+### 🔴 P0 — 候选构建阻断（1 项）
+
+#### TD-019: Electron 打包态 renderer / API / 静态资源链路不可用
+- **位置：** `apps/desktop/src/main.ts` + `apps/web/src/main.tsx` + `apps/web/src/api/http.ts` + `apps/web/src/icon-library/appIcons.ts` + `.github/workflows/release.yml` + `scripts/release-preflight.ts`
+- **来源：** 全仓工程审查（2026-07-15）；承接 TD-014 偿还后的 Electron 候选构建验收
+- **目标阶段：** 任何 Electron 内部候选构建前
+- **阻断候选构建：** 是
+- **验证方式：** 生成真实目录包并启动桌面窗口，确认根页面可见、renderer 能访问包内本地 API、图标/壁纸/Web Composer 视频可加载；在 Windows、macOS、Linux 至少各覆盖一个目标包，并把 renderer 功能烟测接入 release preflight 或 CI
+- **问题：** 打包态使用 `file://.../renderer/index.html`，但前端使用 `BrowserRouter`，文件 pathname 无法命中 `/`；API 基址缺省为同源 `/api`，在 `file://` 下无法访问本地 Fastify；运行时仍有多处绝对 `/static/...`；release workflow 未建立可用的生产 API 通道，preflight 只检查文件存在。仅注入 `VITE_API_BASE_URL` 也不足以解决 `file://` 到 HTTP API 的跨源边界
+- **影响：** 目录包可能启动主进程和 API 子进程，但 renderer 空白、API 不可达或主要静态资源缺失，不能据此宣称“可运行目录包”
+- **建议方案：** 先确定统一的生产加载与 API 通道（例如同源 localhost 托管、受控自定义协议或 preload API bridge），再统一静态资源基址与路由策略；完成 renderer 功能烟测后再继续签名、公证和完整安装包验收
+- **估算工作量：** 跨 desktop / web / API / release 的中等改造与三平台验收
+
+### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（8 项）
+
+#### TD-024: 下载器可见设置未进入 worker 契约
+- **位置：** `apps/web/src/apps/DownloaderApp.tsx` + `apps/api/src/schemas.ts` + `apps/api/src/routes/fetch.ts` + `apps/api/src/download-executor.ts` + `apps/api/src/state.ts` + `packages/downloader/src/args.ts`
+- **来源：** 全仓工程审查（2026-07-15）
+- **目标阶段：** 下载器稳定版候选构建前
+- **阻断候选构建：** 是，若保留当前输出目录、字幕、编码偏好和浏览器 Cookie 等可见设置
+- **验证方式：** 以非默认输出目录、字幕、编码偏好、浏览器 Cookie 和批量并发值提交任务，断言共享请求契约、API 校验、worker job 与最终 yt-dlp 参数一致；覆盖不支持字段的显式 4xx 拒绝和批量并发上限
+- **问题：** 前端提交 `output_dir`、字幕、编码偏好、`cookies_from_browser` 与 `max_concurrent` 等字段，schema 也接受并将其保存在 `task.params`，但 `buildDownloadJob()` 只消费 URL、mode 和固定输出模板；客户端提交的 `max_concurrent: 1` 被忽略，服务端使用 CPU 逻辑核数作为全局下载并发上限
+- **影响：** 用户选择可能静默失效；批量任务在 16 核环境可同时启动 16 个 yt-dlp/ffmpeg 流程，造成错误预期和资源峰值
+- **建议方案：** 将下载请求类型收敛到共享契约；支持的字段完整映射到安全的 worker 参数，不支持的字段显式拒绝或从 UI 移除；为全局与单批次并发建立有界、可配置的服务端策略
+- **估算工作量：** contracts / schema / executor / downloader 参数构建与集成测试的中等改造
+
+#### TD-025: Job 运行中进度被状态机自迁移拒绝
+- **位置：** `packages/job-core/src/index.ts` + `apps/api/src/job-utils.ts` + `apps/api/src/transcode-executor.ts` + `apps/api/src/web-composer-executor.ts`
+- **来源：** 全仓工程审查（2026-07-15）
+- **目标阶段：** 转码与 Web Composer 视频候选构建前
+- **阻断候选构建：** 是，若候选版本承诺可见的实时进度
+- **验证方式：** 注入至少两个 worker 中间进度事件，轮询 Job 数据库并确认 `running` 状态不变且 progress/updatedAt 持续更新，最终再进入成功或取消状态
+- **问题：** 进度回调调用 `running -> running`，但状态机不允许自迁移，`updateJobRecord()` 因而返回 `false`；当前调用方没有处理失败结果
+- **影响：** 转码和 Web Composer 视频导出进度会长期显示 0，完成时突然跳到 100，且现有测试未覆盖该链路
+- **建议方案：** 将“状态迁移”和“同状态字段 patch”拆成不同数据库入口，保留状态机约束的同时允许原子更新 progress/updatedAt；补 executor 到数据库再到系统指标响应的集成测试
+- **估算工作量：** Job repository / executor 小到中等改造与回归测试
+
+#### TD-026: Job 取消与完成之间缺少原子终态裁决
+- **位置：** `apps/api/src/job-utils.ts` + `packages/db/src/database.ts` + `apps/api/src/download-executor.ts` + `apps/api/src/transcode-executor.ts` + `apps/api/src/web-composer-executor.ts` + `apps/api/src/routes/browser-network-model.ts`
+- **来源：** 全仓工程审查（2026-07-15）
+- **目标阶段：** 统一 Job 取消能力候选构建前
+- **阻断候选构建：** 是，若候选版本承诺取消后不会产生成功记录或成功资产
+- **验证方式：** 用可控 barrier 构造“worker 已完成但终态尚未写入”与“成功副作用执行前取消”两类竞态，断言数据库只有一个终态，`canceled` Job 不创建成功 Asset、不记录成功日志，内存下载任务与 Job 状态一致
+- **问题：** 取消入口立即写入 `canceled`，执行器稍后仍可能完成；成功迁移被拒后，部分路径仍创建 Asset、写成功日志或把内存下载任务标成完成。Job repository 的更新只有 `WHERE id = ?`，没有基于旧状态的 compare-and-set
+- **影响：** 同一任务可能同时表现为“已取消”和“已完成”，生成幽灵 Asset、错误成功日志或不一致的下载记录；绑定资源也可能早于真实进程结束被回收
+- **建议方案：** 引入基于允许旧状态的原子 compare-and-set，或显式拆分 `cancel_requested` 与执行器终态；只有成功取得终态写入权后才能执行成功 Asset/日志等副作用，并为已产生的临时输出定义清理策略
+- **估算工作量：** Job repository、各 executor 与 Browser Network 状态同步的中等改造
 
 #### TD-023: Web Composer 默认视频来源与再分发授权
 - **位置：** `assets/web-composer/` + `docs/RELEASE.md` + `SECURITY.md`
@@ -63,17 +109,6 @@
 - **影响：** 桌面端真机多标签场景仍可能暴露 view 隐藏、销毁或焦点生命周期问题
 - **建议方案：** 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），重点覆盖后台标签下载归属、权限提示和取消下载隔离。
 - **估算工作量：** 主要是测试验收
-
-#### TD-019: Electron 发布 polish
-- **位置：** `apps/desktop/` + `.github/workflows/release.yml`
-- **来源：** TD-014 偿还后的剩余发布项
-- **目标阶段：** Release 候选构建前
-- **阻断候选构建：** 是，若签名、公证或安装包验收失败
-- **验证方式：** `npm run release:preflight` 后分别验收 `.dmg` / `.exe` / `.AppImage`
-- **问题：** Electron 目录包、preload 路径和本地 API 生产 runtime 已通过 macOS arm64 `--dir` 与包内 `/api/health` 烟测；桌面窗口/托盘图标入口、artifact 命名和 release preflight 已接入；但 macOS/Windows 签名、公证和完整安装包发布仍待验收
-- **影响：** 当前可生成可运行目录包，且发布前置检查更明确；正式分发体验仍取决于签名、公证和跨平台安装包验收
-- **建议方案：** 准备签名证书、公证凭据和 release tag 流程，运行 `npm run release:preflight` 后分别验收 `.dmg` / `.exe` / `.AppImage`
-- **估算工作量：** 发布配置与证书准备为主
 
 #### TD-015: PSD 真实 Photoshop 联调
 - **位置：** `packages/psd-core/` + `workers/psd-worker/` + `fixtures/psd/photoshop-workbench/`
@@ -143,7 +178,7 @@
 - TD-018: PSD manifest 类型重复且非文字 slot 会被隐式忽略。已将 PSD manifest/slot/render input 类型收敛到 `packages/contracts`，并在 API/worker/UI 明确当前仅支持文字 slot。
 - TD-010: `formatBytesPerSecond` 与 `formatSpeed` 重复实现。已提取为 `packages/shared/utils/formatBytesPerSecond.ts` 统一实现，API 和 Web 端均改为引用共享包。
 - TD-011: `cpuPrevious` 模块级全局状态。已将 CPU 采样状态封装为 `createCpuSampler()` 闭包，`sampleCpuPercent` 和 `resetCpuSamplerForTests` 保持原有公共 API 不变。
-- TD-014: Electron 生产打包工具链。已接入 API 生产 runtime bundle、packaged Electron `ELECTRON_RUN_AS_NODE` 启动、`userData` 工作区/DB 默认路径、electron-builder 目录包资源和 macOS arm64 包内 API health 烟测；剩余签名/图标/完整安装包发布项迁移为 TD-019。
+- TD-014: Electron 生产打包结构与 API 子进程链路。已接入 API production runtime bundle、packaged Electron `ELECTRON_RUN_AS_NODE` 启动、`userData` 工作区/DB 默认路径、electron-builder 目录包资源和 macOS arm64 包内 API health 烟测；该项只证明结构入包与 API 子进程可启动，不代表 renderer 功能可用，后续阻断迁移为 TD-019。
 
 ---
 

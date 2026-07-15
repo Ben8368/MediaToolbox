@@ -3,7 +3,8 @@
 > **初始基线：** 2026-07-02
 > **当前分支：** `main`
 > **当前阶段：** Phase 4.5/5 已接入；Phase 5.5 Web Composer beta 已接入；Phase 6A/B/C PathGrant 工作区外路径授权管道已落地
-> **最近更新：** 2026-07-14
+> **最近更新：** 2026-07-15
+> - 全仓工程审查确认 Electron 打包态 renderer / API / 静态资源链路存在候选构建阻断，并识别下载契约、Job 运行进度和取消终态竞态；已登记 TD-019、TD-024、TD-025、TD-026。
 > - Web Composer 字体/图片已随源码本地化，8 个默认 MP4 已迁移到固定 SHA-256 的 `web-composer-assets-v1` Release Asset；根开发入口、Web 开发和构建均接入素材 `ensure`。
 > - 源码/视频资源包边界已补充 ADR、维护责任、安全、发布、PR 与回滚治理；公开分发仍需补齐项目许可证和逐项素材授权记录。
 > - GitHub CI 已显式准备 `ffmpeg` 并升级官方 checkout/setup-node action，避免 hosted runner 工具缺失和 Node 20 action 警告。
@@ -27,7 +28,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 ## 当前阻断项
 
-- 无。
+- Electron 打包态通过 `file://` 加载 renderer，但当前 `BrowserRouter`、同源 `/api` 与运行时绝对 `/static/...` 无法形成可用生产链路；目录包的结构入包和 API health 烟测不能替代 renderer 功能烟测。详见 TD-019。
 
 ## 剩余黄灯
 
@@ -35,7 +36,7 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 
 - Browser Network 待桌面端体验验收：真实文件下载、进度回写、取消、失败提示、权限日志、错误页重试和多标签页 view 生命周期。
 - PSD 工作台待真实 Photoshop 本机联调，并补齐 image / smart-object slot 渲染与复杂 batchPlay。
-- Electron 发布 polish 待补齐：签名、公证与完整安装包发布验收；图标资源入口与 release preflight 已接入。
+- Electron 签名、公证与完整安装包发布验收须在 TD-019 renderer / API / 静态资源阻断修复后继续。
 - 文件管理器上传速率（文件管理器 multipart 上传字节统计）仍待真实大文件上传体验验收。
 - Web Composer 默认视频的 Release Asset 分发与远端下载验收已通过；4K/15 秒长时视频压力验收仍待补齐。
 - Web Composer Slot v2 的预览区直接点选、隐藏恢复和编辑/交互预览切换仍待用户完成主观手感确认。
@@ -46,21 +47,26 @@ MediaToolbox 是一个 NAS 风格 Web 桌面加本地媒体工作流引擎。目
 - TD-023: Web Composer 默认视频来源与再分发授权
 - TD-012: 浏览器 app 纯 Web 模式降级体验
 - TD-013: 浏览器多标签页桌面端真机验收（标签切换 view 生命周期、网络事件按标签隔离）
-- TD-019: Electron 发布 polish（应用图标、签名、公证与完整安装包验收）
+- TD-019: Electron 打包态 renderer / API / 静态资源链路不可用
+- TD-024: 下载器可见设置未进入 worker 契约
+- TD-025: Job 运行中进度被状态机自迁移拒绝
+- TD-026: Job 取消与完成之间缺少原子终态裁决
 - TD-015: PSD 真实 Photoshop 联调（本机命令路径、复杂 batchPlay、image/smart-object slot）
 - TD-016: macOS GPU 指标采集（Apple Silicon 已验收归档）
 
 ## 下一步
 
-1. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
-2. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
-3. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/scan` → 工单编辑 → `POST /api/psd/workorders/{id}/apply` 的异步执行、取消和外部路径授权闭环。
-4. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
-5. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view），并继续完善 Electron 发布 polish（应用图标、签名、公证与完整安装包验收）。
-6. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
-7. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
-8. 公开候选版本前确认 8 个默认 MP4 的来源与再分发授权，并补充项目许可证；无法确认授权的素材必须替换。
-9. 内部候选版本稳定后，按 `docs/ROADMAP.md` Phase 11 启动社交场景生成工作台 MVP；首期仅覆盖微信单聊，后续再评估朋友圈与其他平台场景。
+1. 修复 TD-019：统一 Electron 生产 renderer 路由、API 通道与静态资源基址，并新增真实目录包 renderer 功能烟测。
+2. 修复 TD-024、TD-025、TD-026：收口下载请求契约、Job 运行进度持久化和取消/完成原子终态裁决。
+3. 用户主观确认 Web Composer 三套预设的预览区直接点选、隐藏恢复和编辑/交互预览切换；继续验收图片/视频替换与 4K/15 秒压力路径。
+4. 验收 Phase 4.5：桌面浏览器下载真实文件、进度回写、取消、失败提示、权限日志和新增错误页重试路径。
+5. PSD 工作台端到端联调：配置真实 Photoshop 命令，验证 `POST /api/psd/scan` → 工单编辑 → `POST /api/psd/workorders/{id}/apply` 的异步执行、取消和外部路径授权闭环。
+6. 进入 Phase 5 深水区：image/smart-object slot 渲染实现、复杂 batchPlay 联调。
+7. 桌面端真机验收多标签页 UI（新建/切换/关闭/生命周期/隐藏旧 view）；TD-019 通过后继续签名、公证与完整安装包验收。
+8. 继续验收真实大文件上传流量采集（非浏览器请求体场景已接入文件管理器上传）。
+9. Phase 6A/B/C PathGrant 管道已落地，后续继续验收外部导入/导出和目录级授权浏览的桌面端体验；详见 `docs/ROADMAP.md` Phase 6、`docs/ARCHITECTURE.md` 与 `docs/FRONTEND_API_CONTRACT.md`。
+10. 公开候选版本前确认 8 个默认 MP4 的来源与再分发授权，并补充项目许可证；无法确认授权的素材必须替换。
+11. 内部候选版本稳定后，按 `docs/ROADMAP.md` Phase 11 启动社交场景生成工作台 MVP；首期仅覆盖微信单聊，后续再评估朋友圈与其他平台场景。
 
 ## 常用命令
 
