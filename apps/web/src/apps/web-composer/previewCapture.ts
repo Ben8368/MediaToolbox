@@ -36,21 +36,145 @@ async function waitForPreviewAssets(root: HTMLElement) {
       window.setTimeout(finish, 3000)
     })
   }))
+  // Capture the settled composition rather than the first frame of Framer
+  // Motion's reveal sequence. Infinite decorative CSS animations intentionally
+  // keep running and must not hold up an export.
+  const animations = root.getAnimations({ subtree: true })
+    .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+  await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)))
+  // Framer Motion can schedule its first animation one frame after the DOM
+  // update, outside the initial getAnimations() snapshot above.
+  await sleep(1_000)
+}
+
+type ObjectFit = 'contain' | 'cover'
+
+export function objectFitRect(
+  sourceWidth: number,
+  sourceHeight: number,
+  targetWidth: number,
+  targetHeight: number,
+  fit: ObjectFit,
+) {
+  const scale = fit === 'contain'
+    ? Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight)
+    : Math.max(targetWidth / sourceWidth, targetHeight / sourceHeight)
+  const width = sourceWidth * scale
+  const height = sourceHeight * scale
+  return { x: (targetWidth - width) / 2, y: (targetHeight - height) / 2, width, height }
+}
+
+type BackgroundMedia = HTMLImageElement | HTMLVideoElement
+
+function isBackgroundMedia(element: Element | null): element is BackgroundMedia {
+  return element instanceof HTMLImageElement || element instanceof HTMLVideoElement
+}
+
+function mediaDimensions(media: BackgroundMedia) {
+  return media instanceof HTMLVideoElement
+    ? { width: media.videoWidth, height: media.videoHeight }
+    : { width: media.naturalWidth, height: media.naturalHeight }
+}
+
+async function captureForeground(root: HTMLElement, media: BackgroundMedia | null, width: number, height: number) {
+  const rootBackground = root.style.background
+  const mediaDisplay = media?.style.display
+  const settledElements = [...root.querySelectorAll<HTMLElement>('.vault-copy h1, .vault-copy p, .vault-cta')]
+    .map((element) => ({
+      element,
+      cssText: element.style.cssText,
+      children: [...element.querySelectorAll<HTMLElement>('span')]
+        .map((child) => ({ child, cssText: child.style.cssText })),
+    }))
+  root.style.background = 'transparent'
+  // html2canvas has a Chromium video paint-order bug: `visibility: hidden`
+  // still lets the cloned video cover siblings. The media is absolute, so
+  // removing it from layout is safe and guarantees a transparent foreground.
+  if (media) media.style.display = 'none'
+  for (const { element } of settledElements) {
+    element.style.setProperty('opacity', '1', 'important')
+    element.style.setProperty('transform', 'none', 'important')
+    element.style.setProperty('transition', 'none', 'important')
+    if (element.matches('.vault-cta')) {
+      element.querySelectorAll<HTMLElement>('span').forEach((child) => {
+        child.style.setProperty('position', 'relative', 'important')
+        child.style.setProperty('z-index', '1', 'important')
+      })
+    }
+  }
+
+  try {
+    return await html2canvas(root, {
+      backgroundColor: null,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      scale: 1,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height,
+    })
+  } finally {
+    root.style.background = rootBackground
+    if (media) media.style.display = mediaDisplay ?? ''
+    for (const { element, cssText, children } of settledElements) {
+      element.style.cssText = cssText
+      for (const child of children) child.child.style.cssText = child.cssText
+    }
+  }
+}
+
+type FrameRenderer = {
+  render(): HTMLCanvasElement
+}
+
+async function createFrameRenderer(root: HTMLElement, width: number, height: number): Promise<FrameRenderer> {
+  await waitForPreviewAssets(root)
+  const mediaElement = root.querySelector('.preset-bg-media')
+  const media = isBackgroundMedia(mediaElement) ? mediaElement : null
+  if (!media) {
+    const snapshot = await html2canvas(root, {
+      backgroundColor: '#000000',
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      scale: 1,
+      width,
+      height,
+      windowWidth: width,
+      windowHeight: height,
+    })
+    return { render: () => snapshot }
+  }
+
+  const foreground = await captureForeground(root, media, width, height)
+  const output = document.createElement('canvas')
+  output.width = width
+  output.height = height
+  const context = output.getContext('2d')
+  if (!context) throw new Error('无法创建画布合成上下文。')
+  const fit = getComputedStyle(media).objectFit === 'contain' ? 'contain' : 'cover'
+
+  return {
+    render() {
+      context.clearRect(0, 0, width, height)
+      context.fillStyle = '#000000'
+      context.fillRect(0, 0, width, height)
+      const dimensions = mediaDimensions(media)
+      if (dimensions.width > 0 && dimensions.height > 0) {
+        const rect = objectFitRect(dimensions.width, dimensions.height, width, height, fit)
+        context.drawImage(media, rect.x, rect.y, rect.width, rect.height)
+      }
+      context.drawImage(foreground, 0, 0, width, height)
+      return output
+    },
+  }
 }
 
 async function captureElement(root: HTMLElement, width: number, height: number) {
-  await waitForPreviewAssets(root)
-  return html2canvas(root, {
-    backgroundColor: '#000000',
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    scale: 1,
-    width,
-    height,
-    windowWidth: width,
-    windowHeight: height,
-  })
+  const renderer = await createFrameRenderer(root, width, height)
+  return renderer.render()
 }
 
 function getWebmMimeType() {
@@ -86,6 +210,7 @@ async function captureWebm(
   if (!mimeType) throw new Error('当前桌面 Chromium 不支持 WebM 画布录制。')
 
   const { width, height, fps, durationSeconds } = request.settings
+  const renderer = await createFrameRenderer(root, width, height)
   const output = document.createElement('canvas')
   output.width = width
   output.height = height
@@ -109,7 +234,7 @@ async function captureWebm(
   recorder.start(1000)
   const frameCount = Math.max(1, Math.round(durationSeconds * fps))
   for (let frame = 0; frame < frameCount; frame += 1) {
-    const snapshot = await captureElement(root, width, height)
+    const snapshot = renderer.render()
     context.clearRect(0, 0, width, height)
     context.drawImage(snapshot, 0, 0, width, height)
     postToParent({
