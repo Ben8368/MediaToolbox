@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import type { WebComposerPresetState } from '@mediatoolbox/contracts'
 
@@ -17,15 +17,16 @@ const ASPECT_RATIOS = [
   { label: '4:3', ratio: 4 / 3 },
 ]
 
-const DISPLAY_WIDTH = 960
-
 export function PresetStandalonePage() {
   const { presetId } = useParams<{ presetId: string }>()
+  const previewAreaRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const sessionId = useMemo(createPreviewSessionId, [])
   const [ready, setReady] = useState(false)
   const [state, setState] = useState<WebComposerPresetState | null>(null)
   const [aspectRatio, setAspectRatio] = useState(16 / 9)
+  const [availableW, setAvailableW] = useState(800)
+  const [availableH, setAvailableH] = useState(450)
 
   const preset = useMemo(() => {
     if (!presetId) return null
@@ -38,13 +39,53 @@ export function PresetStandalonePage() {
     }
   }, [preset])
 
-  const viewportWidth = preset?.designSize.width ?? 1920
-  const viewportHeight = Math.round(viewportWidth / aspectRatio)
-  const scale = DISPLAY_WIDTH / viewportWidth
-  const displayHeight = Math.round(DISPLAY_WIDTH / aspectRatio)
+  // Track the exact available space in the preview area
+  useEffect(() => {
+    const el = previewAreaRef.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      setAvailableW(entry.contentRect.width)
+      setAvailableH(entry.contentRect.height)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Largest rect of the selected aspect ratio that fits in available space
+  const { displayW, displayH } = useMemo(() => {
+    const candidateH = Math.round(availableW / aspectRatio)
+    if (candidateH <= availableH) return { displayW: availableW, displayH: candidateH }
+    return { displayW: Math.round(availableH * aspectRatio), displayH: availableH }
+  }, [availableW, availableH, aspectRatio])
+
+  const viewportW = preset?.designSize.width ?? 1920
+  const viewportH = Math.round(viewportW / aspectRatio)
+  const scale = displayW > 0 ? displayW / viewportW : 0
 
   const src = useMemo(() => previewRuntimeUrl(sessionId), [sessionId])
   const expectedOrigin = useMemo(() => new URL(src).origin, [src])
+
+  const postUpdate = useCallback(() => {
+    if (!ready || !preset || !state || scale <= 0) return
+    const message: WebComposerPreviewUpdateMessage = {
+      channel: WEB_COMPOSER_CHANNEL,
+      sessionId,
+      type: 'update',
+      presetId: preset.id,
+      presetVersion: preset.version,
+      state,
+      width: viewportW,
+      height: viewportH,
+      mode: 'preview',
+      selectedSlotId: null,
+      displayScale: Math.min(1, Math.max(0.01, scale)),
+    }
+    iframeRef.current?.contentWindow?.postMessage(
+      message,
+      getWebComposerMessageTargetOrigin(expectedOrigin),
+    )
+  }, [ready, preset, state, sessionId, expectedOrigin, viewportW, viewportH, scale])
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -55,32 +96,17 @@ export function PresetStandalonePage() {
         d?.channel === WEB_COMPOSER_CHANNEL
         && d?.sessionId === sessionId
         && d?.type === 'ready'
-      ) setReady(true)
+      ) {
+        setReady(true)
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
   }, [sessionId, expectedOrigin])
 
   useEffect(() => {
-    if (!ready || !preset || !state) return
-    const message: WebComposerPreviewUpdateMessage = {
-      channel: WEB_COMPOSER_CHANNEL,
-      sessionId,
-      type: 'update',
-      presetId: preset.id,
-      presetVersion: preset.version,
-      state,
-      width: viewportWidth,
-      height: viewportHeight,
-      mode: 'preview',
-      selectedSlotId: null,
-      displayScale: Math.min(1, Math.max(0.01, scale)),
-    }
-    iframeRef.current?.contentWindow?.postMessage(
-      message,
-      getWebComposerMessageTargetOrigin(expectedOrigin),
-    )
-  }, [ready, preset, state, sessionId, expectedOrigin, viewportWidth, viewportHeight, scale])
+    postUpdate()
+  }, [postUpdate])
 
   if (!preset) {
     return null
@@ -93,6 +119,7 @@ export function PresetStandalonePage() {
       display: 'flex',
       flexDirection: 'column',
       background: '#0B0E14',
+      overflow: 'hidden',
     }}>
       {/* Aspect ratio toolbar */}
       <div style={{
@@ -100,9 +127,10 @@ export function PresetStandalonePage() {
         alignItems: 'center',
         justifyContent: 'center',
         gap: '0.5rem',
-        padding: '0.75rem 1rem',
+        padding: '0.5rem 1rem',
         borderBottom: '1px solid #1E293B',
         background: '#0F141E',
+        flexShrink: 0,
       }}>
         {ASPECT_RATIOS.map(({ label, ratio }) => (
           <button
@@ -123,44 +151,42 @@ export function PresetStandalonePage() {
             {label}
           </button>
         ))}
-        <span style={{
-          marginLeft: '1rem',
-          fontSize: '0.75rem',
-          color: '#64748B',
-        }}>
-          {viewportWidth}×{viewportHeight}
-        </span>
       </div>
 
-      {/* Preview area */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          width: DISPLAY_WIDTH,
-          height: displayHeight,
+      {/* Preview area — fills remaining space, no padding, no scrollbars */}
+      <div
+        ref={previewAreaRef}
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           overflow: 'hidden',
-          borderRadius: '0.5rem',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
-        }}>
-          <iframe
-            ref={iframeRef}
-            src={src}
-            title={preset.name}
-            sandbox="allow-scripts allow-same-origin"
-            style={{
-              width: viewportWidth,
-              height: viewportHeight,
-              border: 'none',
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-            }}
-          />
-        </div>
+        }}
+      >
+        {scale > 0 && (
+          <div style={{
+            width: displayW,
+            height: displayH,
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}>
+            <iframe
+              ref={iframeRef}
+              src={src}
+              title={preset.name}
+              sandbox="allow-scripts allow-same-origin"
+              style={{
+                display: 'block',
+                width: viewportW,
+                height: viewportH,
+                border: 'none',
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
