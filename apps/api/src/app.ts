@@ -14,6 +14,7 @@ import { registerTranscodeRoutes } from './routes/transcode.js'
 import { registerFontsRoutes } from './routes/fonts.js'
 import { registerWebComposerRoutes } from './routes/web-composer.js'
 import { registerRendererRoutes } from './renderer-routes.js'
+import { recoverInterruptedJobs } from './job-recovery.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
@@ -50,6 +51,7 @@ export async function buildApiServer(options: ApiServerOptions = {}) {
     ajv: { customOptions: { removeAdditional: false } },
   })
   const state = createApiState()
+  await recoverInterruptedJobs(state)
   await hydrateNotificationState(state)
 
   app.setErrorHandler((error, _request, reply) => {

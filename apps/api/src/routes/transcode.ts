@@ -1,6 +1,6 @@
 import path from 'node:path'
 import type { FastifyInstance } from 'fastify'
-import { createJobRecord } from '@mediatoolbox/job-core'
+import { createJobId, createJobRecord } from '@mediatoolbox/job-core'
 import type { JobRecord, OkResult, TranscodeProbeResponse, TranscodeSourceInfo, TranscodeCommandPreviewResponse } from '@mediatoolbox/contracts'
 import type { TranscodePreset, VideoEncodePreset } from '@mediatoolbox/ffmpeg'
 import { probeMedia, analyzeSource, buildFfmpegArgs, buildTwoPassFfmpegArgs } from '@mediatoolbox/ffmpeg'
@@ -17,7 +17,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
     async (request) => {
       const { inputPath, outputPath, preset, title, inputGrantId, outputGrantId, videoCrf, videoEncodePreset, audioBitrate, targetBitrateKbps, enableVmaf } = request.body
 
-      const jobId = `transcode-${Date.now()}`
+      const jobId = createJobId('transcode')
       const input = await resolveInputPath(state, { path: inputPath, grantId: inputGrantId, bindJobId: jobId })
       const VALID_PRESETS: TranscodePreset[] = ['mp4-h264-aac', 'mp4-h265-aac', 'mkv-h265-aac', 'audio-aac', 'audio-mp3', 'copy', 'remux']
       const safePreset: TranscodePreset = VALID_PRESETS.includes(preset as TranscodePreset) ? (preset as TranscodePreset) : 'mp4-h264-aac'

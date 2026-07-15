@@ -63,7 +63,13 @@ export async function executePsdScan(
       workOrderCreated = true
       controller.signal.throwIfAborted()
 
-      const completed = await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+      const completed = await updateJobRecord(
+        state,
+        job.id,
+        'succeeded',
+        { progress: { current: 100, total: 100, unit: 'percent' } },
+        { revokeGrantsOnTerminal: false },
+      )
       if (!completed) {
         await state.db.workOrders.delete(workOrderId)
         workOrderCreated = false
@@ -119,7 +125,13 @@ export async function executePsdApply(
     controller.signal.throwIfAborted()
 
     if (result.type === 'apply') {
-      const completed = await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
+      const completed = await updateJobRecord(
+        state,
+        job.id,
+        'succeeded',
+        { progress: { current: 100, total: 100, unit: 'percent' } },
+        { revokeGrantsOnTerminal: false },
+      )
       if (completed) addLog(state.db, 'INFO', 'psd', `PSD 应用完成：${workOrder.id}，${result.appliedCount} 个图层已应用`)
     } else {
       throw new Error('Worker returned non-apply result')

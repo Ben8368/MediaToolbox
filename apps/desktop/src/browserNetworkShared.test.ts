@@ -2,6 +2,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
+  createBrowserNetworkId,
   resolveDownloadDirectory,
   resolveWorkspaceDirectory,
   toVirtualWorkspacePath,
@@ -19,6 +20,14 @@ function options(env: NodeJS.ProcessEnv = {}): BrowserNetworkOptions {
     env,
   }
 }
+
+describe('browser network IDs', () => {
+  it('creates collision-resistant IDs independently of wall-clock time', () => {
+    const ids = Array.from({ length: 100 }, () => createBrowserNetworkId('browser-download'))
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids.every((id) => /^browser-download-[0-9a-f-]{36}$/.test(id))).toBe(true)
+  })
+})
 
 describe('browser network shared paths', () => {
   it('keeps browser downloads inside the workspace downloads directory', () => {

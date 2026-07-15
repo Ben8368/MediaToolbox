@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { canTransitionJob, createJobRecord } from '@mediatoolbox/job-core'
+import { canTransitionJob, createJobId, createJobRecord } from '@mediatoolbox/job-core'
 import type { JobRecord, OkResult } from '@mediatoolbox/contracts'
 
 import type { ApiState } from '../state.js'
@@ -19,7 +19,7 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
       || request.body.kind === 'web.render.image'
       || request.body.kind === 'web.render.video'
     const job = createJobRecord({
-      id: `job-${Date.now()}`,
+      id: createJobId('job'),
       kind: allowedKind ? request.body.kind as JobRecord['kind'] : 'download.video',
       title: request.body.title || '本地任务',
     })

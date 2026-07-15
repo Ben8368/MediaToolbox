@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import {
   emitBrowserNetworkEvent,
+  createBrowserNetworkId,
   patchBrowserNetworkJson,
   postBrowserNetworkJson,
   resolveDownloadDirectory,
@@ -31,7 +32,7 @@ export function cancelBrowserNetworkDownload(id: string, viewId?: string): boole
 
 export function configureDownloads(session: BrowserSession, options: BrowserNetworkOptions, sessionId: string): void {
   session.on('will-download', (_event, item, webContents) => {
-    const id = `browser-download-${Date.now()}-${downloadItems.size + 1}`
+    const id = createBrowserNetworkId('browser-download')
     const filename = sanitizeFilename(item.getFilename())
     const target = createDownloadTarget(options, filename)
     const sourceUrl = item.getURL()

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { createJobRecord } from '@mediatoolbox/job-core'
+import { createJobId, createJobRecord } from '@mediatoolbox/job-core'
 import {
   getWebComposerPresetReference,
   type JobRecord,
@@ -80,7 +80,7 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
       const filename = outputName(metadata.presetId, 'png')
       const virtualOutputPath = `${state.workspaceRoot}/Exports/${filename}`
       const job = createJobRecord({
-        id: `web-image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: createJobId('web-image'),
         kind: 'web.render.image',
         title: `网页合成 PNG：${metadata.presetId}`,
       })
@@ -106,7 +106,7 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
       const virtualOutputPath = `${state.workspaceRoot}/Exports/${filename}`
       const physicalOutputPath = toPhysicalWorkspacePath(state, virtualOutputPath)
       const job = createJobRecord({
-        id: `web-video-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: createJobId('web-video'),
         kind: 'web.render.video',
         title: `网页合成 MP4：${metadata.presetId}`,
       })

@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { createJobId } from '@mediatoolbox/job-core'
 import type {
   BrowserNetworkDownloadRecord,
   BrowserNetworkDownloadStatus,
@@ -67,8 +68,8 @@ export function safeFilename(filename: string): string {
   return basename || 'download.bin'
 }
 
-export function createBrowserDownloadId(state: ApiState, now: number, requestedId?: string): string {
-  const id = requestedId?.trim() || `browser-download-${now}-${state.browserDownloads.length + 1}`
+export function createBrowserDownloadId(state: ApiState, requestedId?: string): string {
+  const id = requestedId?.trim() || createJobId('browser-download')
   validateBrowserNetworkId(id, '浏览器下载 ID 不符合 API 契约。')
   if (state.browserDownloads.some((download) => download.id === id)) {
     const error = new Error('浏览器下载记录已存在。')
@@ -78,8 +79,8 @@ export function createBrowserDownloadId(state: ApiState, now: number, requestedI
   return id
 }
 
-export function createBrowserRequestId(state: ApiState, now: number, requestedId?: string): string {
-  const id = requestedId?.trim() || `browser-request-${now}-${state.browserRequests.length + 1}`
+export function createBrowserRequestId(state: ApiState, requestedId?: string): string {
+  const id = requestedId?.trim() || createJobId('browser-request')
   validateBrowserNetworkId(id, '浏览器网络请求 ID 不符合 API 契约。')
   if (state.browserRequests.some((item) => item.id === id)) {
     const error = new Error('浏览器网络请求记录已存在。')

@@ -2,6 +2,7 @@ import type { BrowserNetworkHttpMethod } from '@mediatoolbox/contracts'
 
 import {
   emitBrowserNetworkEvent,
+  createBrowserNetworkId,
   patchBrowserNetworkJson,
   postBrowserNetworkJson,
   type BrowserNetworkOptions,
@@ -36,7 +37,7 @@ export async function requestBrowserNetworkUrl(
   const url = normalizeRequestUrl(draft.url)
   const method = normalizeRequestMethod(draft.method)
   const headers = sanitizeRequestHeaders(draft.headers ?? {})
-  const id = `browser-request-${Date.now()}-${Math.round(Math.random() * 100000)}`
+  const id = createBrowserNetworkId('browser-request')
   const started = {
     id,
     url,

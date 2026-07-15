@@ -1,8 +1,13 @@
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import type { BrowserNetworkPermissionEvent, BrowserNetworkSessionScope } from '@mediatoolbox/contracts'
 
 type ElectronModule = typeof import('electron')
 export type BrowserHostWindow = import('electron').BrowserWindow
+
+export function createBrowserNetworkId(prefix: 'browser-download' | 'browser-request'): string {
+  return `${prefix}-${randomUUID()}`
+}
 
 export type BrowserNetworkOptions = {
   viewId: string

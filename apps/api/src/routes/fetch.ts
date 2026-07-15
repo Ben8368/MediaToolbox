@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { createJobRecord } from '@mediatoolbox/job-core'
+import { createJobId, createJobRecord } from '@mediatoolbox/job-core'
 import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStrategyResponse, FetchTaskDraft, FetchTaskRecord, OkResult, SubmitFetchResponse, TaskListResponse } from '@mediatoolbox/contracts'
 
 import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
@@ -75,9 +75,10 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
     if (urls.length === 0) throw new Error('下载任务至少需要一个 URL。')
     const tasks: FetchTaskRecord[] = []
 
-    for (const [index, url] of urls.entries()) {
-      const id = `fetch-${createdAt}-${state.fetchTasks.length + index + 1}`
-      tasks.push(createFetchTask(id, draftForSingleUrl(draft, url, `fetch-batch-${createdAt}-${state.fetchTasks.length + 1}`), createdAt))
+    const batchId = createJobId('fetch-batch')
+    for (const url of urls) {
+      const id = createJobId('fetch')
+      tasks.push(createFetchTask(id, draftForSingleUrl(draft, url, batchId), createdAt))
     }
 
     state.fetchTasks.unshift(...tasks)

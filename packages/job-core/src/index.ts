@@ -1,9 +1,11 @@
 import type { JobKind, JobRecord, JobStatus } from '@mediatoolbox/contracts'
 
+const jobIdPrefixPattern = /^[a-z][a-z0-9-]{0,31}$/
+
 const allowedTransitions: Record<JobStatus, JobStatus[]> = {
-  queued: ['running', 'canceled'],
+  queued: ['running', 'failed', 'canceled'],
   running: ['paused', 'succeeded', 'failed', 'canceled'],
-  paused: ['queued', 'running', 'canceled'],
+  paused: ['queued', 'running', 'failed', 'canceled'],
   succeeded: [],
   failed: ['queued'],
   canceled: [],
@@ -19,6 +21,11 @@ export function canTransitionJob(from: JobStatus, to: JobStatus): boolean {
  */
 export function isTerminalJobStatus(status: JobStatus): boolean {
   return status === 'succeeded' || status === 'failed' || status === 'canceled'
+}
+
+export function createJobId(prefix: string): string {
+  if (!jobIdPrefixPattern.test(prefix)) throw new Error(`Invalid job ID prefix: ${prefix}`)
+  return `${prefix}-${globalThis.crypto.randomUUID()}`
 }
 
 export function transitionJob(job: JobRecord, nextStatus: JobStatus, now = new Date()): JobRecord {

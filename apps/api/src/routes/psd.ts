@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import type { WorkOrder, WorkOrderGetResponse, OkResult, FontsListResponse, JobRecord } from '@mediatoolbox/contracts'
-import { createJobRecord } from '@mediatoolbox/job-core'
+import { createJobId, createJobRecord } from '@mediatoolbox/job-core'
 import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError } from '@mediatoolbox/psd-worker'
 
 import { psdScanSchema, psdWorkOrderUpdateSchema } from '../schemas.js'
@@ -16,7 +16,8 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     { schema: psdScanSchema },
     async (request, reply) => {
       const { psdPath, inputGrantId } = request.body
-      const workOrderId = `wo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      // 扫描 Job 与工单共享 ID，使重启恢复和授权生命周期能指向同一持久化实体。
+      const workOrderId = createJobId('psd-scan')
       let physicalPath: string
       try {
         physicalPath = (await resolveInputPath(state, { path: psdPath, grantId: inputGrantId, bindJobId: workOrderId })).physicalPath
@@ -26,7 +27,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       }
 
       const job = createJobRecord({
-        id: `psd-scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        id: workOrderId,
         kind: 'psd.scan',
         title: `PSD 扫描：${physicalPath.split(/[\\/]/).pop() ?? 'unknown.psd'}`,
       })
@@ -109,7 +110,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
     const { outputPath, outputGrantId } = request.body
 
     const job = createJobRecord({
-      id: `psd-apply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: createJobId('psd-apply'),
       kind: 'psd.apply',
       title: `PSD 应用：${workOrder.psdFileName}`,
     })

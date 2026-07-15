@@ -57,7 +57,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
 
       const targetPath = normalizeBrowserDownloadPath(request.body.target_path, state.workspaceRoot)
       const now = nowSeconds()
-      const id = createBrowserDownloadId(state, now, request.body.id)
+      const id = createBrowserDownloadId(state, request.body.id)
       const download: BrowserNetworkDownloadRecord = {
         id,
         job_id: id,
@@ -153,7 +153,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
       if (!requireDesktopMarker(request, reply)) return { ok: false, message: '缺少桌面浏览器网络标记。' }
 
       const now = nowSeconds()
-      const id = createBrowserRequestId(state, now, request.body.id)
+      const id = createBrowserRequestId(state, request.body.id)
       const record: BrowserNetworkRequestRecord = {
         id,
         job_id: id,
