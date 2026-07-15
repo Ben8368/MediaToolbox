@@ -1,6 +1,7 @@
 import {
   WEB_COMPOSER_ICON_NAMES,
   getWebComposerPresetReference,
+  isWebComposerAspectRatio,
   isWebComposerPresetId,
   type WebComposerEditorMode,
   type WebComposerExportSettings,
@@ -167,8 +168,7 @@ function isPresetState(value: unknown): value is WebComposerPresetState {
 
 function isExportSettings(value: unknown): value is WebComposerExportSettings {
   if (!isRecord(value)) return false
-  return typeof value.aspectRatio === 'string'
-    && ['16:9', '4:3', '1:1', '9:16'].includes(value.aspectRatio)
+  return isWebComposerAspectRatio(value.aspectRatio)
     && typeof value.resolution === 'string'
     && ['720p', '1080p', '1440p', '2160p'].includes(value.resolution)
     && isPositiveInteger(value.width)
