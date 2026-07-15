@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import type { WebComposerPresetState } from '@mediatoolbox/contracts'
+import {
+  WEB_COMPOSER_ASPECT_RATIO_OPTIONS,
+  type WebComposerAspectRatio,
+  type WebComposerPresetState,
+} from '@mediatoolbox/contracts'
 
 import { presetById, clonePresetState } from '@/apps/web-composer/presets'
 import { createPreviewSessionId, previewRuntimeUrl } from '@/apps/web-composer/model'
@@ -11,12 +15,6 @@ import {
   type WebComposerPreviewUpdateMessage,
 } from '@/apps/web-composer/previewMessages'
 
-const ASPECT_RATIOS = [
-  { label: '16:9', ratio: 16 / 9 },
-  { label: '1.91:1', ratio: 1.91 },
-  { label: '4:3', ratio: 4 / 3 },
-]
-
 export function PresetStandalonePage() {
   const { presetId } = useParams<{ presetId: string }>()
   const previewAreaRef = useRef<HTMLDivElement>(null)
@@ -24,7 +22,7 @@ export function PresetStandalonePage() {
   const sessionId = useMemo(createPreviewSessionId, [])
   const [ready, setReady] = useState(false)
   const [state, setState] = useState<WebComposerPresetState | null>(null)
-  const [aspectRatio, setAspectRatio] = useState(16 / 9)
+  const [aspectRatio, setAspectRatio] = useState<WebComposerAspectRatio>('16:9')
   const [availableW, setAvailableW] = useState(800)
   const [availableH, setAvailableH] = useState(450)
 
@@ -52,15 +50,19 @@ export function PresetStandalonePage() {
     return () => observer.disconnect()
   }, [])
 
+  const selectedAspectRatio = WEB_COMPOSER_ASPECT_RATIO_OPTIONS.find((option) => option.value === aspectRatio)
+    ?? WEB_COMPOSER_ASPECT_RATIO_OPTIONS[0]
+  const aspectRatioValue = selectedAspectRatio.width / selectedAspectRatio.height
+
   // Largest rect of the selected aspect ratio that fits in available space
   const { displayW, displayH } = useMemo(() => {
-    const candidateH = Math.round(availableW / aspectRatio)
+    const candidateH = Math.round(availableW / aspectRatioValue)
     if (candidateH <= availableH) return { displayW: availableW, displayH: candidateH }
-    return { displayW: Math.round(availableH * aspectRatio), displayH: availableH }
-  }, [availableW, availableH, aspectRatio])
+    return { displayW: Math.round(availableH * aspectRatioValue), displayH: availableH }
+  }, [availableW, availableH, aspectRatioValue])
 
   const viewportW = preset?.designSize.width ?? 1920
-  const viewportH = Math.round(viewportW / aspectRatio)
+  const viewportH = Math.round(viewportW / aspectRatioValue)
   const scale = displayW > 0 ? displayW / viewportW : 0
 
   const src = useMemo(() => previewRuntimeUrl(sessionId), [sessionId])
@@ -132,23 +134,23 @@ export function PresetStandalonePage() {
         background: '#0F141E',
         flexShrink: 0,
       }}>
-        {ASPECT_RATIOS.map(({ label, ratio }) => (
+        {WEB_COMPOSER_ASPECT_RATIO_OPTIONS.map((option) => (
           <button
-            key={label}
+            key={option.value}
             type="button"
-            onClick={() => setAspectRatio(ratio)}
+            onClick={() => setAspectRatio(option.value)}
             style={{
               padding: '0.375rem 1rem',
               borderRadius: '0.375rem',
-              border: ratio === aspectRatio ? '1px solid #38BDF8' : '1px solid #334155',
-              background: ratio === aspectRatio ? '#0F2847' : 'transparent',
-              color: ratio === aspectRatio ? '#38BDF8' : '#94A3B8',
+              border: option.value === aspectRatio ? '1px solid #38BDF8' : '1px solid #334155',
+              background: option.value === aspectRatio ? '#0F2847' : 'transparent',
+              color: option.value === aspectRatio ? '#38BDF8' : '#94A3B8',
               fontSize: '0.875rem',
-              fontWeight: ratio === aspectRatio ? 600 : 400,
+              fontWeight: option.value === aspectRatio ? 600 : 400,
               cursor: 'pointer',
             }}
           >
-            {label}
+            {option.label}
           </button>
         ))}
       </div>

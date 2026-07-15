@@ -32,7 +32,22 @@ export function getWebComposerPresetReference(
 
 export type WebComposerMediaKind = 'video' | 'image'
 
-export type WebComposerAspectRatio = '16:9' | '4:3' | '1:1' | '9:16'
+export const WEB_COMPOSER_ASPECT_RATIO_OPTIONS = [
+  { value: '16:9', label: '16:9', width: 16, height: 9 },
+  { value: '9:16', label: '9:16', width: 9, height: 16 },
+  { value: '1.91:1', label: '1.91:1', width: 191, height: 100 },
+  { value: '1:1.91', label: '1:1.91', width: 100, height: 191 },
+  { value: '4:3', label: '4:3', width: 4, height: 3 },
+  { value: '3:4', label: '3:4', width: 3, height: 4 },
+  { value: '1:1', label: '1:1', width: 1, height: 1 },
+] as const
+
+export type WebComposerAspectRatio = (typeof WEB_COMPOSER_ASPECT_RATIO_OPTIONS)[number]['value']
+
+export function isWebComposerAspectRatio(value: unknown): value is WebComposerAspectRatio {
+  return typeof value === 'string'
+    && WEB_COMPOSER_ASPECT_RATIO_OPTIONS.some((option) => option.value === value)
+}
 
 export type WebComposerExportResolution = '720p' | '1080p' | '1440p' | '2160p'
 

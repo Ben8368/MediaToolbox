@@ -5,15 +5,11 @@ import type {
   WebComposerPresetId,
   WebComposerPresetState,
 } from '@mediatoolbox/contracts'
+import { WEB_COMPOSER_ASPECT_RATIO_OPTIONS } from '@mediatoolbox/contracts'
 
 import { clonePresetState, presets } from './presets'
 
-export const aspectRatioOptions: Array<{ value: WebComposerAspectRatio; label: string; width: number; height: number }> = [
-  { value: '16:9', label: '16:9 横屏', width: 16, height: 9 },
-  { value: '4:3', label: '4:3 经典', width: 4, height: 3 },
-  { value: '1:1', label: '1:1 方图', width: 1, height: 1 },
-  { value: '9:16', label: '9:16 竖屏', width: 9, height: 16 },
-]
+export const aspectRatioOptions = WEB_COMPOSER_ASPECT_RATIO_OPTIONS
 
 export const resolutionOptions: Array<{ value: WebComposerExportResolution; label: string; pixels: number }> = [
   { value: '720p', label: '720P', pixels: 720 },
