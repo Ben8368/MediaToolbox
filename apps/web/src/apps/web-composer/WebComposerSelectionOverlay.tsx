@@ -17,6 +17,7 @@ type OverlayFrame = {
 }
 
 const emptyFrame: OverlayFrame = { hovered: null, selected: null }
+export const selectionIndicatorDurationMs = 1200
 
 function sameNumber(left: number, right: number) {
   return Math.abs(left - right) < 0.25
@@ -91,7 +92,21 @@ export function WebComposerSelectionOverlay({
   onSelectedMetrics: (slotId: string, rect: WebComposerSlotRect) => void
 }) {
   const [frame, setFrame] = useState<OverlayFrame>(emptyFrame)
+  const [selectedIndicatorVisible, setSelectedIndicatorVisible] = useState(false)
+  const [selectedIndicatorToken, setSelectedIndicatorToken] = useState(0)
   const lastMetricsRef = useRef<{ slotId: string; rect: WebComposerSlotRect } | null>(null)
+
+  useEffect(() => {
+    if (!enabled || !selected) {
+      setSelectedIndicatorVisible(false)
+      return
+    }
+
+    setSelectedIndicatorVisible(true)
+    setSelectedIndicatorToken((token) => token + 1)
+    const timeout = window.setTimeout(() => setSelectedIndicatorVisible(false), selectionIndicatorDurationMs)
+    return () => window.clearTimeout(timeout)
+  }, [enabled, selected])
 
   useEffect(() => {
     if (!enabled || (!hovered && !selected)) {
@@ -143,7 +158,14 @@ export function WebComposerSelectionOverlay({
   return (
     <div className="wc-selection-layer" data-html2canvas-ignore="true" aria-hidden="true">
       {hoveredTarget && <Outline target={hoveredTarget} kind="hovered" inverseScale={inverseScale} />}
-      {frame.selected && <Outline target={frame.selected} kind="selected" inverseScale={inverseScale} />}
+      {frame.selected && selectedIndicatorVisible && (
+        <Outline
+          key={`${frame.selected.slotId}-${selectedIndicatorToken}`}
+          target={frame.selected}
+          kind="selected"
+          inverseScale={inverseScale}
+        />
+      )}
     </div>
   )
 }

@@ -19,7 +19,7 @@ export function WebComposerApp() {
   const [activePresetId, setActivePresetId] = useState<WebComposerPresetId>(presets[0].id)
   const [presetStates, setPresetStates] = useState(createInitialPresetStates)
   const [exportSettings, setExportSettings] = useState<WebComposerExportSettings>(() => createExportSettings())
-  const [mode, setMode] = useState<WebComposerEditorMode>('edit')
+  const [mode, setMode] = useState<WebComposerEditorMode>('preview')
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const [selectedMetrics, setSelectedMetrics] = useState<{ slotId: string; rect: WebComposerSlotMetrics } | null>(null)
   const exporter = useWebComposerExport(iframeRef, sessionId)
@@ -39,7 +39,7 @@ export function WebComposerApp() {
     setActivePresetId(nextPreset.id)
     setSelectedSlotId(null)
     setSelectedMetrics(null)
-    setMode('edit')
+    setMode('preview')
   }, [])
 
   const selectSlot = useCallback((slotId: string | null) => {

@@ -87,7 +87,7 @@ export function WebComposerPreviewRuntime() {
     state: clonePresetState(initialPreset.defaults),
     width: 1920,
     height: 1080,
-    mode: 'edit',
+    mode: 'preview',
     selectedSlotId: null,
     displayScale: 0.25,
   })
