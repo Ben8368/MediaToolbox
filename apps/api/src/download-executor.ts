@@ -205,7 +205,6 @@ export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): Downl
   const urls = Array.isArray(params.urls) ? params.urls.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
   const url = typeof params.url === 'string' && params.url.trim().length > 0 ? params.url.trim() : (urls[0]?.trim() ?? '')
   const mode = params.mode === 'audio' ? 'audio' : params.mode === 'subtitles' ? 'subtitles' : 'video'
-  const noTranscode = params.no_transcode === true
   return {
     url,
     mode,
@@ -213,7 +212,8 @@ export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): Downl
     // 字幕策略不由客户端选择：yt-dlp 检测到可用字幕时，仅保留原始语言的一份 SRT。
     subtitles: { languages: ['original'], auto: true, format: 'srt' },
     ...(params.cookies_from_browser ? { cookiesFromBrowser: params.cookies_from_browser } : {}),
-    ...(mode === 'video' ? { video: { preferH264: !noTranscode && params.prefer_h264 === true, recodeH264: !noTranscode && params.prefer_h264 === true } } : {}),
+    // 默认保留最高规格并在合并时优先 MKV；兼容格式仅在完整下载后转为 H.264/MP4，不能先筛掉 VP9/AV1 等最高规格流。
+    ...(mode === 'video' ? { video: { mergeOutputFormat: 'mkv', recodeH264: params.compatible_format === true } } : {}),
   }
 }
 

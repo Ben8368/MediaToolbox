@@ -4,15 +4,13 @@ type DownloaderAddFormProps = {
   taskUrl: string
   taskOutputDir: string
   taskCookieBrowser: CookieBrowser
-  taskPreferH264: boolean
-  taskNoTranscode: boolean
+  taskCompatibleFormat: boolean
   addingTask: boolean
   submitError: string
   onTaskUrlChange: (value: string) => void
   onTaskOutputDirChange: (value: string) => void
   onTaskCookieBrowserChange: (value: CookieBrowser) => void
-  onTaskPreferH264Change: (value: boolean) => void
-  onTaskNoTranscodeChange: (value: boolean) => void
+  onTaskCompatibleFormatChange: (value: boolean) => void
   onOpenDirectoryPicker: () => void
   onSubmit: () => void
   onClose: () => void
@@ -22,15 +20,13 @@ export function DownloaderAddForm({
   taskUrl,
   taskOutputDir,
   taskCookieBrowser,
-  taskPreferH264,
-  taskNoTranscode,
+  taskCompatibleFormat,
   addingTask,
   submitError,
   onTaskUrlChange,
   onTaskOutputDirChange,
   onTaskCookieBrowserChange,
-  onTaskPreferH264Change,
-  onTaskNoTranscodeChange,
+  onTaskCompatibleFormatChange,
   onOpenDirectoryPicker,
   onSubmit,
   onClose,
@@ -84,31 +80,18 @@ export function DownloaderAddForm({
         </div>
       </div>
 
-      <div className="dl-form-row">
-        <div className="dl-field">
-          <label>视频编码</label>
-          <select
-            value={String(taskPreferH264)}
-            disabled={taskNoTranscode}
-            onChange={(event) => onTaskPreferH264Change(event.target.value === 'true')}
-          >
-            <option value="true">优先 H264（兼容性好）</option>
-            <option value="false">最高规格原始编码</option>
-          </select>
-          <small className="dl-field-hint">
-            {taskNoTranscode
-              ? '已选"不转码"，将保留最高规格原始编码。'
-              : '优先选已是 H264 的最高规格；若最高规格非 H264，则下载后转码为 H264/MP4。'}
-          </small>
-        </div>
-        <div className="dl-field">
-          <label>转码</label>
-          <select value={String(taskNoTranscode)} onChange={(event) => onTaskNoTranscodeChange(event.target.value === 'true')}>
-            <option value="false">按需转码为 H264/MP4</option>
-            <option value="true">不转码（保留原始格式）</option>
-          </select>
-          <small className="dl-field-hint">选择"不转码"可加快完成，但可能得到 VP9/AV1 等编码。</small>
-        </div>
+      <div className="dl-field dl-compatible-format">
+        <label className="dl-checkbox-label">
+          <input
+            type="checkbox"
+            checked={taskCompatibleFormat}
+            onChange={(event) => onTaskCompatibleFormatChange(event.target.checked)}
+          />
+          <span>兼容格式（H.264 / MP4）</span>
+        </label>
+        <small className="dl-field-hint">
+          默认下载最高规格、不转码，并在合并音视频时优先使用 MKV 封装。勾选后会先下载最高规格，再转码为 H.264 / MP4。
+        </small>
       </div>
 
       <div className="dl-form-actions">

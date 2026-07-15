@@ -149,8 +149,8 @@ export type FetchTaskDraft = {
   urls?: string[]
   mode?: 'video' | 'audio' | 'subtitles'
   output_dir?: string
-  prefer_h264?: boolean
-  no_transcode?: boolean
+  /** 下载最高规格；启用时在下载完成后转为 H.264/MP4，便于在常见设备播放。 */
+  compatible_format?: boolean
   max_concurrent?: number
   cookies_from_browser?: DownloadCookieBrowser
 }

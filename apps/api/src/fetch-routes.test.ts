@@ -119,20 +119,30 @@ describe('fetch routes', () => {
     expect(job.url).toBe('https://example.com/a')
   })
 
-  it('always maps the automatic original-language subtitle policy to the worker contract', () => {
+  it('keeps the highest-quality stream, prefers MKV merging, and only transcodes when compatibility is requested', () => {
     const job = buildDownloadJob({
       id: 'task-settings', task_id: 'task-settings', title: 'task', source_url: 'https://example.com/a',
       status: 'pending', progress: 0, stage: 'pending', created_at: 1, updated_at: 1, started_at: null, completed_at: null,
       params: {
-        url: 'https://example.com/a', prefer_h264: true, no_transcode: false, cookies_from_browser: 'chrome',
+        url: 'https://example.com/a', compatible_format: true, cookies_from_browser: 'chrome',
       },
     } satisfies FetchTaskRecord)
 
     expect(job).toMatchObject({
       subtitles: { languages: ['original'], auto: true, format: 'srt' },
       cookiesFromBrowser: 'chrome',
-      video: { preferH264: true, recodeH264: true },
+      video: { mergeOutputFormat: 'mkv', recodeH264: true },
     })
+  })
+
+  it('defaults to highest-quality MKV merging without transcoding', () => {
+    const job = buildDownloadJob({
+      id: 'task-default', task_id: 'task-default', title: 'task', source_url: 'https://example.com/a',
+      status: 'pending', progress: 0, stage: 'pending', created_at: 1, updated_at: 1, started_at: null, completed_at: null,
+      params: { url: 'https://example.com/a' },
+    } satisfies FetchTaskRecord)
+
+    expect(job.video).toEqual({ mergeOutputFormat: 'mkv', recodeH264: false })
   })
 
   it('rejects removed manual subtitle options', async () => {

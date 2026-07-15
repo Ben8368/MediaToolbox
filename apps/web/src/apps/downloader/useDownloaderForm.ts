@@ -7,8 +7,7 @@ export function useDownloaderForm() {
   const [taskOutputDir, setTaskOutputDir] = useState('')
   const [taskCookieBrowser, setTaskCookieBrowser] = useState<CookieBrowser>('none')
   // 下载选项（字幕策略由下载器统一自动处理）
-  const [taskPreferH264, setTaskPreferH264] = useState(true)
-  const [taskNoTranscode, setTaskNoTranscode] = useState(false)
+  const [taskCompatibleFormat, setTaskCompatibleFormat] = useState(false)
   const [addingTask, setAddingTask] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -23,10 +22,8 @@ export function useDownloaderForm() {
     setTaskOutputDir,
     taskCookieBrowser,
     setTaskCookieBrowser,
-    taskPreferH264,
-    setTaskPreferH264,
-    taskNoTranscode,
-    setTaskNoTranscode,
+    taskCompatibleFormat,
+    setTaskCompatibleFormat,
     addingTask,
     setAddingTask,
     submitError,

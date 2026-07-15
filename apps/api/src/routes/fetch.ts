@@ -175,7 +175,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
 function normalizeFetchTaskDraft(draft: FetchTaskDraft, state: ApiState): FetchTaskDraft {
   const supportedKeys = new Set([
-    'url', 'urls', 'mode', 'output_dir', 'prefer_h264', 'no_transcode', 'max_concurrent', 'cookies_from_browser',
+    'url', 'urls', 'mode', 'output_dir', 'compatible_format', 'max_concurrent', 'cookies_from_browser',
   ])
   const unknownKey = Object.keys(draft).find((key) => !supportedKeys.has(key))
   if (unknownKey) {

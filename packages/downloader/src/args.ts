@@ -11,7 +11,7 @@ export type YtdlpRequest = {
   }
   cookiesFromBrowser?: 'chrome' | 'edge' | 'safari' | 'firefox'
   video?: {
-    preferH264?: boolean
+    mergeOutputFormat?: 'mkv'
     recodeH264?: boolean
   }
 }
@@ -23,8 +23,8 @@ export function buildYtdlpArgs(request: YtdlpRequest): string[] {
     args.push('--extract-audio', '--audio-format', 'mp3')
   }
 
-  if (request.mode === 'video' && request.video?.preferH264) {
-    args.push('--format', 'bestvideo[vcodec^=avc1]+bestaudio/best[vcodec^=avc1]/best')
+  if (request.mode === 'video' && request.video?.mergeOutputFormat) {
+    args.push('--merge-output-format', request.video.mergeOutputFormat)
   }
   if (request.mode === 'video' && request.video?.recodeH264) {
     args.push('--recode-video', 'mp4')

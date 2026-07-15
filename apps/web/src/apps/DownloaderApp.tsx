@@ -59,8 +59,7 @@ export function DownloaderApp() {
       const draft: FetchTaskDraft = {
         urls: urls,
         output_dir: form.taskOutputDir || '/Workspace/Downloads',
-        prefer_h264: form.taskNoTranscode ? false : form.taskPreferH264,
-        no_transcode: form.taskNoTranscode,
+        compatible_format: form.taskCompatibleFormat,
         max_concurrent: 1,
         ...(form.taskCookieBrowser !== 'none' ? { cookies_from_browser: form.taskCookieBrowser } : {}),
       }
@@ -84,8 +83,7 @@ export function DownloaderApp() {
     [
       form.taskCookieBrowser,
       form.taskOutputDir,
-      form.taskPreferH264,
-      form.taskNoTranscode,
+      form.taskCompatibleFormat,
       refreshLists,
       setOptimisticTasks,
       selection,
@@ -205,15 +203,13 @@ export function DownloaderApp() {
               taskUrl={form.taskUrl}
               taskOutputDir={form.taskOutputDir}
               taskCookieBrowser={form.taskCookieBrowser}
-              taskPreferH264={form.taskPreferH264}
-              taskNoTranscode={form.taskNoTranscode}
+              taskCompatibleFormat={form.taskCompatibleFormat}
               addingTask={form.addingTask}
               submitError={form.submitError}
               onTaskUrlChange={form.setTaskUrl}
               onTaskOutputDirChange={form.setTaskOutputDir}
               onTaskCookieBrowserChange={confirmCookieBrowserChange}
-              onTaskPreferH264Change={form.setTaskPreferH264}
-              onTaskNoTranscodeChange={form.setTaskNoTranscode}
+              onTaskCompatibleFormatChange={form.setTaskCompatibleFormat}
               onOpenDirectoryPicker={() => form.setDirectoryPickerOpen(true)}
               onSubmit={submitNewTask}
               onClose={() => {
