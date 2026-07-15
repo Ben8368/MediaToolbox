@@ -79,6 +79,8 @@
 - commit message 标题与正文使用中文；Conventional Commit 类型前缀与 Git trailer 键名保留英文
 - 当前工具参与实质改动时，在 message 末尾追加对应 `Co-authored-by` trailer，前方保留一个空行
 - Git trailer 记录工具来源，不记录具体模型来源；例如 Claude Code 使用不同模型执行任务时，仍统一写 `Co-authored-by: Claude Code <noreply@anthropic.com>`
+- Windows PowerShell 中不得在 `git commit -m` 的字符串内嵌入 `\n`：它会被作为字面字符写入，导致 trailer 无法被 Git/GitHub 识别。正文与 trailer 必须使用独立的 `-m` 参数，例如 `git commit -m "fix(web): 标题" -m "正文" -m "Co-authored-by: Codex <codex@openai.com>"`。
+- 提交后须执行 `git show -s --format=%B HEAD | git interpret-trailers --parse`，确认对应 `Co-authored-by` 出现在解析结果中；无输出或仅出现字面 `\n` 时，必须在发布前修正提交。
 - 不得提交 `.env`、凭据或其他敏感文件；若误纳入暂存区须先移除
 
 提交粒度与历史整理：
