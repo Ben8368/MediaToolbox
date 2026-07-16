@@ -1,12 +1,14 @@
 import Database from 'better-sqlite3'
-import type { AssetRecord, JobRecord, LogEntry, WorkOrder } from '@mediatoolbox/contracts'
-import { CURRENT_SCHEMA_VERSION, SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH } from './schema.js'
-import type { MediaToolboxDatabase } from './index.js'
+import type { AssetRecord, LogEntry, WorkOrder } from '@mediatoolbox/contracts'
+import { SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH } from './schema.js'
+import type { MediaToolboxDatabase } from './types.js'
+import { createJobRepository } from './job-repository.js'
 import { createPathGrantRepository } from './path-grant-repository.js'
 import { createTrashRepository } from './trash-repository.js'
 
 export class SqliteDatabase implements MediaToolboxDatabase {
   private db: Database.Database
+  readonly jobs: MediaToolboxDatabase['jobs']
   readonly pathGrants: MediaToolboxDatabase['pathGrants']
   readonly trash: MediaToolboxDatabase['trash']
 
@@ -15,6 +17,7 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     this.db.pragma('journal_mode = WAL')
     this.db.pragma('foreign_keys = ON')
     this.initializeSchema()
+    this.jobs = createJobRepository(this.db)
     this.pathGrants = createPathGrantRepository(this.db)
     this.trash = createTrashRepository(this.db)
   }
@@ -72,110 +75,6 @@ export class SqliteDatabase implements MediaToolboxDatabase {
 
   close(): void {
     this.db.close()
-  }
-
-  jobs = {
-    create: async (job: JobRecord): Promise<void> => {
-      const stmt = this.db.prepare(`
-        INSERT INTO jobs (id, kind, status, title, progress_json, created_at, updated_at, error_message)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      stmt.run(
-        job.id,
-        job.kind,
-        job.status,
-        job.title,
-        job.progress ? JSON.stringify(job.progress) : null,
-        job.createdAt,
-        job.updatedAt,
-        job.errorMessage ?? null
-      )
-    },
-
-    findById: async (id: string): Promise<JobRecord | undefined> => {
-      const stmt = this.db.prepare('SELECT * FROM jobs WHERE id = ?')
-      const row = stmt.get(id) as DbJobRow | undefined
-      return row ? this.mapDbJobToRecord(row) : undefined
-    },
-
-    list: async (): Promise<JobRecord[]> => {
-      const stmt = this.db.prepare('SELECT * FROM jobs ORDER BY updated_at DESC')
-      const rows = stmt.all() as DbJobRow[]
-      return rows.map((row) => this.mapDbJobToRecord(row))
-    },
-
-    update: async (job: JobRecord): Promise<void> => {
-      const stmt = this.db.prepare(`
-        UPDATE jobs
-        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?
-        WHERE id = ?
-      `)
-      stmt.run(
-        job.kind,
-        job.status,
-        job.title,
-        job.progress ? JSON.stringify(job.progress) : null,
-        job.updatedAt,
-        job.errorMessage ?? null,
-        job.id
-      )
-    },
-
-    updateIfStatus: async (job: JobRecord, expectedStatus: JobRecord['status']): Promise<boolean> => {
-      const stmt = this.db.prepare(`
-        UPDATE jobs
-        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?
-        WHERE id = ? AND status = ?
-      `)
-      const result = stmt.run(
-        job.kind,
-        job.status,
-        job.title,
-        job.progress ? JSON.stringify(job.progress) : null,
-        job.updatedAt,
-        job.errorMessage ?? null,
-        job.id,
-        expectedStatus,
-      )
-      return result.changes === 1
-    },
-
-    patchIfStatus: async (id: string, expectedStatus: JobRecord['status'], patch: Partial<Pick<JobRecord, 'progress' | 'errorMessage'>>, updatedAt: number): Promise<boolean> => {
-      const stmt = this.db.prepare(`
-        UPDATE jobs
-        SET progress_json = COALESCE(?, progress_json),
-            error_message = COALESCE(?, error_message),
-            updated_at = ?
-        WHERE id = ? AND status = ?
-      `)
-      const result = stmt.run(
-        patch.progress ? JSON.stringify(patch.progress) : null,
-        patch.errorMessage ?? null,
-        updatedAt,
-        id,
-        expectedStatus,
-      )
-      return result.changes === 1
-    },
-
-    delete: async (id: string): Promise<void> => {
-      const stmt = this.db.prepare('DELETE FROM jobs WHERE id = ?')
-      stmt.run(id)
-    },
-  }
-
-  private mapDbJobToRecord(row: DbJobRow): JobRecord {
-    const record: JobRecord = {
-      id: row.id,
-      kind: row.kind as JobRecord['kind'],
-      status: row.status as JobRecord['status'],
-      title: row.title,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    }
-    if (row.progress_json) record.progress = JSON.parse(row.progress_json)
-    if (row.error_message !== null) record.errorMessage = row.error_message
-    return record
   }
 
   assets = {
@@ -338,17 +237,6 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     }
   }
 
-}
-
-type DbJobRow = {
-  id: string
-  kind: string
-  status: string
-  title: string
-  progress_json: string | null
-  created_at: number
-  updated_at: number
-  error_message: string | null
 }
 
 type DbAssetRow = {

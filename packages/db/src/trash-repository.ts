@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { TrashEntry } from '@mediatoolbox/contracts'
 
-import type { MediaToolboxDatabase } from './index.js'
+import type { MediaToolboxDatabase } from './types.js'
 
 export function createTrashRepository(db: Database.Database): MediaToolboxDatabase['trash'] {
   return {

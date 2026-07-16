@@ -1,4 +1,4 @@
-export type { TranscodePreset, TranscodeRequest, VideoEncodePreset } from './args.js'
+export type { TranscodePreset, TranscodeRequest, TwoPassFfmpegOptions, VideoEncodePreset } from './args.js'
 export { buildFfmpegArgs, buildFfprobeArgs, buildTwoPassFfmpegArgs } from './args.js'
 export type { NormalizedFfmpegError } from './errors.js'
 export { FfmpegRunError, FfmpegToolNotFoundError, normalizeFfmpegError } from './errors.js'

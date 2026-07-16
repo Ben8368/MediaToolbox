@@ -42,6 +42,16 @@ describe('jobs', () => {
     expect(list).toHaveLength(2)
   })
 
+  it('lists only active jobs for high-frequency status polling', async () => {
+    await db.jobs.create(makeJob({ id: 'queued', status: 'queued' }))
+    await db.jobs.create(makeJob({ id: 'running', status: 'running' }))
+    await db.jobs.create(makeJob({ id: 'paused', status: 'paused' }))
+    await db.jobs.create(makeJob({ id: 'done', status: 'succeeded' }))
+
+    const list = await db.jobs.listActive()
+    expect(list.map((job) => job.id).sort()).toEqual(['paused', 'queued', 'running'])
+  })
+
   it('updates job status', async () => {
     const job = makeJob()
     await db.jobs.create(job)

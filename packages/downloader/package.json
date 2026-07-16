@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit"
   },
+  "dependencies": {
+    "@mediatoolbox/process-manager": "0.1.0"
+  },
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^4.1.9"

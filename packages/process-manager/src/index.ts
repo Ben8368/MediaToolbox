@@ -126,7 +126,7 @@ export class MediaToolboxProcessManager {
   async shutdownAll(options: ShutdownOptions = {}): Promise<void> {
     const forceAfterMs = options.forceAfterMs ?? 3000
     const running = this.list().reverse()
-    await Promise.all(running.map((processItem) => terminateProcessTree(processItem.child, forceAfterMs)))
+    await Promise.all(running.map((processItem) => terminateProcessTree(processItem.child, { forceAfterMs })))
     this.processes.clear()
   }
 }
@@ -154,8 +154,9 @@ export function normalizeProcessEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return normalized
 }
 
-async function terminateProcessTree(child: ChildProcess, forceAfterMs: number): Promise<void> {
+export async function terminateProcessTree(child: ChildProcess, options: ShutdownOptions = {}): Promise<void> {
   if (child.exitCode !== null || child.signalCode !== null || !child.pid) return
+  const forceAfterMs = options.forceAfterMs ?? 3000
 
   if (process.platform === 'win32') {
     await runTaskkill(child.pid)

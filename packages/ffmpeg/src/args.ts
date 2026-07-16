@@ -19,6 +19,11 @@ export type TranscodeRequest = {
   targetBitrateKbps?: number
 }
 
+export type TwoPassFfmpegOptions = {
+  /** 允许测试或特殊运行环境覆盖空设备；默认按当前平台选择。 */
+  nullDevice?: string
+}
+
 export function buildFfprobeArgs(inputPath: string): string[] {
   return ['-v', 'error', '-show_format', '-show_streams', '-of', 'json', inputPath]
 }
@@ -82,11 +87,17 @@ export function buildFfmpegArgs(request: TranscodeRequest): string[] {
   }
 }
 
-export function buildTwoPassFfmpegArgs(request: TranscodeRequest, pass: 1 | 2, passLogFile: string): string[] {
+export function buildTwoPassFfmpegArgs(
+  request: TranscodeRequest,
+  pass: 1 | 2,
+  passLogFile: string,
+  options: TwoPassFfmpegOptions = {},
+): string[] {
   const encPreset = request.videoEncodePreset ?? 'slow'
   const bitrate = request.targetBitrateKbps ?? 8000
   const audioBitrate = request.audioBitrate ?? 192
   const codec = request.preset === 'mp4-h264-aac' ? 'libx264' : 'libx265'
+  const nullDevice = options.nullDevice ?? (process.platform === 'win32' ? 'NUL' : '/dev/null')
 
   if (pass === 1) {
     return [
@@ -94,8 +105,7 @@ export function buildTwoPassFfmpegArgs(request: TranscodeRequest, pass: 1 | 2, p
       '-map', '0:v:0',
       '-c:v', codec, '-b:v', `${bitrate}k`, '-preset', encPreset,
       '-pass', '1', '-passlogfile', passLogFile,
-      // NUL is the Windows null device; this project only targets Windows.
-      '-an', '-f', 'null', 'NUL',
+      '-an', '-f', 'null', nullDevice,
     ]
   }
 

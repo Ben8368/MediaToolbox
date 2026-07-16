@@ -118,7 +118,7 @@ function __mtbJS(v){
         // directly with a .jsx arg does not reliably execute the script.
         // Use VBScript COM automation instead: DoJavaScriptFile() blocks until
         // the script finishes, so cscript.exe exits only after PS is done.
-        await runViaWindowsCom(scriptPath, outputPath, tag, options, spawn, fs, os, path, runOptions.signal)
+        await runViaWindowsCom(scriptPath, tag, options, spawn, fs, os, path, runOptions.signal)
       } else {
         await runViaDirectSpawn(scriptPath, options, spawn, runOptions.signal)
       }
@@ -146,7 +146,6 @@ type PathMod = typeof import('node:path')
 
 async function runViaWindowsCom(
   scriptPath: string,
-  outputPath: string,
   tag: string,
   options: PhotoshopCommandRunnerOptions,
   spawn: SpawnFn,

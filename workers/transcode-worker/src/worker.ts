@@ -14,6 +14,7 @@ import {
 } from '@mediatoolbox/ffmpeg'
 import { transitionJob } from '@mediatoolbox/job-core'
 import type { JobRecord, JobProgress } from '@mediatoolbox/contracts'
+import fs from 'node:fs/promises'
 
 export type TranscodeWorkerJob = TranscodeRequest & {
   ffmpeg?: ResolveFfmpegToolOptions
@@ -73,19 +74,23 @@ export async function runTranscodeWorkerJob(
   let result: FfmpegRunResult
   if (job.targetBitrateKbps && TWO_PASS_PRESETS.has(job.preset)) {
     const passLogFile = `${job.outputPath}.ffmpeg2pass`
-    await runFfmpeg(job, {
-      command: ffmpegTool.command,
-      argsOverride: buildTwoPassFfmpegArgs(job, 1, passLogFile),
-      ...(options.signal ? { signal: options.signal } : {}),
-    })
-    result = await runFfmpeg(job, {
-      command: ffmpegTool.command,
-      argsOverride: buildTwoPassFfmpegArgs(job, 2, passLogFile),
-      ...(options.signal ? { signal: options.signal } : {}),
-      ...(durationSeconds !== undefined ? { durationSeconds } : {}),
-      onEvent: handleEvent,
-      ...(options.onLog ? { onLog: options.onLog } : {}),
-    })
+    try {
+      await runFfmpeg(job, {
+        command: ffmpegTool.command,
+        argsOverride: buildTwoPassFfmpegArgs(job, 1, passLogFile),
+        ...(options.signal ? { signal: options.signal } : {}),
+      })
+      result = await runFfmpeg(job, {
+        command: ffmpegTool.command,
+        argsOverride: buildTwoPassFfmpegArgs(job, 2, passLogFile),
+        ...(options.signal ? { signal: options.signal } : {}),
+        ...(durationSeconds !== undefined ? { durationSeconds } : {}),
+        onEvent: handleEvent,
+        ...(options.onLog ? { onLog: options.onLog } : {}),
+      })
+    } finally {
+      await cleanupTwoPassFiles(passLogFile)
+    }
   } else {
     result = await runFfmpeg(job, {
       command: ffmpegTool.command,
@@ -113,6 +118,14 @@ export async function runTranscodeWorkerJob(
     ...(durationSeconds !== undefined ? { durationSeconds } : {}),
     ...(vmafScore !== undefined ? { vmafScore } : {}),
   }
+}
+
+async function cleanupTwoPassFiles(passLogFile: string): Promise<void> {
+  await Promise.all([
+    `${passLogFile}-0.log`,
+    `${passLogFile}-0.log.mbtree`,
+    `${passLogFile}-0.log.cutree`,
+  ].map((file) => fs.unlink(file).catch(() => undefined)))
 }
 
 export function applyTranscodeResult(

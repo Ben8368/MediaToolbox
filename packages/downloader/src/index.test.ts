@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { EventEmitter } from 'node:events'
+import { PassThrough } from 'node:stream'
+import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   buildYtdlpArgs,
@@ -6,6 +9,7 @@ import {
   normalizeYtdlpError,
   parseYtdlpProgressLine,
   resolveYtdlpTool,
+  runYtdlpDownload,
   YtdlpToolNotFoundError,
 } from './index.js'
 
@@ -140,3 +144,40 @@ describe('normalizeYtdlpError', () => {
     })
   })
 })
+
+describe('runYtdlpDownload', () => {
+  it('terminates the whole adapter process tree when canceled', async () => {
+    const child = createFakeChildProcess()
+    const terminateProcess = vi.fn(async (target: ChildProcessWithoutNullStreams) => {
+      target.emit('close', null)
+    })
+    const controller = new AbortController()
+    const resultPromise = runYtdlpDownload({
+      url: 'https://example.com/video',
+      mode: 'video',
+      outputTemplate: '%(title)s.%(ext)s',
+    }, {
+      signal: controller.signal,
+      spawnProcess: () => child,
+      terminateProcess,
+    })
+
+    controller.abort()
+    await expect(resultPromise).resolves.toMatchObject({ status: 'canceled' })
+    expect(terminateProcess).toHaveBeenCalledWith(child)
+  })
+})
+
+function createFakeChildProcess(): ChildProcessWithoutNullStreams {
+  const child = new EventEmitter() as ChildProcessWithoutNullStreams
+  Object.assign(child, {
+    stdout: new PassThrough(),
+    stderr: new PassThrough(),
+    stdin: new PassThrough(),
+    exitCode: null,
+    signalCode: null,
+    pid: 1234,
+    kill: vi.fn(() => true),
+  })
+  return child
+}

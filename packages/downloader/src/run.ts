@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
+import { terminateProcessTree } from '@mediatoolbox/process-manager'
 
 import { buildYtdlpArgs, type YtdlpRequest } from './args.js'
 import { normalizeYtdlpError, YtdlpRunError } from './errors.js'
@@ -19,6 +20,7 @@ export type YtdlpRunOptions = {
   onEvent?: (event: YtdlpProgressEvent) => void
   onLog?: (line: string, stream: 'stdout' | 'stderr') => void
   spawnProcess?: YtdlpSpawn
+  terminateProcess?: (child: ChildProcessWithoutNullStreams) => Promise<void>
 }
 
 export type YtdlpRunResult = {
@@ -51,6 +53,7 @@ export function runYtdlpDownload(request: YtdlpRequest, options: YtdlpRunOptions
   const command = options.command ?? 'yt-dlp'
   const args = buildYtdlpArgs(request)
   const spawnProcess: YtdlpSpawn = options.spawnProcess ?? ((spawnCommand, spawnArgs, spawnOptions) => spawn(spawnCommand, spawnArgs, spawnOptions))
+  const terminateProcess = options.terminateProcess ?? ((child) => terminateProcessTree(child))
   const events: YtdlpProgressEvent[] = []
   let stderrText = ''
   let canceled = false
@@ -84,7 +87,9 @@ export function runYtdlpDownload(request: YtdlpRequest, options: YtdlpRunOptions
 
     const abort = () => {
       canceled = true
-      child.kill()
+      void terminateProcess(child).catch(() => {
+        child.kill()
+      })
     }
 
     options.signal?.addEventListener('abort', abort, { once: true })
