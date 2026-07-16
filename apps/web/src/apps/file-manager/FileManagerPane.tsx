@@ -238,31 +238,6 @@ export function FileManagerPane() {
           onDownloadSelected={downloadSelected}
         />
 
-        {!trash.isTrashView && assets.length > 0 && (
-          <section className="fm-assets">
-            <div className="fm-assets__head">
-              <strong>产出资产</strong>
-              <button type="button" onClick={() => void refreshAssets()}>刷新</button>
-            </div>
-            <div className="fm-asset-list">
-              {assets.slice(0, 5).map((asset) => (
-                <button
-                  type="button"
-                  className="fm-asset-item"
-                  key={asset.id}
-                  onClick={() => {
-                    const parent = parentPath(asset.path)
-                    if (parent) void navigate(parent)
-                  }}
-                >
-                  <span>{asset.name}</span>
-                  <small>{asset.kind} · {asset.path}</small>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
         <FileManagerEntryTable
           loading={loading}
           error={error}
