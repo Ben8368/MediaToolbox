@@ -76,6 +76,8 @@ Workers / adapters 负责：
 | `GET /api/filebrowser/disks` | 磁盘列表 | 本地映射 |
 | `POST /api/filebrowser/list` | 列出目录 | 本地映射 |
 | `POST /api/filebrowser/mkdir` | 新建文件夹 | 本地映射 |
+| `POST /api/filebrowser/upload` | 以 multipart `directory` + `file` 导入文件到工作区；浏览器负责生成 boundary，单文件上限 500 MB | 本地映射 |
+| `GET /api/filebrowser/file` | 按工作区虚拟 `path` 返回文件字节，仅允许访问受控工作区内文件 | 本地映射 |
 | `DELETE /api/filebrowser/path` | 删除/移入回收站 | 本地映射 |
 | `GET /api/filebrowser/trash` | 回收站列表 | 本地映射 |
 | `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 本地映射 |

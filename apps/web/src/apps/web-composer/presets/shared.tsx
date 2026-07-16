@@ -106,7 +106,7 @@ export function PresetSlotContent({ state, slotId, viewport, iconClassName, imag
     )
   }
 
-  if (slot.activeKind === 'image' && slot.image) {
+  if (slot.activeKind === 'image' && slot.image?.src.trim()) {
     return (
       <img
         className={imageClassName ?? 'wc-preset-slot-image'}

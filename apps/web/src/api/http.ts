@@ -59,7 +59,7 @@ export async function apiRequest<T>(path: string, init: ApiRequestInit = {}): Pr
 
   try {
     const headers = new Headers(fetchInit.headers)
-    if (fetchInit.body && !headers.has('Content-Type')) {
+    if (typeof fetchInit.body === 'string' && !headers.has('Content-Type')) {
       headers.set('Content-Type', 'application/json')
     }
 

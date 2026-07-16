@@ -1,13 +1,13 @@
 # 当前状态
 
-> **最后确认：** 2026-07-15<br>
+> **最后确认：** 2026-07-16<br>
 > **阶段：** Phase 4.5 / 5 已接入，Phase 5.5 Web Composer beta 已接入，Phase 6A/B/C PathGrant 管道已落地。详细能力边界见 [ROADMAP.md](docs/ROADMAP.md)。
 
 ## 当前决策
 
 - 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE` 与 8 个默认 MP4 的逐项 `assets/web-composer/PROVENANCE.json`，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
 - **TD-019** 的实现与自动化烟测已接入，尚待首次 tag Release 在 Windows、macOS、Linux 实跑；这不是“renderer 不可用”的代码阻断。
-- 最近客观验证：2026-07-15 `npm run verify` 通过（35 个测试文件、209 项）；`npm run release:preflight:public` 按设计拒绝缺失的公开授权证据。
+- 最近客观验证：2026-07-16 `npm run verify` 通过（39 个测试文件、227 项）；Web Composer 真实 PNG 经 Vite 代理上传、下载后的 SHA-256 一致；`npm run release:preflight:public` 按设计拒绝缺失的公开授权证据。
 
 ## 近期优先级
 

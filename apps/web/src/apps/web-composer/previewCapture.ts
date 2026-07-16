@@ -24,8 +24,80 @@ function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
 
+type PreviewImage = Pick<
+  HTMLImageElement,
+  | 'addEventListener'
+  | 'alt'
+  | 'complete'
+  | 'currentSrc'
+  | 'decode'
+  | 'naturalHeight'
+  | 'naturalWidth'
+  | 'removeEventListener'
+  | 'src'
+>
+
+const PREVIEW_IMAGE_LOAD_TIMEOUT_MS = 15_000
+
+function previewImageLabel(image: PreviewImage) {
+  return image.alt.trim() || image.currentSrc.trim() || image.src.trim() || '未命名图片'
+}
+
+function assertPreviewImageReady(image: PreviewImage) {
+  if (image.naturalWidth > 0 && image.naturalHeight > 0) return
+  throw new Error(`图片“${previewImageLabel(image)}”加载失败，请重新选择素材后再导出。`)
+}
+
+async function decodePreviewImage(image: PreviewImage) {
+  if (typeof image.decode !== 'function') return
+  await image.decode().catch(() => undefined)
+}
+
+export async function waitForPreviewImage(image: PreviewImage) {
+  if (!image.complete) {
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      let timer: ReturnType<typeof globalThis.setTimeout> | undefined
+      const cleanup = () => {
+        image.removeEventListener('load', onLoad)
+        image.removeEventListener('error', onError)
+        if (timer !== undefined) globalThis.clearTimeout(timer)
+      }
+      const finish = (callback: () => void) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        callback()
+      }
+      const onLoad = () => finish(resolve)
+      const onError = () => finish(() => reject(
+        new Error(`图片“${previewImageLabel(image)}”加载失败，请重新选择素材后再导出。`),
+      ))
+
+      image.addEventListener('load', onLoad, { once: true })
+      image.addEventListener('error', onError, { once: true })
+      timer = globalThis.setTimeout(() => finish(() => reject(
+        new Error(`等待图片“${previewImageLabel(image)}”加载超时，请稍后重试。`),
+      )), PREVIEW_IMAGE_LOAD_TIMEOUT_MS)
+
+      // Avoid missing a load/error transition that completed between the
+      // initial `complete` check and listener registration.
+      if (image.complete) {
+        queueMicrotask(image.naturalWidth > 0 && image.naturalHeight > 0 ? onLoad : onError)
+      }
+    })
+    await decodePreviewImage(image)
+  }
+  assertPreviewImageReady(image)
+}
+
+export async function waitForPreviewImages(root: Pick<HTMLElement, 'querySelectorAll'>) {
+  await Promise.all([...root.querySelectorAll<HTMLImageElement>('img')].map(waitForPreviewImage))
+}
+
 async function waitForPreviewAssets(root: HTMLElement) {
   await document.fonts?.ready
+  await waitForPreviewImages(root)
   const videos = [...root.querySelectorAll('video')]
   await Promise.all(videos.map((video) => {
     if (video.readyState >= 2) return Promise.resolve()

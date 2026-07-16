@@ -33,6 +33,7 @@ export function WebComposerPreviewStage({
   onSlotMetrics,
   onSettingsChange,
   busy,
+  compositionInvalidReason,
   onExport,
   onReset,
 }: {
@@ -49,6 +50,7 @@ export function WebComposerPreviewStage({
   onSlotMetrics: (slotId: string, rect: WebComposerSlotRect) => void
   onSettingsChange: (settings: WebComposerExportSettings) => void
   busy: boolean
+  compositionInvalidReason: string | null
   onExport: (kind: 'png' | 'webm') => void
   onReset: () => void
 }) {
@@ -154,8 +156,8 @@ export function WebComposerPreviewStage({
             <button type="button" className={mode === 'edit' ? 'is-active' : ''} aria-pressed={mode === 'edit'} onClick={() => onModeChange('edit')}>编辑</button>
             <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>预览</button>
           </div>
-          <button type="button" disabled={busy} onClick={() => onExport('png')}>导出 PNG</button>
-          <button type="button" disabled={busy} onClick={() => onExport('webm')}>导出 MP4</button>
+          <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('png')}>导出 PNG</button>
+          <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('webm')}>导出 MP4</button>
           <button type="button" className="wc-preview-actions__reset" disabled={busy} onClick={onReset}>恢复默认</button>
         </div>
       </div>

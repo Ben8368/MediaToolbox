@@ -3,7 +3,7 @@ import { WEB_COMPOSER_PRESET_CATALOG } from '@mediatoolbox/contracts'
 import { describe, expect, it } from 'vitest'
 
 import { presets } from './index'
-import { replaceSlotWithImage } from '../slotState'
+import { replaceSlotWithImage, setSlotActiveKind } from '../slotState'
 
 describe('web composer preset manifests', () => {
   it('matches the shared preset catalog', () => {
@@ -92,5 +92,30 @@ describe('web composer preset manifests', () => {
     expect(markup).toContain('src="/api/filebrowser/file?path=%2FWorkspace%2Flumora-logo.png"')
     expect(markup).toContain('alt="lumora-logo.png"')
     expect(markup).not.toContain('>Lumora</a>')
+  })
+
+  it('keeps the Lumora text logo visible while an image candidate has no source', () => {
+    const preset = presets.find((item) => item.id === 'lumora')
+    expect(preset).toBeDefined()
+    if (!preset) return
+
+    const state = setSlotActiveKind(preset.defaults, 'brand.logo', 'image')
+    const Component = preset.Component
+    const markup = renderToStaticMarkup(
+      <Component
+        state={state}
+        viewport={{
+          width: preset.designSize.width,
+          height: preset.designSize.height,
+          designWidth: preset.designSize.width,
+          designHeight: preset.designSize.height,
+        }}
+      />,
+    )
+
+    expect(markup).toContain('data-wc-slot-kind="image"')
+    expect(markup).toContain('>Lumora</a>')
+    expect(markup).not.toContain('alt="Logo"')
+    expect(markup).not.toContain('src=""')
   })
 })

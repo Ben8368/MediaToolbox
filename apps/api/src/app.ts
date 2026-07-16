@@ -18,6 +18,7 @@ import { recoverInterruptedJobs } from './job-recovery.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
+  code?: string
   message?: string
   statusCode?: number
   validation?: unknown
@@ -36,6 +37,8 @@ function statusCodeFromError(error: ApiErrorLike) {
 
 function messageFromError(error: ApiErrorLike, statusCode: number) {
   if (error.validation) return '请求参数不符合 API 契约。'
+  if (error.code === 'FST_ERR_CTP_INVALID_CONTENT_LENGTH') return '请求数据传输不完整，请重试。'
+  if (error.code === 'FST_ERR_CTP_BODY_TOO_LARGE' || error.code === 'FST_REQ_FILE_TOO_LARGE') return '请求数据过大。'
   if (statusCode >= 500) return '本地 API 处理失败。'
   return error.message || '请求失败。'
 }

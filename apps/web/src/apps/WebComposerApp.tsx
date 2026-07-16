@@ -6,6 +6,7 @@ import type {
   WebComposerPresetState,
 } from '@mediatoolbox/contracts'
 
+import { validateWebComposerComposition } from './web-composer/compositionValidation'
 import { createExportSettings, createInitialPresetStates, createPreviewSessionId } from './web-composer/model'
 import { presetById, presets, clonePresetState } from './web-composer/presets'
 import { WebComposerInspector, type WebComposerSlotMetrics } from './web-composer/WebComposerInspector'
@@ -26,6 +27,13 @@ export function WebComposerApp() {
 
   const activePreset = useMemo(() => presetById.get(activePresetId) ?? presets[0], [activePresetId])
   const activeState = presetStates[activePreset.id] ?? activePreset.defaults
+  const compositionValidation = useMemo(
+    () => validateWebComposerComposition(activePreset, activeState),
+    [activePreset, activeState],
+  )
+  const status = !exporter.busy && !compositionValidation.valid
+    ? compositionValidation.reason
+    : exporter.status
 
   const updateActiveState = useCallback((state: WebComposerPresetState) => {
     setPresetStates((current) => ({ ...current, [activePreset.id]: state }))
@@ -83,14 +91,18 @@ export function WebComposerApp() {
           onSlotMetrics={updateSlotMetrics}
           onSettingsChange={setExportSettings}
           busy={exporter.busy}
-          onExport={(kind) => void exporter.exportComposition(kind, activePreset.id, activePreset.version, exportSettings)}
+          compositionInvalidReason={compositionValidation.reason}
+          onExport={(kind) => {
+            if (!compositionValidation.valid) return
+            void exporter.exportComposition(kind, activePreset.id, activePreset.version, exportSettings)
+          }}
           onReset={resetActivePreset}
         />
       </div>
       <footer className="wc-statusbar">
         <div>
           <span className={exporter.busy ? 'wc-status-dot wc-status-dot--busy' : 'wc-status-dot'} />
-          <span title={exporter.status}>{exporter.status}</span>
+          <span role="status" aria-live="polite" title={status ?? undefined}>{status}</span>
         </div>
         {exporter.activeJobId && (
           <button type="button" onClick={() => void exporter.cancel()}>取消任务</button>
