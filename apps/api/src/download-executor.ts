@@ -10,40 +10,48 @@ import { addLog, nowSeconds } from './utils.js'
 import { toVirtualWorkspacePath } from './workspace-files.js'
 import { updateJobRecord } from './job-utils.js'
 
-const activeAbortControllers = new Map<string, AbortController>()
-let activeDownloadCount = 0
-const downloadQueue: Array<{ task: FetchTaskRecord; state: ApiState }> = []
-const activeDownloadCountsByBatch = new Map<string, number>()
-
-function drainQueue(): void {
-  while (downloadQueue.length > 0) {
-    const index = downloadQueue.findIndex((entry) => activeDownloadCount < entry.state.maxConcurrentDownloads && canStartBatch(entry.task))
+function drainQueue(state: ApiState): void {
+  const scheduler = state.downloadScheduler
+  while (scheduler.queue.length > 0) {
+    const index = scheduler.queue.findIndex((task) => scheduler.activeCount < state.maxConcurrentDownloads && canStartBatch(task, state))
     if (index < 0) return
-    const [entry] = downloadQueue.splice(index, 1)
-    if (entry) startScheduledDownload(entry)
+    const [task] = scheduler.queue.splice(index, 1)
+    if (task) startScheduledDownload(task, state)
   }
 }
 
 export function scheduleDownload(task: FetchTaskRecord, state: ApiState): void {
-  if (activeDownloadCount < state.maxConcurrentDownloads && canStartBatch(task)) {
-    startScheduledDownload({ task, state })
+  const scheduler = state.downloadScheduler
+  if (scheduler.activeCount < state.maxConcurrentDownloads && canStartBatch(task, state)) {
+    startScheduledDownload(task, state)
   } else {
-    task.stage = `排队中（第 ${downloadQueue.length + 1} 位）`
-    downloadQueue.push({ task, state })
+    task.stage = `排队中（第 ${scheduler.queue.length + 1} 位）`
+    scheduler.queue.push(task)
   }
 }
 
-function startScheduledDownload(entry: { task: FetchTaskRecord; state: ApiState }): void {
-  const batchId = batchIdForTask(entry.task)
-  activeDownloadCount++
-  activeDownloadCountsByBatch.set(batchId, (activeDownloadCountsByBatch.get(batchId) ?? 0) + 1)
-  void executeDownload(entry.task, entry.state).finally(() => {
-    activeDownloadCount--
-    const remaining = (activeDownloadCountsByBatch.get(batchId) ?? 1) - 1
-    if (remaining > 0) activeDownloadCountsByBatch.set(batchId, remaining)
-    else activeDownloadCountsByBatch.delete(batchId)
-    drainQueue()
+function startScheduledDownload(task: FetchTaskRecord, state: ApiState): void {
+  const scheduler = state.downloadScheduler
+  const batchId = batchIdForTask(task)
+  scheduler.activeCount++
+  scheduler.activeCountsByBatch.set(batchId, (scheduler.activeCountsByBatch.get(batchId) ?? 0) + 1)
+  void state.executors.run(task.id, async (signal) => {
+    try {
+      await executeDownload(task, state, signal)
+    } catch (error) {
+      addLog(state.db, 'ERROR', 'downloader', `下载执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+    }
   })
+    .catch((error) => {
+      addLog(state.db, 'ERROR', 'downloader', `下载执行器登记失败：${error instanceof Error ? error.message : String(error)}`)
+    })
+    .finally(() => {
+      scheduler.activeCount--
+      const remaining = (scheduler.activeCountsByBatch.get(batchId) ?? 1) - 1
+      if (remaining > 0) scheduler.activeCountsByBatch.set(batchId, remaining)
+      else scheduler.activeCountsByBatch.delete(batchId)
+      if (!state.executors.isClosing) drainQueue(state)
+    })
 }
 
 function batchIdForTask(task: FetchTaskRecord): string {
@@ -57,34 +65,42 @@ function batchLimitForTask(task: FetchTaskRecord): number {
   return Math.max(1, Math.min(4, Math.floor(requested)))
 }
 
-function canStartBatch(task: FetchTaskRecord): boolean {
-  return (activeDownloadCountsByBatch.get(batchIdForTask(task)) ?? 0) < batchLimitForTask(task)
+function canStartBatch(task: FetchTaskRecord, state: ApiState): boolean {
+  return (state.downloadScheduler.activeCountsByBatch.get(batchIdForTask(task)) ?? 0) < batchLimitForTask(task)
 }
 
-export function abortDownload(taskId: string): void {
-  const queueIndex = downloadQueue.findIndex((entry) => entry.task.id === taskId)
+export function abortDownload(taskId: string, state: ApiState): void {
+  const queueIndex = state.downloadScheduler.queue.findIndex((task) => task.id === taskId)
   if (queueIndex >= 0) {
-    const [entry] = downloadQueue.splice(queueIndex, 1)
-    if (entry) {
-      entry.task.status = 'cancelled'
-      entry.task.stage = '已取消'
-      entry.task.updated_at = nowSeconds()
-      entry.task.completed_at = entry.task.updated_at
+    const [task] = state.downloadScheduler.queue.splice(queueIndex, 1)
+    if (task) {
+      task.status = 'cancelled'
+      task.stage = '已取消'
+      task.updated_at = nowSeconds()
+      task.completed_at = task.updated_at
     }
     return
   }
-  activeAbortControllers.get(taskId)?.abort()
-  activeAbortControllers.delete(taskId)
+  state.executors.abort(taskId)
+}
+
+export async function shutdownDownloadScheduler(state: ApiState): Promise<void> {
+  const queued = state.downloadScheduler.queue.splice(0)
+  await Promise.all(queued.map(async (task) => {
+    const canceled = await updateDownloadJob(state, task.id, 'canceled')
+    if (!canceled) return
+    task.status = 'cancelled'
+    task.stage = '服务关闭，任务已取消'
+    task.updated_at = nowSeconds()
+    task.completed_at = task.updated_at
+  }))
 }
 
 export async function updateDownloadJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof updateJobRecord>[2]) {
   return updateJobRecord(state, taskId, nextStatus)
 }
 
-export async function executeDownload(task: FetchTaskRecord, state: ApiState): Promise<void> {
-  const controller = new AbortController()
-  activeAbortControllers.set(task.id, controller)
-
+export async function executeDownload(task: FetchTaskRecord, state: ApiState, signal: AbortSignal): Promise<void> {
   const started = await updateDownloadJob(state, task.id, 'running')
   if (!started) return
   task.status = 'running'
@@ -99,9 +115,9 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
     const outputFiles = new Set<string>()
 
     const result = await runDownloadWorkerJob(job, {
-      signal: controller.signal,
+      signal,
       onEvent: (event: YtdlpProgressEvent) => {
-        if (controller.signal.aborted) return
+        if (signal.aborted) return
         task.updated_at = nowSeconds()
         if (event.type === 'progress') {
           task.progress = event.percent
@@ -139,8 +155,6 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       },
     })
 
-    activeAbortControllers.delete(task.id)
-
     if (result.status === 'canceled') {
       if (await updateDownloadJob(state, task.id, 'canceled')) {
         task.status = 'cancelled'
@@ -170,7 +184,6 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState): P
       addLog(state.db, 'INFO', 'downloader', `下载完成：${task.title}`)
     }
   } catch (error) {
-    activeAbortControllers.delete(task.id)
     task.completed_at = nowSeconds()
     task.updated_at = task.completed_at
 

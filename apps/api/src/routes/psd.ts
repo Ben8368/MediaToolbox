@@ -38,8 +38,22 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         throw error
       }
 
-      void executePsdScan(job, psdPath ?? physicalPath, physicalPath, workOrderId, inputGrantId, state)
-        .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 扫描执行器清理失败：${error instanceof Error ? error.message : String(error)}`))
+      void state.executors.run(job.id, async (signal) => {
+        try {
+          await executePsdScan(
+            job,
+            psdPath ?? physicalPath,
+            physicalPath,
+            workOrderId,
+            inputGrantId,
+            state,
+            signal,
+          )
+        } catch (error) {
+          addLog(state.db, 'ERROR', 'psd', `PSD 扫描执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+        }
+      })
+        .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 扫描执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
 
       return { ok: true, job, workOrderId }
     },
@@ -132,9 +146,16 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
       return { ok: false, message: error instanceof Error ? error.message : String(error) }
     }
 
-    void executePsdApply(job, workOrderForApply, physicalPsdPath, physicalOutputPath, state)
-      .finally(() => revokeGrantsBoundToJob(state, workOrder.id))
-      .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 应用执行器清理失败：${error instanceof Error ? error.message : String(error)}`))
+    void state.executors.run(job.id, async (signal) => {
+      try {
+        await executePsdApply(job, workOrderForApply, physicalPsdPath, physicalOutputPath, state, signal)
+      } catch (error) {
+        addLog(state.db, 'ERROR', 'psd', `PSD 应用执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+      } finally {
+        await revokeGrantsBoundToJob(state, workOrder.id)
+      }
+    })
+      .catch((error) => addLog(state.db, 'ERROR', 'psd', `PSD 应用执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
 
     return { ok: true, job }
   })
@@ -142,7 +163,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
   // POST /api/psd/workorders/:id/translate — AI 翻译（占位，v1 返回 501）
   app.post<{ Params: { id: string }; Body: Record<string, unknown> }>(
     '/api/psd/workorders/:id/translate',
-    async (request, reply) => {
+    async (_request, reply) => {
       reply.status(501)
       return { ok: false, message: 'AI 翻译功能尚未开放，敬请期待。' }
     },
@@ -155,7 +176,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
   })
 
   // GET /api/psd/fonts — 列出 Photoshop 可用字体
-  app.get<{ Reply: FontsListResponse }>('/api/psd/fonts', async (request, reply) => {
+  app.get<{ Reply: FontsListResponse }>('/api/psd/fonts', async (_request, reply) => {
     try {
       const result = await runPsdWorkerJob({ type: 'list-fonts' })
       if (result.type !== 'list-fonts') {

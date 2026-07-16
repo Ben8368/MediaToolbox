@@ -43,7 +43,7 @@ Workers / adapters 负责：
 | `GET /api/health` | 本地 API 健康检查 | 骨架 |
 | `GET /api/apps` | 工作台应用列表；应用 ID 与前端 registry 对齐为 `browser`、`file-manager`、`fetcher`、`transcode`、`ps`、`web-composer`、`settings`、`logs` | 骨架 |
 | `GET /api/system/metrics` | 右侧状态面板系统快照 | 本地采样 |
-| `GET /api/system/runtime` | 下载器状态栏网络速率 | 本地采样 |
+| `GET /api/system/runtime` | 下载器状态栏的轻量 uptime / 网络速率快照；不触发 GPU、内存或 Job 历史全量采样 | 本地采样 |
 | `POST /api/system/shutdown` | 关闭本地服务，需 `x-mediatoolbox-shutdown: desktop` 请求头与桌面 token（`requireDesktopAuth`）；桌面模式下 Web UI 改走 `mediatoolbox:shutdown` IPC，不直接持有 token 调用此端点，纯 Web 模式下始终返回 403 | 骨架 |
 | `GET /api/logs` | 日志列表 | SQLite |
 | `GET /api/logs/metadata` | 日志筛选元数据 | SQLite |

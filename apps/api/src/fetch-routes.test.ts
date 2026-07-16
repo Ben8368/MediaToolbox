@@ -1,5 +1,19 @@
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@mediatoolbox/download-worker', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mediatoolbox/download-worker')>()
+  return {
+    ...actual,
+    runDownloadWorkerJob: vi.fn(async () => ({
+      status: 'canceled' as const,
+      command: 'yt-dlp',
+      args: [],
+      exitCode: null,
+      events: [],
+    })),
+  }
+})
 
 import { buildApiServer } from './app.js'
 import { buildDownloadJob } from './download-executor.js'

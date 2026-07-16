@@ -7,8 +7,6 @@ import { patchRunningJob, updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 
-const activeAbortControllers = new Map<string, AbortController>()
-
 export type WebComposerCaptureJob = {
   kind: 'png' | 'webm'
   capture: Buffer
@@ -17,11 +15,6 @@ export type WebComposerCaptureJob = {
   physicalInputPath?: string
   fps?: number
   durationSeconds?: number
-}
-
-export function abortWebComposerRender(jobId: string): void {
-  activeAbortControllers.get(jobId)?.abort()
-  activeAbortControllers.delete(jobId)
 }
 
 async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebComposerCaptureJob) {
@@ -37,16 +30,20 @@ async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebCompo
   })
 }
 
-export async function executeWebComposerCapture(job: JobRecord, capture: WebComposerCaptureJob, state: ApiState): Promise<void> {
-  const controller = new AbortController()
-  activeAbortControllers.set(job.id, controller)
+export async function executeWebComposerCapture(
+  job: JobRecord,
+  capture: WebComposerCaptureJob,
+  state: ApiState,
+  signal: AbortSignal,
+): Promise<void> {
   const started = await updateJobRecord(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
   if (!started) return
   addLog(state.db, 'INFO', 'web-composer', `开始导出：${job.title}`)
+  let retainOutput = false
 
   try {
     if (capture.kind === 'png') {
-      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
       await persistWebComposerPng(capture.capture, capture.physicalOutputPath)
     } else {
       if (!capture.physicalInputPath || !capture.fps || !capture.durationSeconds) {
@@ -59,7 +56,7 @@ export async function executeWebComposerCapture(job: JobRecord, capture: WebComp
         fps: capture.fps,
         durationSeconds: capture.durationSeconds,
       }, {
-        signal: controller.signal,
+        signal,
         onProgress: (progress) => {
           void patchRunningJob(state, job.id, { progress })
         },
@@ -75,20 +72,20 @@ export async function executeWebComposerCapture(job: JobRecord, capture: WebComp
       }
     }
 
-    if (controller.signal.aborted) {
+    if (signal.aborted) {
       await updateJobRecord(state, job.id, 'canceled')
       await fs.unlink(capture.physicalOutputPath).catch(() => undefined)
       return
     }
     const completed = await updateJobRecord(state, job.id, 'succeeded', { progress: { current: 100, total: 100, unit: 'percent' } })
-    if (!completed) {
-      await fs.unlink(capture.physicalOutputPath).catch(() => undefined)
-      return
-    }
-    await addOutputAsset(state, job, capture)
+    if (!completed) return
+    retainOutput = true
+    await addOutputAsset(state, job, capture).catch((error) => {
+      addLog(state.db, 'WARNING', 'web-composer', `导出产物已生成，但资产索引写入失败：${error instanceof Error ? error.message : String(error)}`)
+    })
     addLog(state.db, 'INFO', 'web-composer', `导出完成：${capture.virtualOutputPath}`)
   } catch (error) {
-    if (controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+    if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
       if (await updateJobRecord(state, job.id, 'canceled')) {
         addLog(state.db, 'WARNING', 'web-composer', `导出已取消：${job.title}`)
       }
@@ -99,7 +96,7 @@ export async function executeWebComposerCapture(job: JobRecord, capture: WebComp
       }
     }
   } finally {
-    activeAbortControllers.delete(job.id)
     if (capture.physicalInputPath) await fs.unlink(capture.physicalInputPath).catch(() => undefined)
+    if (!retainOutput) await fs.unlink(capture.physicalOutputPath).catch(() => undefined)
   }
 }

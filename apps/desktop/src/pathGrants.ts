@@ -1,19 +1,8 @@
 import path from 'node:path'
 import type { BrowserWindow } from 'electron'
+import type { PathGrantInfo } from '@mediatoolbox/contracts'
 
 type ElectronModule = typeof import('electron')
-
-// Grant info 类型（与 contracts 对齐，这里内联避免循环依赖）
-type PathGrantInfo = {
-  id: string
-  kind: 'file.read' | 'file.write' | 'dir.read'
-  status: string
-  displayName: string
-  expiresAt: number
-  createdAt: number
-  updatedAt: number
-  jobId?: string
-}
 
 async function postPathGrant(
   apiUrl: string,

@@ -7,7 +7,8 @@ import { probeMedia, analyzeSource, buildFfmpegArgs, buildTwoPassFfmpegArgs } fr
 
 import { transcodeJobCreateSchema, transcodeProbeSchema, transcodePreviewCommandSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
-import { executeTranscode, abortTranscode, updateTranscodeJob } from '../transcode-executor.js'
+import { executeTranscode, updateTranscodeJob } from '../transcode-executor.js'
+import { addLog } from '../utils.js'
 import { resolveInputPath, resolveOutputPath, revokeGrantsBoundToJob } from '../workspace-path.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
@@ -48,21 +49,29 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         throw error
       }
 
-      void executeTranscode(
-        job,
-        {
-          inputPath: input.physicalPath,
-          outputPath: output.physicalPath,
-          preset: safePreset,
-          ...(videoCrf !== undefined ? { videoCrf } : {}),
-          ...(videoEncodePreset ? { videoEncodePreset: videoEncodePreset as VideoEncodePreset } : {}),
-          ...(audioBitrate !== undefined ? { audioBitrate } : {}),
-          ...(targetBitrateKbps !== undefined ? { targetBitrateKbps } : {}),
-          ...(enableVmaf !== undefined ? { enableVmaf } : {}),
-        },
-        state,
-        output.virtualPath ?? `__grant:${outputGrantId}`,
-      )
+      void state.executors.run(job.id, async (signal) => {
+        try {
+          await executeTranscode(
+            job,
+            {
+              inputPath: input.physicalPath,
+              outputPath: output.physicalPath,
+              preset: safePreset,
+              ...(videoCrf !== undefined ? { videoCrf } : {}),
+              ...(videoEncodePreset ? { videoEncodePreset: videoEncodePreset as VideoEncodePreset } : {}),
+              ...(audioBitrate !== undefined ? { audioBitrate } : {}),
+              ...(targetBitrateKbps !== undefined ? { targetBitrateKbps } : {}),
+              ...(enableVmaf !== undefined ? { enableVmaf } : {}),
+            },
+            state,
+            output.virtualPath ?? `__grant:${outputGrantId}`,
+            signal,
+          )
+        } catch (error) {
+          addLog(state.db, 'ERROR', 'transcode', `转码执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+        }
+      })
+        .catch((error) => addLog(state.db, 'ERROR', 'transcode', `转码执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
 
       return job
     },
@@ -73,7 +82,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
     async (request) => {
       const job = await state.db.jobs.findById(request.params.id)
       if (job && job.kind === 'media.transcode' && (job.status === 'queued' || job.status === 'running')) {
-        abortTranscode(job.id)
+        state.executors.abort(job.id)
         await updateTranscodeJob(state, job.id, 'canceled')
       }
       return { ok: true }

@@ -66,6 +66,43 @@ describe('transcode routes', () => {
     }
   })
 
+  it('preserves an existing output when the replacement transcode fails', async () => {
+    const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-transcode-preserve-'))
+    process.env.MEDIATOOLBOX_WORKSPACE_DIR = workspaceDir
+    try {
+      const exportsDir = path.join(workspaceDir, 'Exports')
+      const outputPhysicalPath = path.join(exportsDir, 'existing-output.mp4')
+      await fs.mkdir(exportsDir, { recursive: true })
+      await fs.writeFile(outputPhysicalPath, 'existing-output')
+
+      const app = await buildApiServer()
+      const created = await app.inject({
+        method: 'POST',
+        url: '/api/transcode/jobs',
+        payload: {
+          inputPath: '/Workspace/missing-input.mp4',
+          outputPath: '/Workspace/Exports/existing-output.mp4',
+          preset: 'copy',
+        },
+      })
+      const jobId = created.json<{ id: string }>().id
+
+      let status = 'queued'
+      for (let attempt = 0; attempt < 100 && status !== 'succeeded' && status !== 'failed'; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        const detail = await app.inject({ method: 'GET', url: `/api/jobs/${jobId}` })
+        status = detail.json<{ job: { status: string } }>().job.status
+      }
+
+      expect(status).toBe('failed')
+      expect(await fs.readFile(outputPhysicalPath, 'utf8')).toBe('existing-output')
+      expect((await fs.readdir(exportsDir)).filter((name) => name.includes(jobId))).toEqual([])
+      await app.close()
+    } finally {
+      delete process.env.MEDIATOOLBOX_WORKSPACE_DIR
+    }
+  })
+
   it('accepts transcode jobs that use a read path grant instead of an input path', async () => {
     process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
     const app = await buildApiServer()

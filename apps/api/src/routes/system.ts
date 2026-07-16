@@ -16,6 +16,7 @@ import { requireDesktopAuth } from '../desktop-auth.js'
 
 const SUPERVISOR_SHUTDOWN_URL = process.env.MEDIATOOLBOX_SUPERVISOR_SHUTDOWN_URL?.trim()
 const execFileAsync = promisify(execFile)
+const NETWORK_RATE_CACHE_MS = 900
 
 function service(id: string, name: string, detail: string, availabilityStatus = 'ready', online = true) {
   return {
@@ -53,13 +54,11 @@ async function memorySnapshot() {
 async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   const activeTasks = state.fetchTasks.filter((task) => !isTerminalTask(task))
   const activeBrowserDownloads = state.browserDownloads.filter((download) => download.status === 'pending' || download.status === 'running')
-  const jobs = await state.db.jobs.list()
-  const activeJobs = jobs.filter((job) => job.status === 'queued' || job.status === 'running' || job.status === 'paused')
-  const networkRates = sampleProjectNetworkRates(state)
-  state.networkSample = networkRates.nextSample
+  const activeJobs = await state.db.jobs.listActive()
+  const runtimeMetrics = buildRuntimeMetrics(state)
   const [memory, gpu] = await Promise.all([memorySnapshot(), sampleGpu()])
   return {
-    runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
+    ...runtimeMetrics,
     system: {
       cpu_percent: sampleCpuPercent(),
       memory_percent: memory.percent,
@@ -71,12 +70,6 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
       gpu_percent: gpu.percent,
       gpu_available: gpu.available,
       gpu_detail: gpu.detail,
-    },
-    network: {
-      upload: { text: formatBytesPerSecond(networkRates.uploadBytesPerSec) },
-      download: { text: formatBytesPerSecond(networkRates.downloadBytesPerSec) },
-      upload_bytes_per_sec: networkRates.uploadBytesPerSec,
-      download_bytes_per_sec: networkRates.downloadBytesPerSec,
     },
     services: [
       service('api', '本地 API', 'Fastify API 正在运行。'),
@@ -138,6 +131,35 @@ async function buildMetrics(state: ApiState): Promise<RuntimeMetrics> {
   }
 }
 
+function buildRuntimeMetrics(state: ApiState): RuntimeMetricsSlice {
+  const networkRates = sampleCachedNetworkRates(state)
+  return {
+    runtime: { uptime_seconds: Math.floor((Date.now() - state.startedAt) / 1000) },
+    network: {
+      upload: { text: formatBytesPerSecond(networkRates.uploadBytesPerSec) },
+      download: { text: formatBytesPerSecond(networkRates.downloadBytesPerSec) },
+      upload_bytes_per_sec: networkRates.uploadBytesPerSec,
+      download_bytes_per_sec: networkRates.downloadBytesPerSec,
+    },
+  }
+}
+
+function sampleCachedNetworkRates(state: ApiState) {
+  const now = Date.now()
+  if (state.networkRatesCache && now - state.networkRatesCache.at < NETWORK_RATE_CACHE_MS) {
+    return state.networkRatesCache
+  }
+
+  const sampled = sampleProjectNetworkRates(state)
+  state.networkSample = sampled.nextSample
+  state.networkRatesCache = {
+    at: now,
+    uploadBytesPerSec: sampled.uploadBytesPerSec,
+    downloadBytesPerSec: sampled.downloadBytesPerSec,
+  }
+  return state.networkRatesCache
+}
+
 async function macosMemoryPressurePercent(): Promise<number | undefined> {
   try {
     const { stdout } = await execFileAsync('memory_pressure', ['-Q'], { timeout: 800 })
@@ -157,14 +179,7 @@ function memoryPressureLabel(percent: number): string {
 
 export function registerSystemRoutes(app: FastifyInstance, state: ApiState) {
   app.get<{ Reply: RuntimeMetrics }>('/api/system/metrics', async () => buildMetrics(state))
-  app.get<{ Reply: RuntimeMetricsSlice }>('/api/system/runtime', async () => {
-    const metrics = await buildMetrics(state)
-    const slice: RuntimeMetricsSlice = {}
-    if (metrics.runtime) slice.runtime = metrics.runtime
-    if (metrics.system) slice.system = metrics.system
-    if (metrics.network) slice.network = metrics.network
-    return slice
-  })
+  app.get<{ Reply: RuntimeMetricsSlice }>('/api/system/runtime', async () => buildRuntimeMetrics(state))
   app.post<{ Reply: OkResult }>('/api/system/shutdown', async (request, reply) => {
     if (!requireDesktopAuth(request, reply, 'x-mediatoolbox-shutdown')) {
       return { ok: false, message: '缺少本地关机授权。' }

@@ -5,7 +5,7 @@ import type { BrowserNetworkDownloadRoute, DownloadStrategyAnalysis, DownloadStr
 import { clearFetchTasksSchema, downloadAnalyzeSchema, fetchTaskSubmitSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
-import { executeDownload, abortDownload, updateDownloadJob, scheduleDownload } from '../download-executor.js'
+import { abortDownload, updateDownloadJob, scheduleDownload } from '../download-executor.js'
 import { readWorkspaceFileForDownload } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
 
@@ -105,7 +105,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Params: { id: string }; Reply: OkResult }>('/api/fetch/tasks/:id/cancel', async (request) => {
     const task = state.fetchTasks.find((item) => item.id === request.params.id || item.task_id === request.params.id)
     if (task && !isTerminalTask(task)) {
-      abortDownload(task.id)
+      abortDownload(task.id, state)
       const canceled = await updateDownloadJob(state, task.id, 'canceled')
       if (canceled) {
         task.status = 'cancelled'

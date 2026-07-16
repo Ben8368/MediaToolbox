@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import { requireDesktopAuth } from '../desktop-auth.js'
 import type { ApiState } from '../state.js'
-import { WorkspacePathError } from '../workspace-path.js'
 import { addLog } from '../utils.js'
 
 const TTL_MS: Record<string, number> = {
@@ -45,6 +44,10 @@ export function registerPathGrantRoutes(app: FastifyInstance, state: ApiState): 
     if (!displayName || typeof displayName !== 'string') {
       reply.status(400)
       return { ok: false, message: 'displayName 不能为空。' }
+    }
+    if (ttlMs !== undefined && (!Number.isFinite(ttlMs) || ttlMs <= 0)) {
+      reply.status(400)
+      return { ok: false, message: 'ttlMs 必须是正数。' }
     }
 
     const effectiveTtl = Math.min(ttlMs ?? TTL_MS[kind] ?? 3_600_000, 7_200_000)

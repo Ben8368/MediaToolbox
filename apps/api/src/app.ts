@@ -15,6 +15,7 @@ import { registerFontsRoutes } from './routes/fonts.js'
 import { registerWebComposerRoutes } from './routes/web-composer.js'
 import { registerRendererRoutes } from './renderer-routes.js'
 import { recoverInterruptedJobs } from './job-recovery.js'
+import { shutdownDownloadScheduler } from './download-executor.js'
 import { createApiState } from './state.js'
 
 type ApiErrorLike = {
@@ -49,13 +50,19 @@ export type ApiServerOptions = {
 
 export async function buildApiServer(options: ApiServerOptions = {}) {
   const app = Fastify({
-    logger: true,
+    logger: process.env['NODE_ENV'] !== 'test',
     // 不剥离未知字段：调用方必须收到可读 4xx，不能把可见设置静默吞掉。
     ajv: { customOptions: { removeAdditional: false } },
   })
   const state = createApiState()
   await recoverInterruptedJobs(state)
   await hydrateNotificationState(state)
+
+  app.addHook('onClose', async () => {
+    await shutdownDownloadScheduler(state)
+    await state.executors.shutdown()
+    state.db.close()
+  })
 
   app.setErrorHandler((error, _request, reply) => {
     const apiError = asApiErrorLike(error)

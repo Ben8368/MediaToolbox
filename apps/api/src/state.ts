@@ -1,10 +1,11 @@
-import type { BrowserNetworkDownloadRecord, BrowserNetworkRequestRecord, FetchTaskRecord, JobRecord, LogEntry } from '@mediatoolbox/contracts'
+import type { BrowserNetworkDownloadRecord, BrowserNetworkRequestRecord, FetchTaskRecord } from '@mediatoolbox/contracts'
 import { SqliteDatabase } from '@mediatoolbox/db'
 import type { MediaToolboxDatabase } from '@mediatoolbox/db'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
+import { ExecutorRegistry } from './executor-registry.js'
 import type { ProjectNetworkSample } from './system-sampler.js'
 import { formatLogTime } from './utils.js'
 
@@ -30,6 +31,17 @@ export type ApiState = {
   browserRequests: BrowserNetworkRequestRecord[]
   filebrowserUploadedBytes: number
   networkSample: ProjectNetworkSample
+  networkRatesCache: {
+    at: number
+    uploadBytesPerSec: number
+    downloadBytesPerSec: number
+  } | null
+  executors: ExecutorRegistry
+  downloadScheduler: {
+    activeCount: number
+    queue: FetchTaskRecord[]
+    activeCountsByBatch: Map<string, number>
+  }
   db: MediaToolboxDatabase
   notificationsReadAt: string | null
   folders: Set<string>
@@ -68,6 +80,13 @@ export function createApiState(): ApiState {
     browserRequests: [],
     filebrowserUploadedBytes: 0,
     networkSample: { at: Date.now(), browserReceivedBytes: 0, browserResponseBytes: 0, browserRequestBytes: 0, filebrowserUploadedBytes: 0 },
+    networkRatesCache: null,
+    executors: new ExecutorRegistry(),
+    downloadScheduler: {
+      activeCount: 0,
+      queue: [],
+      activeCountsByBatch: new Map(),
+    },
     db,
     notificationsReadAt: null,
     folders: new Set(['/Workspace', '/Workspace/Downloads', '/Workspace/Exports', '/Workspace/PSD', '/Workspace/Transcodes']),
@@ -106,14 +125,4 @@ function resolvePhysicalWorkspaceBase(): string {
     return path.join(os.tmpdir(), `api-workspace-${process.pid}-${Date.now()}-${testWorkspaceCounter}`)
   }
   return path.resolve(process.cwd(), '..', '..', '.tmp', 'workspace')
-}
-
-function findRepoRoot(start: string): string {
-  let current = path.resolve(start)
-  while (true) {
-    if (fs.existsSync(path.join(current, 'package.json')) && fs.existsSync(path.join(current, 'apps'))) return current
-    const parent = path.dirname(current)
-    if (parent === current) return path.resolve(start)
-    current = parent
-  }
 }

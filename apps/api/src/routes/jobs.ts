@@ -4,9 +4,6 @@ import type { JobRecord, OkResult } from '@mediatoolbox/contracts'
 
 import type { ApiState } from '../state.js'
 import { abortDownload } from '../download-executor.js'
-import { abortTranscode } from '../transcode-executor.js'
-import { abortPsdJob } from '../psd-executor.js'
-import { abortWebComposerRender } from '../web-composer-executor.js'
 import { updateJobRecord } from '../job-utils.js'
 import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 
@@ -49,13 +46,9 @@ export function registerJobRoutes(app: FastifyInstance, state: ApiState) {
     }
 
     if (job.kind.startsWith('download.')) {
-      abortDownload(job.id)
-    } else if (job.kind === 'media.transcode') {
-      abortTranscode(job.id)
-    } else if (job.kind === 'psd.scan' || job.kind === 'psd.apply') {
-      abortPsdJob(job.id)
-    } else if (job.kind === 'web.render.image' || job.kind === 'web.render.video') {
-      abortWebComposerRender(job.id)
+      abortDownload(job.id, state)
+    } else {
+      state.executors.abort(job.id)
     }
 
     const canceled = await updateJobRecord(state, job.id, 'canceled')

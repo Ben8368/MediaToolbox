@@ -9,6 +9,7 @@ import {
 import type { ApiState } from '../state.js'
 import { toPhysicalWorkspacePath } from '../workspace-files.js'
 import { executeWebComposerCapture } from '../web-composer-executor.js'
+import { addLog } from '../utils.js'
 
 const PNG_LIMIT = 50 * 1024 * 1024
 const WEBM_LIMIT = 200 * 1024 * 1024
@@ -85,12 +86,19 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
         title: `网页合成 PNG：${metadata.presetId}`,
       })
       await state.db.jobs.create(job)
-      void executeWebComposerCapture(job, {
-        kind: 'png',
-        capture: request.body,
-        virtualOutputPath,
-        physicalOutputPath: toPhysicalWorkspacePath(state, virtualOutputPath),
-      }, state)
+      void state.executors.run(job.id, async (signal) => {
+        try {
+          await executeWebComposerCapture(job, {
+            kind: 'png',
+            capture: request.body,
+            virtualOutputPath,
+            physicalOutputPath: toPhysicalWorkspacePath(state, virtualOutputPath),
+          }, state, signal)
+        } catch (error) {
+          addLog(state.db, 'ERROR', 'web-composer', `PNG 执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+        }
+      })
+        .catch((error) => addLog(state.db, 'ERROR', 'web-composer', `PNG 执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
       return job
     },
   )
@@ -102,6 +110,8 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
       const metadata = parseMetadata(request.query, true)
       if (!Buffer.isBuffer(request.body) || !isWebm(request.body)) badRequest('WebM 捕获数据格式不正确。')
       if (metadata.fps === undefined || metadata.durationSeconds === undefined) badRequest('视频导出参数不完整。')
+      const fps = metadata.fps
+      const durationSeconds = metadata.durationSeconds
       const filename = outputName(metadata.presetId, 'mp4')
       const virtualOutputPath = `${state.workspaceRoot}/Exports/${filename}`
       const physicalOutputPath = toPhysicalWorkspacePath(state, virtualOutputPath)
@@ -111,15 +121,22 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
         title: `网页合成 MP4：${metadata.presetId}`,
       })
       await state.db.jobs.create(job)
-      void executeWebComposerCapture(job, {
-        kind: 'webm',
-        capture: request.body,
-        virtualOutputPath,
-        physicalOutputPath,
-        physicalInputPath: `${physicalOutputPath}.capture.webm`,
-        fps: metadata.fps,
-        durationSeconds: metadata.durationSeconds,
-      }, state)
+      void state.executors.run(job.id, async (signal) => {
+        try {
+          await executeWebComposerCapture(job, {
+            kind: 'webm',
+            capture: request.body,
+            virtualOutputPath,
+            physicalOutputPath,
+            physicalInputPath: `${physicalOutputPath}.capture.webm`,
+            fps,
+            durationSeconds,
+          }, state, signal)
+        } catch (error) {
+          addLog(state.db, 'ERROR', 'web-composer', `视频执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+        }
+      })
+        .catch((error) => addLog(state.db, 'ERROR', 'web-composer', `视频执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
       return job
     },
   )

@@ -70,6 +70,25 @@ describe('api skeleton contract', () => {
     await app.close()
   })
 
+  it('keeps the high-frequency runtime endpoint lightweight', async () => {
+    const app = await buildApiServer()
+
+    const runtime = await app.inject({ method: 'GET', url: '/api/system/runtime' })
+    const body = runtime.json()
+
+    expect(body).toMatchObject({
+      runtime: expect.objectContaining({ uptime_seconds: expect.any(Number) }),
+      network: expect.objectContaining({
+        upload_bytes_per_sec: expect.any(Number),
+        download_bytes_per_sec: expect.any(Number),
+      }),
+    })
+    expect(body).not.toHaveProperty('system')
+    expect(body).not.toHaveProperty('services')
+    expect(body).not.toHaveProperty('tasks')
+    await app.close()
+  })
+
   it('never leaks the physical workspace root in a client-facing response (regression for path disclosure)', async () => {
     const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mtb-secret-workspace-'))
     process.env.MEDIATOOLBOX_WORKSPACE_DIR = workspaceDir
@@ -237,6 +256,30 @@ describe('api skeleton contract', () => {
     const grantAfterCancel = await app.inject({ method: 'GET', url: `/api/path-grants/${grantId}` })
 
     expect(grantAfterCancel.statusCode).toBe(404)
+    await app.close()
+  })
+
+  it('rejects invalid path-grant lifetimes instead of persisting unusable grants', async () => {
+    process.env.MEDIATOOLBOX_DESKTOP_AUTH_TOKEN = 'test-desktop-token'
+    const app = await buildApiServer()
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/path-grants',
+      headers: {
+        'x-mediatoolbox-desktop': 'desktop',
+        'x-mediatoolbox-desktop-token': 'test-desktop-token',
+      },
+      payload: {
+        kind: 'file.read',
+        physicalPath: path.resolve('README.md'),
+        displayName: 'README.md',
+        ttlMs: -1,
+      },
+    })
+
+    expect(response.statusCode).toBe(400)
+    expect(response.json()).toMatchObject({ ok: false, message: 'ttlMs 必须是正数。' })
     await app.close()
   })
 

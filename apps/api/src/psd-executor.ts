@@ -6,12 +6,6 @@ import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 import { revokeGrantsBoundToJob, toGrantMarker } from './workspace-path.js'
 
-const activeAbortControllers = new Map<string, AbortController>()
-
-export function abortPsdJob(jobId: string): void {
-  activeAbortControllers.get(jobId)?.abort()
-}
-
 function isAbortError(error: unknown, signal: AbortSignal): boolean {
   return signal.aborted || (error instanceof Error && error.name === 'AbortError')
 }
@@ -29,9 +23,8 @@ export async function executePsdScan(
   workOrderId: string,
   inputGrantId: string | undefined,
   state: ApiState,
+  signal: AbortSignal,
 ): Promise<void> {
-  const controller = new AbortController()
-  activeAbortControllers.set(job.id, controller)
   let workOrderCreated = false
   let retainInputGrant = false
 
@@ -43,9 +36,9 @@ export async function executePsdScan(
     const result = await runPsdWorkerJob(
       { type: 'scan', psdPath: physicalPath },
       undefined,
-      { signal: controller.signal },
+      { signal },
     )
-    controller.signal.throwIfAborted()
+    signal.throwIfAborted()
 
     if (result.type === 'scan') {
       const workOrder: WorkOrder = {
@@ -61,7 +54,7 @@ export async function executePsdScan(
       }
       await state.db.workOrders.create(workOrder)
       workOrderCreated = true
-      controller.signal.throwIfAborted()
+      signal.throwIfAborted()
 
       const completed = await updateJobRecord(
         state,
@@ -85,7 +78,7 @@ export async function executePsdScan(
       await state.db.workOrders.delete(workOrderId)
       workOrderCreated = false
     }
-    if (isAbortError(error, controller.signal)) {
+    if (isAbortError(error, signal)) {
       if (await updateJobRecord(state, job.id, 'canceled')) {
         addLog(state.db, 'WARNING', 'psd', `PSD 扫描已取消：${job.title}`)
       }
@@ -96,7 +89,6 @@ export async function executePsdScan(
       }
     }
   } finally {
-    activeAbortControllers.delete(job.id)
     if (!retainInputGrant) await revokeGrantsBoundToJob(state, workOrderId)
   }
 }
@@ -107,10 +99,8 @@ export async function executePsdApply(
   physicalPsdPath: string,
   physicalOutputPath: string,
   state: ApiState,
+  signal: AbortSignal,
 ): Promise<void> {
-  const controller = new AbortController()
-  activeAbortControllers.set(job.id, controller)
-
   try {
     const started = await updateJobRecord(state, job.id, 'running')
     if (!started) return
@@ -121,8 +111,8 @@ export async function executePsdApply(
       type: 'apply',
       workOrder: workOrderForApply,
       outputPsdPath: physicalOutputPath,
-    }, undefined, { signal: controller.signal })
-    controller.signal.throwIfAborted()
+    }, undefined, { signal })
+    signal.throwIfAborted()
 
     if (result.type === 'apply') {
       const completed = await updateJobRecord(
@@ -136,7 +126,7 @@ export async function executePsdApply(
       throw new Error('Worker returned non-apply result')
     }
   } catch (error) {
-    if (isAbortError(error, controller.signal)) {
+    if (isAbortError(error, signal)) {
       if (await updateJobRecord(state, job.id, 'canceled')) {
         addLog(state.db, 'WARNING', 'psd', `PSD 应用已取消：${job.title}`)
       }
@@ -146,7 +136,5 @@ export async function executePsdApply(
         addLog(state.db, 'ERROR', 'psd', `PSD 应用出错：${job.title} — ${message}`)
       }
     }
-  } finally {
-    activeAbortControllers.delete(job.id)
   }
 }

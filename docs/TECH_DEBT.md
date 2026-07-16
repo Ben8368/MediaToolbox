@@ -83,15 +83,15 @@
 - **估算工作量：** Phase 5 深水区任务，20-50 行核心逻辑 + 真机联调
 
 
-#### TD-028: Job 可重试调度与安全关闭屏障
+#### TD-028: Job 可重试调度与幂等输出
 - **位置：** `apps/api/src/job-recovery.ts` + `apps/api/src/*-executor.ts` + `packages/job-core/`
 - **来源：** 全仓技术债复核（2026-07-15）
 - **目标阶段：** 长任务可靠性迭代
 - **阻断候选构建：** 否；若承诺进程重启后自动续跑则是
-- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；API 启动会将 SQLite 遗留的 `queued` / `running` / `paused` 孤儿任务原子标记为 `failed`，写入明确中断原因和审计日志，并吊销绑定 PathGrant。
-- **剩余问题：** 当前仍不自动重试、没有 attempt/checkpoint/幂等输出 token；Fastify 关闭也没有等待所有 executor 停止后再关闭数据库的统一屏障。
-- **影响：** API 重启后不会继续显示永久运行中的假任务，但用户仍需手动重提；直接引入关库 hook 会与异步 executor 收尾竞争。
-- **建议方案：** 先建立 executor registry 与 graceful drain，再设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
+- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；API 启动会将 SQLite 遗留的 `queued` / `running` / `paused` 孤儿任务原子标记为 `failed`，写入明确中断原因和审计日志，并吊销绑定 PathGrant。下载、转码、PSD 与 Web Composer executor 已由实例级 registry 跟踪；Fastify 关闭会取消排队下载、终止活动任务、等待 executor 清理完成后再关闭数据库，下载取消会终止 yt-dlp 及其子进程树。
+- **剩余问题：** 当前仍不自动重试，也没有 attempt/checkpoint/幂等输出 token；进程重启后的任务只能明确失败，不能安全续跑。
+- **影响：** API 重启与关闭不再留下永久运行中的假任务，也不会让 executor 与关库竞争，但暂时性失败仍需用户手动重提。
+- **建议方案：** 设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
 - **估算工作量：** 中等，需要数据库契约、调度器、executor 和重启/关闭集成测试协同修改。
 
 ### 🟢 P2 — 长期规划
