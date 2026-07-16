@@ -1,7 +1,6 @@
 import { useId, useState, type ChangeEvent } from 'react'
 import type {
   WebComposerFontWeight,
-  WebComposerNumberControl,
   WebComposerPresetState,
   WebComposerSlotContentKind,
   WebComposerSlotManifest,
@@ -12,9 +11,12 @@ import type {
 import { filebrowserFileDownloadUrl, uploadFilebrowserFile } from '@/api'
 import type { WebComposerSlotRect } from './previewMessages'
 import { webComposerIconLabels } from './WebComposerIcon'
-import { fontWeightLabel, getFontOptions, getFontSizeOptions } from './typographyOptions'
 import {
-  clampSlotNumber,
+  WebComposerNullableNumberField,
+  WebComposerNullableNumberSelect,
+} from './WebComposerNumberField'
+import { fontWeightLabel, getFontOptions } from './typographyOptions'
+import {
   setSlotActiveKind,
   setSlotOffset,
   setSlotVisibility,
@@ -33,61 +35,6 @@ const kindLabels: Record<WebComposerSlotContentKind, string> = {
   icon: '图标',
   image: '图片',
   media: '媒体',
-}
-
-function NullableNumberField({
-  label,
-  value,
-  control,
-  onChange,
-}: {
-  label: string
-  value: number | null
-  control: WebComposerNumberControl
-  onChange: (value: number | null) => void
-}) {
-  return (
-    <label className="wc-context-field">
-      <span>{label}</span>
-      <input
-        type="number"
-        min={control.min}
-        max={control.max}
-        step={control.step}
-        value={value ?? ''}
-        placeholder="预设"
-        onChange={(event) => {
-          const rawValue = event.currentTarget.value
-          onChange(rawValue === '' ? null : clampSlotNumber(Number(rawValue), control))
-        }}
-      />
-    </label>
-  )
-}
-
-function NullableNumberSelect({
-  label,
-  value,
-  control,
-  onChange,
-}: {
-  label: string
-  value: number | null
-  control: WebComposerNumberControl
-  onChange: (value: number | null) => void
-}) {
-  return (
-    <label className="wc-context-field">
-      <span>{label}</span>
-      <select
-        value={value ?? ''}
-        onChange={(event) => onChange(event.currentTarget.value === '' ? null : Number(event.currentTarget.value))}
-      >
-        <option value="">继承预设</option>
-        {getFontSizeOptions(control, value).map((size) => <option key={size} value={size}>{size} px</option>)}
-      </select>
-    </label>
-  )
 }
 
 function ColorOverride({
@@ -261,7 +208,7 @@ export function WebComposerSlotEditor({
           )}
           <div className="wc-context-grid wc-context-grid--two">
             {textEditor.fontSize && (
-              <NullableNumberSelect
+              <WebComposerNullableNumberSelect
                 label="设计字号"
                 value={value.text.fontSize}
                 control={textEditor.fontSize}
@@ -310,7 +257,7 @@ export function WebComposerSlotEditor({
             </select>
           </label>
           {iconEditor.size && (
-            <NullableNumberField
+            <WebComposerNullableNumberField
               label="图标尺寸"
               value={value.icon.size}
               control={iconEditor.size}
@@ -333,8 +280,8 @@ export function WebComposerSlotEditor({
           <label className="wc-context-field"><span>图片 URL</span><textarea value={value.image.src} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { src: event.currentTarget.value }))} /></label>
           <label className="wc-context-field"><span>替代文本</span><input value={value.image.alt} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { alt: event.currentTarget.value }))} /></label>
           <div className="wc-context-grid wc-context-grid--two">
-            {imageEditor.width && <NullableNumberField label="宽度" value={value.image.width} control={imageEditor.width} onChange={(width) => onStateChange(updateSlotImage(state, slot.id, { width }))} />}
-            {imageEditor.height && <NullableNumberField label="高度" value={value.image.height} control={imageEditor.height} onChange={(height) => onStateChange(updateSlotImage(state, slot.id, { height }))} />}
+            {imageEditor.width && <WebComposerNullableNumberField label="宽度" value={value.image.width} control={imageEditor.width} onChange={(width) => onStateChange(updateSlotImage(state, slot.id, { width }))} />}
+            {imageEditor.height && <WebComposerNullableNumberField label="高度" value={value.image.height} control={imageEditor.height} onChange={(height) => onStateChange(updateSlotImage(state, slot.id, { height }))} />}
           </div>
           {imageEditor.fit && <label className="wc-context-field"><span>填充方式</span><select value={value.image.fit} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { fit: event.currentTarget.value as 'contain' | 'cover' }))}>{imageEditor.fit.map((fit) => <option key={fit} value={fit}>{fit}</option>)}</select></label>}
           <label className="wc-context-upload">从工作区替换图片<input className="wc-visually-hidden" type="file" accept={imageEditor.accept} onChange={(event) => void handleUpload('image', event)} /></label>

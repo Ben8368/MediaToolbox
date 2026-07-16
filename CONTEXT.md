@@ -7,7 +7,7 @@
 
 - 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE` 与 8 个默认 MP4 的逐项 `assets/web-composer/PROVENANCE.json`，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
 - **TD-019** 的实现与自动化烟测已接入，尚待首次 tag Release 在 Windows、macOS、Linux 实跑；这不是“renderer 不可用”的代码阻断。
-- 最近客观验证：2026-07-16 `npm run verify` 通过（39 个测试文件、227 项）；Web Composer 真实 PNG 经 Vite 代理上传、下载后的 SHA-256 一致；`npm run release:preflight:public` 按设计拒绝缺失的公开授权证据。
+- 最近客观验证：2026-07-16 `npm run verify` 通过（40 个测试文件、231 项）；Web Composer 真实 PNG 经 Vite 代理上传、下载后的 SHA-256 一致；`npm run release:preflight:public` 按设计拒绝缺失的公开授权证据。
 
 ## 近期优先级
 
