@@ -1,5 +1,5 @@
 import { apiRequest } from '@/api/http'
-import type { AssetListResponse, OkResult, WebComposerCaptureMetadata, WorkOrderScanResponse, WorkOrderGetResponse, WorkOrderApplyResponse, WorkOrder } from '@mediatoolbox/contracts'
+import type { AssetListResponse, OkResult, WebComposerCaptureMetadata, WorkOrderGetResponse, WorkOrder } from '@mediatoolbox/contracts'
 import type { JobListResponse, JobRecord, TranscodeCommandPreviewResponse, TranscodeJobDraft, TranscodeProbeResponse } from '@/api/types'
 
 export function listJobs(): Promise<JobListResponse> {

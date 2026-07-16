@@ -1,22 +1,23 @@
-import type { ComponentType } from 'react'
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 import type { WorkbenchAppId } from '@mediatoolbox/contracts'
 
-import { BrowserApp } from '@/apps/BrowserApp'
-import { DownloaderApp } from '@/apps/DownloaderApp'
-import { FileManagerApp } from '@/apps/FileManagerApp'
-import { PsdApp } from '@/apps/PsdApp'
-import { SettingsApp } from '@/apps/SettingsApp'
-import { TranscodeApp } from '@/apps/TranscodeApp'
-import { WebComposerApp } from '@/apps/WebComposerApp'
-import { LogViewer } from '@/LogViewer'
 import { APP_ICON_PATHS } from '@/icon-library'
+
+const BrowserApp = lazy(() => import('@/apps/BrowserApp').then((module) => ({ default: module.BrowserApp })))
+const DownloaderApp = lazy(() => import('@/apps/DownloaderApp').then((module) => ({ default: module.DownloaderApp })))
+const FileManagerApp = lazy(() => import('@/apps/FileManagerApp').then((module) => ({ default: module.FileManagerApp })))
+const PsdApp = lazy(() => import('@/apps/PsdApp').then((module) => ({ default: module.PsdApp })))
+const SettingsApp = lazy(() => import('@/apps/SettingsApp').then((module) => ({ default: module.SettingsApp })))
+const TranscodeApp = lazy(() => import('@/apps/TranscodeApp').then((module) => ({ default: module.TranscodeApp })))
+const WebComposerApp = lazy(() => import('@/apps/WebComposerApp').then((module) => ({ default: module.WebComposerApp })))
+const LogViewer = lazy(() => import('@/LogViewer').then((module) => ({ default: module.LogViewer })))
 
 export type RegisteredApp = {
   id: WorkbenchAppId
   title: string
   label: string
   icon: string
-  component: ComponentType
+  component: ComponentType | LazyExoticComponent<ComponentType>
   status: 'stable' | 'beta' | 'hidden'
   launcherVisible?: boolean
 }

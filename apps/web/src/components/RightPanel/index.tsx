@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { cancelJob, getSystemMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'
 import { useSystemStore } from '@/store'

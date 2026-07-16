@@ -14,7 +14,7 @@ interface SystemStore {
   resetSystemLifecycle: () => void
 }
 
-export const useSystemStore = create<SystemStore>()((set, get) => ({
+export const useSystemStore = create<SystemStore>()((set) => ({
   showLauncher: false,
   themeMode: 'dark',
   wallpaper: 2,

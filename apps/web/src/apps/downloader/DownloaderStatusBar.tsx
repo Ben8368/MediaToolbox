@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { fetchSystemRuntimeMetrics } from '@/api'
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling'

@@ -1,4 +1,7 @@
 ﻿import { getRegisteredApp } from '@/appRegistry'
+import { Suspense } from 'react'
+
+import { AppLoadBoundary } from '@/components/AppLoadBoundary'
 import { DesktopWindow } from '@/Window'
 import { useWindowStore } from '@/windowStore'
 
@@ -33,7 +36,11 @@ export function WindowContainer() {
             onDrag={dragWindow}
             onResize={resizeWindow}
           >
-            <C />
+            <AppLoadBoundary resetKey={w.appType}>
+              <Suspense fallback={<div className="mt-app-loading" role="status">正在加载应用...</div>}>
+                <C />
+              </Suspense>
+            </AppLoadBoundary>
           </DesktopWindow>
         )
       })}
