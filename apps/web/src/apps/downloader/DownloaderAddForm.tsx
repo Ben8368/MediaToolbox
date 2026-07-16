@@ -16,6 +16,25 @@ type DownloaderAddFormProps = {
   onClose: () => void
 }
 
+type DownloadOptionHelpProps = {
+  id: string
+  label: string
+  children: string
+}
+
+function DownloadOptionHelp({ id, label, children }: DownloadOptionHelpProps) {
+  return (
+    <span className="dl-option-help">
+      <button type="button" className="dl-option-help__trigger" aria-label={label} aria-describedby={id}>
+        <span aria-hidden="true">?</span>
+      </button>
+      <span id={id} className="dl-option-help__tooltip" role="tooltip">
+        {children}
+      </span>
+    </span>
+  )
+}
+
 export function DownloaderAddForm({
   taskUrl,
   taskOutputDir,
@@ -75,14 +94,11 @@ export function DownloaderAddForm({
         </div>
       </div>
 
-      <div className="dl-form-options">
-        <div className="dl-field dl-option-card">
-          <div className="dl-field-heading">
-            <label htmlFor="download-cookie-browser">登录态</label>
-            <small>可选</small>
-          </div>
+      <div className="dl-form-command-row">
+        <div className="dl-field dl-option-control dl-login-option">
           <select
             id="download-cookie-browser"
+            aria-label="登录态"
             value={taskCookieBrowser}
             onChange={(event) => onTaskCookieBrowserChange(event.target.value as CookieBrowser)}
           >
@@ -92,10 +108,12 @@ export function DownloaderAddForm({
             <option value="safari">Safari</option>
             <option value="firefox">Firefox</option>
           </select>
-          <small className="dl-field-hint">仅在遇到 YouTube 登录或机器人验证时选择；读取 Cookie 前需完全退出对应浏览器。</small>
+          <DownloadOptionHelp id="download-cookie-browser-help" label="登录态说明">
+            仅在遇到 YouTube 登录或机器人验证时选择；读取 Cookie 前需完全退出对应浏览器。
+          </DownloadOptionHelp>
         </div>
 
-        <div className="dl-field dl-compatible-format dl-option-card">
+        <div className="dl-option-control dl-compatible-format">
           <label className="dl-checkbox-label">
             <input
               type="checkbox"
@@ -104,19 +122,19 @@ export function DownloaderAddForm({
             />
             <span>兼容格式（H.264 / MP4）</span>
           </label>
-          <small className="dl-field-hint">
+          <DownloadOptionHelp id="download-compatible-format-help" label="兼容格式说明">
             默认保留最高规格，音视频合并优先使用 MKV；勾选后会转码为 H.264 / MP4。
-          </small>
+          </DownloadOptionHelp>
         </div>
-      </div>
 
-      <div className="dl-form-actions">
-        <button className="dl-btn dl-btn--primary" onClick={onSubmit} disabled={addingTask || !taskUrl.trim()}>
-          {addingTask ? '提交中...' : '确认添加'}
-        </button>
-        <button className="dl-btn" onClick={onClose}>
-          取消
-        </button>
+        <div className="dl-form-actions">
+          <button className="dl-btn dl-btn--primary" onClick={onSubmit} disabled={addingTask || !taskUrl.trim()}>
+            {addingTask ? '提交中...' : '确认添加'}
+          </button>
+          <button className="dl-btn" onClick={onClose}>
+            取消
+          </button>
+        </div>
       </div>
       {submitError && <div className="dl-form-error">{submitError}</div>}
     </div>

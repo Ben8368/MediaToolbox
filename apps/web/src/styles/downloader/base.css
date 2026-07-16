@@ -206,6 +206,7 @@
 .dl-search svg { width: 14px; height: 14px; flex-shrink: 0; }
 
 .dl-add-form {
+  container-type: inline-size;
   display: grid;
   gap: 12px;
   margin-bottom: 12px;
@@ -316,24 +317,41 @@
   opacity: 1;
 }
 
-.dl-form-options {
+.dl-form-command-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(170px, .95fr) minmax(230px, 1.05fr) auto;
+  align-items: stretch;
   gap: 12px;
 }
 
-.dl-option-card {
-  min-height: 90px;
+.dl-option-control {
+  min-width: 0;
+  height: 32px;
   box-sizing: border-box;
-  justify-content: flex-start;
-  padding: 12px;
-  border: 1px solid rgba(148,163,184,.14);
-  border-radius: 9px;
-  background: rgba(4,9,17,.28);
+}
+
+.dl-login-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.dl-login-option select {
+  width: 100%;
+  min-height: 32px;
+  height: 32px;
 }
 
 .dl-compatible-format {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  padding: 0 10px;
+  border: 1px solid rgba(148,163,184,.14);
+  border-radius: 6px;
+  background: rgba(4,9,17,.28);
 }
 
 .dl-checkbox-label {
@@ -342,7 +360,9 @@
   width: fit-content;
   gap: 8px;
   cursor: pointer;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .dl-checkbox-label input {
@@ -353,15 +373,76 @@
   accent-color: var(--mt-brand);
 }
 
+.dl-option-help {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.dl-option-help__trigger {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(125, 190, 255, .42);
+  border-radius: 50%;
+  background: rgba(77, 171, 255, .09);
+  color: rgba(191, 219, 254, .82);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.dl-option-help__trigger:hover,
+.dl-option-help__trigger:focus-visible {
+  border-color: rgba(125, 190, 255, .8);
+  background: rgba(77, 171, 255, .18);
+  color: #e0f2fe;
+  outline: 0;
+}
+
+.dl-option-help__tooltip {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: max-content;
+  max-width: min(290px, calc(100cqw - 32px));
+  padding: 8px 10px;
+  border: 1px solid rgba(125, 190, 255, .28);
+  border-radius: 7px;
+  background: rgba(8, 18, 32, .98);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+  color: rgba(241, 245, 249, .9);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .14s ease, transform .14s ease;
+  visibility: hidden;
+}
+
+.dl-option-help:hover .dl-option-help__tooltip,
+.dl-option-help:focus-within .dl-option-help__tooltip {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
 .dl-field--path {
   grid-column: 1 / -1;
 }
 
 .dl-form-actions {
   display: flex;
+  align-items: center;
+  align-self: center;
   gap: 8px;
-  margin-top: 2px;
-  padding-top: 2px;
 }
 
 .dl-form-actions .dl-btn--primary {
@@ -456,12 +537,25 @@
   .dl-add-form {
     padding: 12px;
   }
+}
 
-  .dl-form-options {
+@container (max-width: 620px) {
+  .dl-form-command-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dl-form-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@container (max-width: 440px) {
+  .dl-form-command-row {
     grid-template-columns: 1fr;
   }
 
-  .dl-option-card {
-    min-height: auto;
+  .dl-form-actions {
+    grid-column: auto;
   }
 }
