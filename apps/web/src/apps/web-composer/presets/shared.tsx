@@ -107,14 +107,16 @@ export function PresetSlotContent({ state, slotId, viewport, iconClassName, imag
   }
 
   if (slot.activeKind === 'image' && slot.image?.src.trim()) {
+    const width = slot.image.width === null ? null : slot.image.width * scale
+    const height = slot.image.height === null ? null : slot.image.height * scale
     return (
       <img
         className={imageClassName ?? 'wc-preset-slot-image'}
         src={slot.image.src}
         alt={slot.image.alt}
         style={{
-          width: slot.image.width === null ? undefined : slot.image.width * scale,
-          height: slot.image.height === null ? undefined : slot.image.height * scale,
+          width: width ?? (height === null ? undefined : 'auto'),
+          height: height ?? (width === null ? undefined : 'auto'),
           objectFit: slot.image.fit,
         }}
         {...getMediaProps(slot.image.src)}

@@ -339,6 +339,13 @@
   line-height: 1.45;
 }
 
+.wc-context-help {
+  margin: -2px 0 0;
+  color: rgba(186, 211, 233, 0.68);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .wc-context-visibility {
   display: flex;
   min-width: 0;

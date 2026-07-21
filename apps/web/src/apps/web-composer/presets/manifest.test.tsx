@@ -65,6 +65,41 @@ describe('web composer preset manifests', () => {
     })
   }
 
+  it('enables an independent color override for every editable text slot', () => {
+    for (const preset of presets) {
+      for (const slot of preset.slots) {
+        if (slot.editors.text) {
+          expect(slot.editors.text.color).toBe(true)
+        }
+      }
+    }
+  })
+
+  it('gives every icon candidate a size and position control', () => {
+    for (const preset of presets) {
+      for (const slot of preset.slots) {
+        if (slot.editors.icon) {
+          expect(slot.editors.icon.size).toBeDefined()
+          expect(slot.offset).toBeDefined()
+        }
+      }
+    }
+  })
+
+  it('gives every brand logo or mark image option size and position controls', () => {
+    for (const preset of presets) {
+      for (const slot of preset.slots.filter((item) => /brand\.(logo|mark)/.test(item.id))) {
+        expect(slot.offset).toBeDefined()
+        if (slot.editors.image) {
+          expect(slot.editors.image.width).toBeDefined()
+          expect(slot.editors.image.height).toBeDefined()
+        } else {
+          expect(slot.editors.text?.fontSize).toBeDefined()
+        }
+      }
+    }
+  })
+
   it('renders a text-backed Lumora logo replacement as an image', () => {
     const preset = presets.find((item) => item.id === 'lumora')
     expect(preset).toBeDefined()

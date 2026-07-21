@@ -104,7 +104,19 @@ export function iconSlot({ id, label, group, iconId, allowImage = false, canHide
   }
 }
 
-export function mediaSlot({ id, label, group, src }: { id: string; label: string; group: string; src: string }): SlotBundle {
+export function mediaSlot({
+  id,
+  label,
+  group,
+  src,
+  kind = 'video',
+}: {
+  id: string
+  label: string
+  group: string
+  src: string
+  kind?: 'video' | 'image'
+}): SlotBundle {
   return {
     manifest: {
       id,
@@ -120,7 +132,42 @@ export function mediaSlot({ id, label, group, src }: { id: string; label: string
       activeKind: 'media',
       visible: true,
       offset: { x: 0, y: 0 },
-      media: { kind: 'video', src, fit: 'cover' },
+      media: { kind, src, fit: 'cover' },
+    },
+  }
+}
+
+export function imageSlot({
+  id,
+  label,
+  group,
+  src,
+  alt = label,
+  fit = 'cover',
+}: {
+  id: string
+  label: string
+  group: string
+  src: string
+  alt?: string
+  fit?: 'contain' | 'cover'
+}): SlotBundle {
+  return {
+    manifest: {
+      id,
+      label,
+      group,
+      canHide: true,
+      offset,
+      editors: {
+        image: { accept: 'image/*', width: dimension, height: dimension, fit: ['contain', 'cover'] },
+      },
+    },
+    value: {
+      activeKind: 'image',
+      visible: true,
+      offset: { x: 0, y: 0 },
+      image: { src, alt, width: null, height: null, fit },
     },
   }
 }

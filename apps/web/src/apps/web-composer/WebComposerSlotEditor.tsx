@@ -280,9 +280,10 @@ export function WebComposerSlotEditor({
           <label className="wc-context-field"><span>图片 URL</span><textarea value={value.image.src} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { src: event.currentTarget.value }))} /></label>
           <label className="wc-context-field"><span>替代文本</span><input value={value.image.alt} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { alt: event.currentTarget.value }))} /></label>
           <div className="wc-context-grid wc-context-grid--two">
-            {imageEditor.width && <WebComposerNullableNumberField label="宽度" value={value.image.width} control={imageEditor.width} onChange={(width) => onStateChange(updateSlotImage(state, slot.id, { width }))} />}
-            {imageEditor.height && <WebComposerNullableNumberField label="高度" value={value.image.height} control={imageEditor.height} onChange={(height) => onStateChange(updateSlotImage(state, slot.id, { height }))} />}
+            {imageEditor.width && <WebComposerNullableNumberField label="尺寸（宽）" value={value.image.width} control={imageEditor.width} onChange={(width) => onStateChange(updateSlotImage(state, slot.id, { width }))} />}
+            {imageEditor.height && <WebComposerNullableNumberField label="尺寸（高）" value={value.image.height} control={imageEditor.height} onChange={(height) => onStateChange(updateSlotImage(state, slot.id, { height }))} />}
           </div>
+          {(imageEditor.width || imageEditor.height) && <p className="wc-context-help">仅填写宽或高可等比缩放；同时填写两项可自定义宽高。</p>}
           {imageEditor.fit && <label className="wc-context-field"><span>填充方式</span><select value={value.image.fit} onChange={(event) => onStateChange(updateSlotImage(state, slot.id, { fit: event.currentTarget.value as 'contain' | 'cover' }))}>{imageEditor.fit.map((fit) => <option key={fit} value={fit}>{fit}</option>)}</select></label>}
           <label className="wc-context-upload">从工作区替换图片<input className="wc-visually-hidden" type="file" accept={imageEditor.accept} onChange={(event) => void handleUpload('image', event)} /></label>
         </div>

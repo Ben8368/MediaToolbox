@@ -305,6 +305,131 @@ button {
   object-fit: cover;
 }
 
+.multi-showcase-preset {
+  height: 100%;
+  min-height: 0;
+  color: var(--multi-showcase-text, #06070a);
+  background: #fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.multi-showcase-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.83fr) minmax(0, 1.17fr);
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  padding: clamp(34px, 4vw, 76px);
+}
+
+.multi-showcase-brand {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(8px, 0.7vw, 14px);
+  height: min-content;
+  font-size: clamp(21px, 1.85vw, 34px);
+  font-weight: 750;
+  letter-spacing: -0.06em;
+}
+
+.multi-showcase-brand-mark {
+  display: inline-flex;
+  height: 1.05em;
+  align-items: center;
+  justify-content: center;
+}
+
+.multi-showcase-brand-icon { width: 1em; height: 1em; fill: currentColor; }
+.multi-showcase-brand-image { display: block; width: auto; height: 1em; object-fit: contain; }
+
+.multi-showcase-preset > .preset-bg-media {
+  object-position: center bottom;
+}
+
+.multi-showcase-copy {
+  align-self: center;
+  max-width: 670px;
+  padding-top: clamp(24px, 3vw, 56px);
+}
+
+.multi-showcase-product-line {
+  display: flex;
+  align-items: center;
+  gap: clamp(9px, 0.9vw, 18px);
+  font-size: clamp(28px, 2.45vw, 48px);
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+
+.multi-showcase-copy h1 {
+  max-width: 620px;
+  margin: clamp(36px, 3.8vw, 68px) 0 clamp(22px, 2.4vw, 44px);
+  font-size: clamp(26px, 2.25vw, 44px);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  white-space: pre-line;
+}
+
+.multi-showcase-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(12px, 1.1vw, 22px);
+}
+
+.multi-showcase-card { min-width: 0; text-align: center; }
+
+.multi-showcase-card-image-wrap {
+  aspect-ratio: 1.68;
+  overflow: hidden;
+  border-radius: clamp(12px, 1.15vw, 22px);
+  background: #d9d9d9;
+}
+
+.multi-showcase-card-image,
+.multi-showcase-hero-image-content {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #171717;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.multi-showcase-card > span {
+  display: block;
+  margin-top: clamp(8px, 0.75vw, 14px);
+  overflow: hidden;
+  font-size: clamp(13px, 1.05vw, 20px);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-showcase-cta {
+  min-width: clamp(158px, 10.5vw, 206px);
+  margin-top: clamp(34px, 3.4vw, 64px);
+  padding: clamp(14px, 1.1vw, 21px) clamp(26px, 2vw, 38px);
+  color: #fff;
+  background: #000;
+  border: 0;
+  border-radius: 999px;
+  font-size: clamp(16px, 1.2vw, 23px);
+  font-weight: 650;
+}
+
+.multi-showcase-hero-image {
+  align-self: center;
+  width: 100%;
+  aspect-ratio: 1.525;
+  overflow: hidden;
+  border-radius: clamp(24px, 2.15vw, 42px);
+  background: #171717;
+  box-shadow: 0 20px 50px rgba(76, 76, 130, 0.1);
+}
+
 .liquid-glass {
   position: relative;
   overflow: hidden;
@@ -1085,6 +1210,32 @@ button {
 }
 
 @media (max-width: 810px) {
+  .multi-showcase-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 20px;
+    padding: 28px;
+  }
+
+  .multi-showcase-copy {
+    align-self: start;
+    max-width: none;
+    padding-top: 0;
+  }
+
+  .multi-showcase-copy h1 {
+    margin-block: 22px 18px;
+  }
+
+  .multi-showcase-cta {
+    margin-top: 24px;
+  }
+
+  .multi-showcase-hero-image {
+    align-self: end;
+    max-height: 290px;
+  }
+
   .lumora-content {
     padding: 22px 18px;
   }

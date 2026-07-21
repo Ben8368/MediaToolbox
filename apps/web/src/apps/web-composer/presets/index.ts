@@ -1,6 +1,8 @@
 import type { WebComposerPresetId, WebComposerPresetState, WebComposerSlotValue } from '@mediatoolbox/contracts'
 
+import { MultiShowcasePreset } from './MultiShowcasePreset'
 import { LumoraPreset } from './LumoraPreset'
+import { multiShowcaseManifest } from './manifests/multiShowcase'
 import { lumoraManifest } from './manifests/lumora'
 import { vaultShieldManifest } from './manifests/vaultshield'
 import { viktorManifest } from './manifests/viktor'
@@ -10,6 +12,7 @@ import { ViktorPreset } from './ViktorPreset'
 
 export const presets: PresetDefinition[] = [
   { ...lumoraManifest, Component: LumoraPreset },
+  { ...multiShowcaseManifest, Component: MultiShowcasePreset },
   { ...vaultShieldManifest, Component: VaultShieldPreset },
   { ...viktorManifest, Component: ViktorPreset },
 ]

@@ -7,6 +7,7 @@ import type { PresetDefinition } from './presets/types'
 import { presets } from './presets'
 
 const thumbnailCopy = {
+  'multi-showcase': { eyebrow: 'BYTEPLUS', title: '多展示', action: 'Learn more' },
   lumora: { eyebrow: 'LUMORA', title: 'Find your\nnext path', action: 'Explore' },
   vaultshield: { eyebrow: 'VAULTSHIELD', title: 'Lock Down Your\nPasswords\nwith Ironclad Security', action: 'Get It Free' },
   viktor: { eyebrow: 'VIKTOR', title: 'VIKTOR\nSTUDIO', action: 'View projects' },
