@@ -1,5 +1,6 @@
 export const WEB_COMPOSER_PRESET_CATALOG = {
   'multi-showcase': { currentVersion: 2, supportedVersions: [2] },
+  'trace-grid': { currentVersion: 1, supportedVersions: [1] },
   lumora: { currentVersion: 2, supportedVersions: [2] },
   vaultshield: { currentVersion: 2, supportedVersions: [2] },
   viktor: { currentVersion: 2, supportedVersions: [2] },

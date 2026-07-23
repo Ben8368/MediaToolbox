@@ -151,6 +151,9 @@
 .wc-preset-thumb__eyebrow { font-size: 6px; font-weight: 800; letter-spacing: .18em; opacity: .8; }
 .wc-preset-thumb__title { max-width: 76%; font-size: clamp(11px, 1.8vw, 17px); line-height: .98; letter-spacing: -.055em; white-space: pre-line; }
 .wc-preset-thumb__action { padding: 4px 7px; border-radius: 999px; background: #7342e2; font-size: 6px; font-weight: 800; }
+.wc-preset-thumb--trace-grid::before { background: radial-gradient(circle at 80% 20%, rgba(77,171,255,.28), transparent 22%), repeating-linear-gradient(90deg, transparent 0 24px, rgba(126,193,255,.08) 24px 25px), linear-gradient(145deg, #0a3150, #061b30 55%, #030b16); }
+.wc-preset-thumb--trace-grid::after { background: linear-gradient(160deg, transparent 44%, rgba(140,114,255,.72) 45% 55%, rgba(40,94,138,.5) 56% 70%, transparent 71%); clip-path: polygon(0 0,100% 0,100% 100%,0 100%); }
+.wc-preset-thumb--trace-grid .wc-preset-thumb__action { background: #8c72ff; }
 .wc-preset-thumb--lumora { align-items: center; justify-content: center; text-align: center; }
 .wc-preset-thumb--multi-showcase { color: #070709; }
 .wc-preset-thumb--multi-showcase::before { background: linear-gradient(135deg, #fff 0%, #fff 48%, #dcd8fc 100%); }

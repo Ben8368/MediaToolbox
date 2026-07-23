@@ -129,7 +129,7 @@ Workers / adapters 负责：
 - `GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。
 - 浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID。
 - 受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。
-- Web Composer 不接收客户端输出路径；服务端以 `packages/contracts` 的预设 catalog 精确校验 ID/版本元组，并校验 PNG/WebM 文件签名、体积和捕获元数据，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。旧版或未知预设组合返回 400。
+- Web Composer 不接收客户端输出路径；服务端以 `packages/contracts` 的预设 catalog 精确校验 ID/版本元组（当前含 `trace-grid@1` 及四个既有 v2 预设），并校验 PNG/WebM 文件签名、体积和捕获元数据，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。旧版或未知预设组合返回 400。
 - PSD manifest、slot 与渲染输入类型收敛到 `packages/contracts`；`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**。
 - 服务端会剥离客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；非文字 slot 当前会明确拒绝，避免静默忽略。
 
