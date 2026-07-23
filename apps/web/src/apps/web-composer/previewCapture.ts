@@ -178,6 +178,10 @@ function mediaDimensions(media: BackgroundMedia) {
 async function captureForeground(root: HTMLElement, media: BackgroundMedia | null, width: number, height: number) {
   const rootBackground = root.style.background
   const mediaDisplay = media?.style.display
+  const presetCanvas = root.querySelector<HTMLElement>('.preset-canvas')
+  const presetCanvasBackground = presetCanvas?.style.background
+  const backgroundLayers = [...root.querySelectorAll<HTMLElement>('[data-wc-slot="background"], .trace-grid-shade')]
+    .map((element) => ({ element, display: element.style.display }))
   const settledElements = [...root.querySelectorAll<HTMLElement>(
     '.vault-copy h1, .vault-copy p, .vault-cta, .vex-heading-line, .vex-heading-character, .vex-fade',
   )]
@@ -188,10 +192,12 @@ async function captureForeground(root: HTMLElement, media: BackgroundMedia | nul
         .map((child) => ({ child, cssText: child.style.cssText })),
     }))
   root.style.background = 'transparent'
+  if (presetCanvas) presetCanvas.style.setProperty('background', 'transparent', 'important')
   // html2canvas has a Chromium video paint-order bug: `visibility: hidden`
   // still lets the cloned video cover siblings. The media is absolute, so
   // removing it from layout is safe and guarantees a transparent foreground.
   if (media) media.style.display = 'none'
+  for (const { element } of backgroundLayers) element.style.setProperty('display', 'none', 'important')
   for (const { element } of settledElements) {
     element.style.setProperty('opacity', '1', 'important')
     element.style.setProperty('transform', 'none', 'important')
@@ -218,7 +224,9 @@ async function captureForeground(root: HTMLElement, media: BackgroundMedia | nul
     })
   } finally {
     root.style.background = rootBackground
+    if (presetCanvas) presetCanvas.style.background = presetCanvasBackground ?? ''
     if (media) media.style.display = mediaDisplay ?? ''
+    for (const { element, display } of backgroundLayers) element.style.display = display
     for (const { element, cssText, children } of settledElements) {
       element.style.cssText = cssText
       for (const child of children) child.child.style.cssText = child.cssText
@@ -230,10 +238,14 @@ type FrameRenderer = {
   render(): HTMLCanvasElement
 }
 
-async function createFrameRenderer(root: HTMLElement, width: number, height: number): Promise<FrameRenderer> {
+async function createFrameRenderer(root: HTMLElement, width: number, height: number, transparentBackground = false): Promise<FrameRenderer> {
   await waitForPreviewAssets(root)
   const mediaElement = root.querySelector('.preset-bg-media')
   const media = isBackgroundMedia(mediaElement) ? mediaElement : null
+  if (transparentBackground) {
+    const foreground = await captureForeground(root, media, width, height)
+    return { render: () => foreground }
+  }
   if (!media) {
     const snapshot = await html2canvas(root, {
       backgroundColor: '#000000',
@@ -273,14 +285,15 @@ async function createFrameRenderer(root: HTMLElement, width: number, height: num
   }
 }
 
-async function captureElement(root: HTMLElement, width: number, height: number) {
-  const renderer = await createFrameRenderer(root, width, height)
+async function captureElement(root: HTMLElement, width: number, height: number, transparentBackground: boolean) {
+  const renderer = await createFrameRenderer(root, width, height, transparentBackground)
   return renderer.render()
 }
 
-function getWebmMimeType() {
+function getWebmMimeType(requireAlpha: boolean) {
   if (typeof MediaRecorder === 'undefined') return ''
   const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+  if (requireAlpha) return MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : ''
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? ''
 }
 
@@ -289,7 +302,7 @@ async function capturePng(
   request: WebComposerPreviewCaptureMessage,
   postToParent: WebComposerPostToParent,
 ) {
-  const canvas = await captureElement(root, request.settings.width, request.settings.height)
+  const canvas = await captureElement(root, request.settings.width, request.settings.height, request.transparentBackground)
   const blob = await canvasToBlob(canvas, 'image/png')
   const buffer = await blob.arrayBuffer()
   postToParent({
@@ -307,11 +320,15 @@ async function captureWebm(
   request: WebComposerPreviewCaptureMessage,
   postToParent: WebComposerPostToParent,
 ) {
-  const mimeType = getWebmMimeType()
-  if (!mimeType) throw new Error('当前桌面 Chromium 不支持 WebM 画布录制。')
+  const mimeType = getWebmMimeType(request.transparentBackground)
+  if (!mimeType) {
+    throw new Error(request.transparentBackground
+      ? '当前桌面 Chromium 不支持带透明通道的 VP9 WebM 画布录制。'
+      : '当前桌面 Chromium 不支持 WebM 画布录制。')
+  }
 
   const { width, height, fps, durationSeconds } = request.settings
-  const renderer = await createFrameRenderer(root, width, height)
+  const renderer = await createFrameRenderer(root, width, height, request.transparentBackground)
   const output = document.createElement('canvas')
   output.width = width
   output.height = height

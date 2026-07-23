@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 
 import { persistWebComposerPng, runWebRenderVideoJob } from '@mediatoolbox/web-render-worker'
 import type { JobRecord } from '@mediatoolbox/contracts'
+import type { WebComposerVideoFormat } from '@mediatoolbox/contracts'
 
 import { patchRunningJob, updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
@@ -15,6 +16,7 @@ export type WebComposerCaptureJob = {
   physicalInputPath?: string
   fps?: number
   durationSeconds?: number
+  videoFormat?: WebComposerVideoFormat
 }
 
 async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebComposerCaptureJob) {
@@ -24,7 +26,7 @@ async function addOutputAsset(state: ApiState, job: JobRecord, capture: WebCompo
     kind: capture.kind === 'png' ? 'image' : 'video',
     name: capture.virtualOutputPath.split('/').pop() || job.title,
     path: capture.virtualOutputPath,
-    mimeType: capture.kind === 'png' ? 'image/png' : 'video/mp4',
+    mimeType: capture.kind === 'png' ? 'image/png' : capture.videoFormat === 'mov-alpha' ? 'video/quicktime' : 'video/mp4',
     createdAt: now,
     updatedAt: now,
   })
@@ -46,15 +48,16 @@ export async function executeWebComposerCapture(
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
       await persistWebComposerPng(capture.capture, capture.physicalOutputPath)
     } else {
-      if (!capture.physicalInputPath || !capture.fps || !capture.durationSeconds) {
+      if (!capture.physicalInputPath || !capture.fps || !capture.durationSeconds || !capture.videoFormat) {
         throw new Error('视频导出参数不完整。')
       }
       await fs.writeFile(capture.physicalInputPath, capture.capture)
       const result = await runWebRenderVideoJob({
         inputWebmPath: capture.physicalInputPath,
-        outputMp4Path: capture.physicalOutputPath,
+        outputPath: capture.physicalOutputPath,
         fps: capture.fps,
         durationSeconds: capture.durationSeconds,
+        videoFormat: capture.videoFormat,
       }, {
         signal,
         onProgress: (progress) => {

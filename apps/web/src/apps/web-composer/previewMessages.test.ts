@@ -69,7 +69,9 @@ describe('web composer preview messages', () => {
         height: 1080,
         fps: 12,
         durationSeconds: 4,
+        transparentBackground: false,
       },
+      transparentBackground: false,
     }
 
     expect(isWebComposerPreviewMessage(capture)).toBe(true)

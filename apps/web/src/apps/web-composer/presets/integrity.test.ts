@@ -3,6 +3,8 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
+import { presets } from './index'
+
 const lockedFiles = {
   'MultiShowcasePreset.tsx': '4a7e89b57f289aceabb7696ec86c38fa7abc3f55f18ed7430e4b1beb843cc639',
   'LumoraPreset.tsx': '67ddfac07e1baa112d5e5c3bd46c8a36901d6f96a939860baee12a28eaf5df6d',
@@ -23,4 +25,12 @@ describe('locked web composer preset sources', () => {
       expect(actual).toBe(expected)
     })
   }
+})
+
+describe('web composer background exports', () => {
+  it('provides a background slot for every preset', () => {
+    for (const preset of presets) {
+      expect(preset.slots.some((slot) => slot.id === 'background')).toBe(true)
+    }
+  })
 })

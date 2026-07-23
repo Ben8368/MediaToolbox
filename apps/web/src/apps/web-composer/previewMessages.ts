@@ -41,6 +41,7 @@ export type WebComposerPreviewCaptureMessage = WebComposerPreviewMessageBase & {
   requestId: string
   kind: 'png' | 'webm'
   settings: WebComposerExportSettings
+  transparentBackground: boolean
 }
 
 export type WebComposerPreviewInboundMessage = WebComposerPreviewUpdateMessage | WebComposerPreviewCaptureMessage
@@ -176,6 +177,7 @@ function isExportSettings(value: unknown): value is WebComposerExportSettings {
     && isPositiveInteger(value.fps)
     && isFiniteNumber(value.durationSeconds)
     && value.durationSeconds > 0
+    && typeof value.transparentBackground === 'boolean'
 }
 
 function isPresetReference(record: Record<string, unknown>) {
@@ -215,6 +217,7 @@ export function isWebComposerPreviewMessage(value: unknown): value is WebCompose
     case 'capture':
       return isNonEmptyString(value.requestId)
         && (value.kind === 'png' || value.kind === 'webm')
+        && typeof value.transparentBackground === 'boolean'
         && isExportSettings(value.settings)
     case 'ready':
       return true

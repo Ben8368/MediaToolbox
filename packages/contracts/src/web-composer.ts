@@ -54,6 +54,10 @@ export function isWebComposerAspectRatio(value: unknown): value is WebComposerAs
 
 export type WebComposerExportResolution = '720p' | '1080p' | '1440p' | '2160p'
 
+export type WebComposerVideoFormat = 'mp4' | 'mov-alpha'
+
+export type WebComposerExportKind = 'png' | WebComposerVideoFormat
+
 export type WebComposerEditorMode = 'edit' | 'preview'
 
 export const WEB_COMPOSER_ICON_NAMES = [
@@ -201,6 +205,7 @@ export type WebComposerExportSettings = {
   height: number
   fps: number
   durationSeconds: number
+  transparentBackground: boolean
 }
 
 export type WebComposerComposition = {
@@ -219,4 +224,5 @@ export type WebComposerCaptureMetadata = {
   height: number
   fps?: number
   durationSeconds?: number
+  videoFormat?: WebComposerVideoFormat
 }

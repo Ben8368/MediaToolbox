@@ -4,6 +4,7 @@ import {
   getWebComposerPresetReference,
   type JobRecord,
   type WebComposerPresetId,
+  type WebComposerVideoFormat,
 } from '@mediatoolbox/contracts'
 
 import type { ApiState } from '../state.js'
@@ -21,6 +22,7 @@ type ExportQuery = {
   height?: string
   fps?: string
   durationSeconds?: string
+  videoFormat?: string
 }
 
 function badRequest(message: string): never {
@@ -63,7 +65,7 @@ function isWebm(buffer: Buffer) {
   return buffer.length >= 4 && buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3
 }
 
-function outputName(presetId: WebComposerPresetId, extension: 'png' | 'mp4') {
+function outputName(presetId: WebComposerPresetId, extension: 'png' | 'mp4' | 'mov') {
   return `web-composer-${presetId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extension}`
 }
 
@@ -112,13 +114,17 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
       if (metadata.fps === undefined || metadata.durationSeconds === undefined) badRequest('视频导出参数不完整。')
       const fps = metadata.fps
       const durationSeconds = metadata.durationSeconds
-      const filename = outputName(metadata.presetId, 'mp4')
+      const videoFormat: WebComposerVideoFormat = request.query.videoFormat === 'mov-alpha' ? 'mov-alpha' : 'mp4'
+      if (request.query.videoFormat !== undefined && request.query.videoFormat !== videoFormat) {
+        badRequest('videoFormat 仅支持 mp4 或 mov-alpha。')
+      }
+      const filename = outputName(metadata.presetId, videoFormat === 'mov-alpha' ? 'mov' : 'mp4')
       const virtualOutputPath = `${state.workspaceRoot}/Exports/${filename}`
       const physicalOutputPath = toPhysicalWorkspacePath(state, virtualOutputPath)
       const job = createJobRecord({
         id: createJobId('web-video'),
         kind: 'web.render.video',
-        title: `网页合成 MP4：${metadata.presetId}`,
+        title: `网页合成 ${videoFormat === 'mov-alpha' ? '透明 MOV' : 'MP4'}：${metadata.presetId}`,
       })
       await state.db.jobs.create(job)
       void state.executors.run(job.id, async (signal) => {
@@ -131,6 +137,7 @@ export function registerWebComposerRoutes(app: FastifyInstance, state: ApiState)
             physicalInputPath: `${physicalOutputPath}.capture.webm`,
             fps,
             durationSeconds,
+            videoFormat,
           }, state, signal)
         } catch (error) {
           addLog(state.db, 'ERROR', 'web-composer', `视频执行器清理失败：${error instanceof Error ? error.message : String(error)}`)

@@ -105,4 +105,27 @@ describe('web composer export routes', () => {
     expect(response.statusCode).toBe(400)
     expect(response.json()).toMatchObject({ ok: false, message: 'WebM 捕获数据格式不正确。' })
   })
+
+  it('accepts only the MP4 and transparent MOV video formats', async () => {
+    const server = await buildApiServer()
+    servers.push(server)
+    const webmHeader = Buffer.from([0x1a, 0x45, 0xdf, 0xa3])
+    const accepted = await server.inject({
+      method: 'POST',
+      url: '/api/web-composer/exports/video?presetId=viktor&presetVersion=2&width=1920&height=1080&fps=12&durationSeconds=4&videoFormat=mov-alpha',
+      headers: { 'content-type': 'application/octet-stream' },
+      payload: webmHeader,
+    })
+    const rejected = await server.inject({
+      method: 'POST',
+      url: '/api/web-composer/exports/video?presetId=viktor&presetVersion=2&width=1920&height=1080&fps=12&durationSeconds=4&videoFormat=avi',
+      headers: { 'content-type': 'application/octet-stream' },
+      payload: webmHeader,
+    })
+
+    expect(accepted.statusCode).toBe(200)
+    expect(accepted.json()).toMatchObject({ kind: 'web.render.video', title: '网页合成 透明 MOV：viktor' })
+    expect(rejected.statusCode).toBe(400)
+    expect(rejected.json()).toMatchObject({ ok: false, message: 'videoFormat 仅支持 mp4 或 mov-alpha。' })
+  })
 })

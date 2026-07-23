@@ -79,6 +79,7 @@ function webComposerExportQuery(metadata: WebComposerCaptureMetadata) {
   })
   if (metadata.fps !== undefined) query.set('fps', String(metadata.fps))
   if (metadata.durationSeconds !== undefined) query.set('durationSeconds', String(metadata.durationSeconds))
+  if (metadata.videoFormat !== undefined) query.set('videoFormat', metadata.videoFormat)
   return query.toString()
 }
 

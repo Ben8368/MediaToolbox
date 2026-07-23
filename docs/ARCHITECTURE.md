@@ -43,10 +43,10 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - 下载：视频、音频、字幕下载底层封装 `yt-dlp`；普通网页资源下载接入 Browser Network adapter 后再汇入下载 app 双通道策略。
 - 转码：按预设调用 `ffmpeg`。
 - PS：PSD 模版检查、slot 替换、批量导出，复杂场景接 Photoshop 自动化。
-- Web Composer：在锁定网页预设上点击选择文案、Logo、图标或背景，由左侧上下文 Inspector 编辑声明的内容与样式能力，并按目标比例与分辨率导出 PNG 或 MP4。
+- Web Composer：在锁定网页预设上点击选择文案、Logo、图标或背景，由左侧上下文 Inspector 编辑声明的内容与样式能力，并按目标比例与分辨率导出 PNG、透明 PNG、MP4 或带 Alpha 的 MOV。
 - 任务中心：统一任务队列、日志和历史。
 
-Web Composer 使用独立同源 iframe 承载浏览器原生预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成，API 校验捕获元数据与文件签名，MP4 编码交给 `web-render-worker` 和 ffmpeg。输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。
+Web Composer 使用独立同源 iframe 承载浏览器原生预设运行时。iframe 始终按目标像素尺寸渲染，工作台只缩放外层预览，不改写预设响应式结构；PNG/WebM 捕获在隔离运行时完成。PNG 可在捕获时隐藏每套预设的背景 Slot；透明 MOV 强制使用 VP9 WebM Alpha 捕获，并由 `web-render-worker` / ffmpeg 编码为 ProRes 4444（`yuva444p10le`）。API 校验捕获元数据与文件签名，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。
 
 Web Composer 视频不进入源码 Git 对象。`assets/web-composer/manifest.json` 固定 8 个基础 MP4 的版本、Release URL、归档 SHA-256 和逐文件 SHA-256；`assets/web-composer/supplemental.json` 当前固定 1 个补充 MP4 的上游 HTTPS URL、大小和 SHA-256，不将其重新打入 Release 归档。字体、CSS 与必要图片仍随源码管理。根 `npm run dev`、`apps/web` 开发与构建生命周期先执行素材 `ensure`，本地有效时不访问网络，缺失时从对应固定来源安装到原静态 URL 目录；Electron renderer 构建产物仍必须包含完整视频，因此首次安装完成后预设与安装包保持离线能力。不可变 tag、授权记录、长期保留和回滚边界见 [ADR/0006-web-composer-external-video-assets.md](ADR/0006-web-composer-external-video-assets.md)。
 

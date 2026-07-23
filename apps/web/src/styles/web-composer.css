@@ -239,6 +239,14 @@
 
 .wc-preview-actions { display: flex; height: 30px; flex: 0 0 auto; align-items: center; gap: 5px; }
 .wc-preview-actions button { height: 30px; border: 1px solid rgba(0,102,255,.35); border-radius: 4px; background: var(--mt-brand); color: #fff; cursor: pointer; padding: 0 7px; font-size: 9.5px; font-weight: 700; white-space: nowrap; }
+.wc-export-transparent { display: inline-flex; align-items: center; gap: 4px; color: var(--wc-muted); font-size: 10px; white-space: nowrap; }
+.wc-export-transparent input { width: auto; min-width: 0; height: auto; padding: 0; accent-color: var(--mt-brand); }
+.wc-video-export { position: relative; display: flex; }
+.wc-video-export > button:first-child { border-radius: 4px 0 0 4px; }
+.wc-video-export__toggle { min-width: 22px; margin-left: -1px; padding: 0 5px !important; border-radius: 0 4px 4px 0 !important; }
+.wc-video-export__menu { position: absolute; z-index: 6; top: calc(100% + 4px); right: 0; display: grid; min-width: 196px; padding: 4px; border: 1px solid rgba(255,255,255,.14); border-radius: 5px; background: #161a22; box-shadow: 0 10px 28px rgba(0,0,0,.35); }
+.wc-video-export__menu button { height: 28px; border: 0; border-radius: 3px; background: transparent; color: var(--wc-text); font-size: 10px; text-align: left; }
+.wc-video-export__menu button:hover, .wc-video-export__menu button:focus-visible { background: rgba(77,171,255,.16); outline: 0; }
 .wc-mode-toggle { display: grid; height: 30px; box-sizing: border-box; grid-template-columns: repeat(2, auto); padding: 2px; border: 1px solid rgba(255,255,255,.12); border-radius: 5px; background: rgba(0,0,0,.28); }
 .wc-mode-toggle button { height: 24px; border: 0; background: transparent; color: var(--wc-muted); padding: 0 6px; }
 .wc-mode-toggle button.is-active { background: rgba(77,171,255,.2); color: #d8efff; box-shadow: inset 0 0 0 1px rgba(77,171,255,.2); }

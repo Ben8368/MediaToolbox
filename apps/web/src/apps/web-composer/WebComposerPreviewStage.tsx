@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import type {
   WebComposerAspectRatio,
   WebComposerEditorMode,
+  WebComposerExportKind,
   WebComposerExportResolution,
   WebComposerExportSettings,
   WebComposerPresetState,
@@ -51,11 +52,12 @@ export function WebComposerPreviewStage({
   onSettingsChange: (settings: WebComposerExportSettings) => void
   busy: boolean
   compositionInvalidReason: string | null
-  onExport: (kind: 'png' | 'webm') => void
+  onExport: (kind: WebComposerExportKind) => void
   onReset: () => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
+  const [videoMenuOpen, setVideoMenuOpen] = useState(false)
   const src = useMemo(() => previewRuntimeUrl(sessionId), [sessionId])
   const expectedOrigin = useMemo(() => new URL(src).origin, [src])
 
@@ -150,14 +152,39 @@ export function WebComposerPreviewStage({
             <input aria-label="时长（秒）" type="number" min={1} max={15} value={settings.durationSeconds} onChange={(event) => onSettingsChange({ ...settings, durationSeconds: Math.min(15, Math.max(1, Number(event.target.value) || 1)) })} />
             <span aria-hidden="true">秒</span>
           </label>
+          <label className="wc-export-transparent" title="仅影响 PNG；透明 MOV 会自动去除背景。">
+            <input
+              type="checkbox"
+              checked={settings.transparentBackground}
+              onChange={(event) => onSettingsChange({ ...settings, transparentBackground: event.target.checked })}
+            />
+            去除背景
+          </label>
         </div>
         <div className="wc-preview-actions" aria-label="预览与导出操作">
           <div className="wc-mode-toggle" aria-label="画布模式">
             <button type="button" className={mode === 'edit' ? 'is-active' : ''} aria-pressed={mode === 'edit'} onClick={() => onModeChange('edit')}>编辑</button>
             <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>预览</button>
           </div>
-          <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('png')}>导出 PNG</button>
-          <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('webm')}>导出 MP4</button>
+          <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('png')}>{settings.transparentBackground ? '导出透明 PNG' : '导出 PNG'}</button>
+          <div className="wc-video-export" data-open={videoMenuOpen || undefined}>
+            <button type="button" disabled={busy || Boolean(compositionInvalidReason)} title={compositionInvalidReason ?? undefined} onClick={() => onExport('mp4')}>导出 MP4</button>
+            <button
+              type="button"
+              className="wc-video-export__toggle"
+              aria-label="选择视频导出格式"
+              aria-expanded={videoMenuOpen}
+              aria-haspopup="menu"
+              disabled={busy || Boolean(compositionInvalidReason)}
+              onClick={() => setVideoMenuOpen((open) => !open)}
+            >⌄</button>
+            {videoMenuOpen && (
+              <div className="wc-video-export__menu" role="menu" aria-label="视频导出格式">
+                <button type="button" role="menuitem" onClick={() => { setVideoMenuOpen(false); onExport('mp4') }}>导出 MP4</button>
+                <button type="button" role="menuitem" onClick={() => { setVideoMenuOpen(false); onExport('mov-alpha') }}>导出透明 MOV（ProRes 4444）</button>
+              </div>
+            )}
+          </div>
           <button type="button" className="wc-preview-actions__reset" disabled={busy} onClick={onReset}>恢复默认</button>
         </div>
       </div>

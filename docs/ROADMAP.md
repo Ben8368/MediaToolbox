@@ -123,6 +123,7 @@
 - [x] 元素大纲支持搜索、分组和隐藏 Slot 恢复；编辑/交互预览模式分离，多工作台消息通过 session、source、origin 和预设版本隔离，选择 overlay 不进入导出捕获层。
 - [x] 独立 iframe 以目标像素尺寸渲染，工作台只缩放外层预览；支持 `16:9`、`4:3`、`1:1`、`9:16` 和 720p/1080p/1440p/4K。
 - [x] PNG 与 MP4 接入统一 Job/Asset；WebM 由 `web-render-worker` 通过 ffmpeg 编码为 H.264 MP4，输出固定进入 `/Workspace/Exports`。
+- [x] 所有预设支持去除背景后导出透明 PNG；MP4 导出菜单提供 VP9 Alpha 捕获、ProRes 4444（`yuva444p10le`）透明 MOV。
 - [x] 2026-07-13 完成桌面默认/最小窗口、Slot 编辑、4:3 画布、PNG 和 1 秒 MP4 本地烟测。
 - [x] 默认字体和必要图片已随源码本地化；8 个基础 MP4 使用固定 SHA-256 的版本化 Release Asset，1 个补充 MP4 固定上游 HTTPS URL、大小和 SHA-256，安装后均由本地静态路径提供。
 - [ ] 完成 4K/15 秒、6 个预设和图片/视频替换的桌面端压力与体验验收。

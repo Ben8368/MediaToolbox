@@ -83,8 +83,8 @@ Workers / adapters 负责：
 | `POST /api/filebrowser/trash/{id}/restore` | 恢复回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash/{id}` | 永久删除回收站条目 | 本地映射 |
 | `DELETE /api/filebrowser/trash` | 清空回收站 | 本地映射 |
-| `POST /api/web-composer/exports/png` | 提交 `application/octet-stream` PNG 捕获；query 携带共享 catalog 中的精确预设 ID/版本元组和目标宽高。当前仅接受三套预设的 Slot v2（版本 `2`）；服务端校验 PNG 签名、版本与 4K 像素上限，创建 `web.render.image` job，输出固定写入 `/Workspace/Exports` | 执行入口 |
-| `POST /api/web-composer/exports/video` | 提交 `application/octet-stream` WebM 捕获；query 额外携带 fps 与时长。当前仅接受共享 catalog 声明的精确 Slot v2 元组；服务端校验 WebM 签名、30 fps/15 秒/4K 上限，创建 `web.render.video` job，由 worker 编码为 H.264 MP4 并写入 `/Workspace/Exports` | 执行入口 |
+| `POST /api/web-composer/exports/png` | 提交 `application/octet-stream` PNG 捕获；query 携带共享 catalog 中的精确预设 ID/版本元组和目标宽高。服务端校验 PNG 签名、版本与 4K 像素上限，创建 `web.render.image` job，输出固定写入 `/Workspace/Exports` | 执行入口 |
+| `POST /api/web-composer/exports/video` | 提交 `application/octet-stream` WebM 捕获；query 额外携带 fps、时长和可选 `videoFormat`（默认 `mp4`，或 `mov-alpha`）。服务端校验 WebM 签名、30 fps/15 秒/4K 上限，创建 `web.render.video` job；前者由 worker 编码为 H.264 MP4，后者编码为带透明通道的 ProRes 4444 MOV，并写入 `/Workspace/Exports` | 执行入口 |
 | `POST /api/transcode/jobs` | 创建转码任务，输入可为工作区路径或 `inputGrantId`；输出可为 `/Workspace/Exports` 路径或 `outputGrantId` | 执行入口 |
 | `POST /api/transcode/jobs/{id}/cancel` | 取消转码任务 | 状态联动 |
 | `POST /api/psd/scan` | 提交 PSD/PSB 扫描 Job；输入可为工作区路径或 `inputGrantId`，立即返回 `psd.scan` Job 与预分配工单 ID | 执行入口 |
@@ -129,7 +129,7 @@ Workers / adapters 负责：
 - `GET /api/fetch/tasks/{id}/file` 只返回任务记录的工作区产物，避免按任意路径绕过文件边界。
 - 浏览器网络下载由 Electron 主进程接管 `will-download` 后登记为 `browser.download` job，只允许写入 `/Workspace/Downloads`，并将桌面端下载 ID 作为后续进度、取消和完成回写的稳定记录 ID。
 - 受控上传文件选择只允许工作区内文件并在桌面端确认，权限请求写入日志审计。
-- Web Composer 不接收客户端输出路径；服务端以 `packages/contracts` 的预设 catalog 精确校验 ID/版本元组（当前含 `trace-grid@1`、`vex-vision@1` 及四个既有 v2 预设），并校验 PNG/WebM 文件签名、体积和捕获元数据，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。旧版或未知预设组合返回 400。
+- Web Composer 不接收客户端输出路径；服务端以 `packages/contracts` 的预设 catalog 精确校验 ID/版本元组（当前含 `trace-grid@1`、`vex-vision@1` 及四个既有 v2 预设），并校验 PNG/WebM 文件签名、体积和捕获元数据；`videoFormat` 仅允许 `mp4` 或 `mov-alpha`，输出文件名与 `/Workspace/Exports` 路径完全由服务端生成。旧版、未知预设或格式组合返回 400。
 - PSD manifest、slot 与渲染输入类型收敛到 `packages/contracts`；`POST /api/psd/render` 与转码输出同一约束：源模版必须落在工作区内，输出路径**完全由服务端在 `/Workspace/Exports` 内生成**。
 - 服务端会剥离客户端传入的 `__outputPath`、`__psdPath` 等 `__` 保留键，杜绝任意文件写入或读取工作区外 PSD；非文字 slot 当前会明确拒绝，避免静默忽略。
 

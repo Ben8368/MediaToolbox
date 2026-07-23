@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
-import type { WebComposerExportSettings, WebComposerPresetId, WebComposerPresetVersion } from '@mediatoolbox/contracts'
+import type { WebComposerExportKind, WebComposerExportSettings, WebComposerPresetId, WebComposerPresetVersion } from '@mediatoolbox/contracts'
 
 import { cancelJob, fetchAssets, getJob, submitWebComposerPng, submitWebComposerVideo } from '@/api'
 import {
@@ -61,7 +61,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>, se
     return () => window.removeEventListener('message', onMessage)
   }, [iframeRef, sessionId])
 
-  const requestCapture = useCallback((kind: 'png' | 'webm', settings: WebComposerExportSettings) => {
+  const requestCapture = useCallback((kind: 'png' | 'webm', settings: WebComposerExportSettings, transparentBackground: boolean) => {
     if (!ready || !iframeRef.current?.contentWindow) return Promise.reject(new Error('预设画布尚未准备完成。'))
     if (pendingRef.current) return Promise.reject(new Error('已有捕获任务正在执行。'))
     const requestId = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -78,6 +78,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>, se
         requestId,
         kind,
         settings,
+        transparentBackground,
       }
       iframeRef.current?.contentWindow?.postMessage(message, getWebComposerMessageTargetOrigin(window.location.origin))
     })
@@ -98,7 +99,7 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>, se
   }, [])
 
   const exportComposition = useCallback(async (
-    kind: 'png' | 'webm',
+    kind: WebComposerExportKind,
     presetId: WebComposerPresetId,
     presetVersion: WebComposerPresetVersion,
     settings: WebComposerExportSettings,
@@ -106,16 +107,18 @@ export function useWebComposerExport(iframeRef: RefObject<HTMLIFrameElement>, se
     if (busy) return
     setBusy(true)
     setActiveJobId(null)
-    setStatus(kind === 'png' ? '正在捕获 PNG…' : '正在捕获视频帧…')
+    const captureKind = kind === 'png' ? 'png' : 'webm'
+    const transparentBackground = kind === 'mov-alpha' || (kind === 'png' && settings.transparentBackground)
+    setStatus(kind === 'png' ? (transparentBackground ? '正在捕获透明 PNG…' : '正在捕获 PNG…') : '正在捕获视频帧…')
     try {
-      const capture = await requestCapture(kind, settings)
+      const capture = await requestCapture(captureKind, settings, transparentBackground)
       setStatus('捕获完成，正在提交统一导出任务…')
       const metadata = {
         presetId,
         presetVersion,
         width: settings.width,
         height: settings.height,
-        ...(kind === 'webm' ? { fps: settings.fps, durationSeconds: settings.durationSeconds } : {}),
+        ...(kind !== 'png' ? { fps: settings.fps, durationSeconds: settings.durationSeconds, videoFormat: kind } : {}),
       }
       const job = kind === 'png'
         ? await submitWebComposerPng(capture.buffer, metadata)

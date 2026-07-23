@@ -37,6 +37,7 @@ export function createExportSettings(
     ...targetSize(aspectRatio, resolution),
     fps: 30,
     durationSeconds: 10,
+    transparentBackground: false,
   }
 }
 
