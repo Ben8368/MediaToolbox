@@ -31,6 +31,34 @@ describe('public release preflight', () => {
     ]))
   })
 
+  it('requires provenance for source-pinned supplemental videos', async () => {
+    const { rootDir, assetDir } = await createFixture()
+    await fs.writeFile(path.join(rootDir, 'LICENSE'), 'internal test license', 'utf8')
+    await fs.writeFile(
+      path.join(assetDir, 'supplemental.json'),
+      JSON.stringify({ files: [{ path: 'vex-reference.mp4' }] }),
+      'utf8',
+    )
+    await fs.writeFile(
+      path.join(assetDir, 'PROVENANCE.json'),
+      JSON.stringify({
+        files: [{
+          path: 'example.mp4',
+          source: 'https://example.com/example.mp4',
+          copyrightOwner: 'Example Owner',
+          license: 'Example License',
+          redistributionEvidence: 'Example Evidence',
+        }],
+      }),
+      'utf8',
+    )
+
+    const result = runPublicReleasePreflight({ rootDir, logger: silentLogger })
+
+    expect(result.ok).toBe(false)
+    expect(result.failures).toContain('PROVENANCE \u672a\u8986\u76d6\u7d20\u6750\uff1avex-reference.mp4')
+  })
+
   it('accepts a complete per-file redistribution record', async () => {
     const { rootDir, assetDir } = await createFixture()
     await fs.writeFile(path.join(rootDir, 'LICENSE'), 'Example project license', 'utf8')

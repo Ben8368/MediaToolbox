@@ -27,20 +27,65 @@ function PresetThumbnail({ preset }: { preset: PresetDefinition }) {
   )
 }
 
+export function WebComposerPresetDialog({ activePresetId, onSelect, onClose }: {
+  activePresetId: WebComposerPresetId
+  onSelect: (presetId: WebComposerPresetId) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="wc-preset-dialog-overlay" onMouseDown={onClose}>
+      <div
+        role="dialog"
+        aria-label="选择预设"
+        className="wc-preset-dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="wc-preset-dialog__header">
+          <strong>选择预设</strong>
+          <button
+            type="button"
+            className="wc-preset-dialog__close"
+            aria-label="关闭"
+            onClick={onClose}
+          />
+        </div>
+        <div className="wc-preset-dialog__grid">
+          {presets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className={`wc-preset-card${preset.id === activePresetId ? ' is-active' : ''}`}
+              onClick={() => { onSelect(preset.id); onClose() }}
+            >
+              <div className="wc-preset-card__thumb">
+                <PresetThumbnail preset={preset} />
+              </div>
+              <div className="wc-preset-card__info">
+                <strong>{preset.name}</strong>
+                <span>{preset.style}</span>
+                <p>{preset.description}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function WebComposerPresetPicker({ activePresetId, onSelect }: {
   activePresetId: WebComposerPresetId
   onSelect: (presetId: WebComposerPresetId) => void
 }) {
   const portalTarget = useWindowHeaderPortalTarget()
   const [open, setOpen] = useState(false)
-  const activePreset = presets.find((p) => p.id === activePresetId) ?? presets[0]
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
+  const activePreset = presets.find((preset) => preset.id === activePresetId) ?? presets[0]
 
   const trigger = portalTarget ? createPortal(
     <div className="wc-preset-picker">
@@ -59,53 +104,16 @@ export function WebComposerPresetPicker({ activePresetId, onSelect }: {
     portalTarget,
   ) : null
 
-  const dialog = open ? (
-    <div
-      className="wc-preset-dialog-overlay"
-      onMouseDown={() => setOpen(false)}
-    >
-      <div
-        role="dialog"
-        aria-label="选择预设"
-        className="wc-preset-dialog"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="wc-preset-dialog__header">
-          <strong>选择预设</strong>
-          <button
-            type="button"
-            className="wc-preset-dialog__close"
-            aria-label="关闭"
-            onClick={() => setOpen(false)}
-          />
-        </div>
-        <div className="wc-preset-dialog__grid">
-          {presets.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className={`wc-preset-card${preset.id === activePresetId ? ' is-active' : ''}`}
-              onClick={() => { onSelect(preset.id); setOpen(false) }}
-            >
-              <div className="wc-preset-card__thumb">
-                <PresetThumbnail preset={preset} />
-              </div>
-              <div className="wc-preset-card__info">
-                <strong>{preset.name}</strong>
-                <span>{preset.style}</span>
-                <p>{preset.description}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  ) : null
-
   return (
     <>
       {trigger}
-      {dialog}
+      {open && (
+        <WebComposerPresetDialog
+          activePresetId={activePresetId}
+          onSelect={onSelect}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   )
 }

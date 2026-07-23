@@ -23,15 +23,16 @@
 
 ## Web Composer 素材包
 
-- 当前拆分范围是 8 个默认 MP4：源码仓库保留字体、CSS、必要图片、`assets/web-composer/manifest.json`、操作说明和安装工具，但不跟踪这 8 个视频。
+- 当前拆分范围是 8 个 Release Asset 基础 MP4 与 1 个固定上游 HTTPS URL、大小和 SHA-256 的补充 MP4：源码仓库保留字体、CSS、必要图片、两份清单、操作说明和安装工具，但不跟踪视频文件。
 - 素材 Release 使用独立 tag，不标记为产品最新版本；归档名称、下载地址和 SHA-256 固定在清单中。
-- `npm run dev` 与 `npm run build` 会先执行素材 `ensure`；已有文件逐项校验通过时不访问网络。
+- `npm run dev` 与 `npm run build` 会先执行素材 `ensure`；基础与补充文件逐项校验通过时不访问网络。
+- `npm run assets:web-composer:pack` 只打包 8 个基础 MP4；补充视频从固定上游安装，不得因构建便利而重新放入 Release 归档。
 - 更新素材时必须提升素材包版本和 tag，不能覆盖已发布归档后继续复用旧 SHA-256。
 - 发布 Electron 候选包前，必须确认 `apps/web/dist/static/web-composer/videos/` 已进入 renderer 资源。
 - 素材清单变更必须在同一改动中记录兼容的预设/产品范围、来源与再分发授权，并完成本地归档安装、远端全新安装和逐文件校验。
 - 已被任一源码版本引用的素材 Release Asset 必须长期保留；若需要迁移，先发布新版本并验证，再更新源码清单。禁止删除仍被已发布源码或产品引用的旧归档。
 - 回滚优先恢复到上一个仍可下载且哈希匹配的清单版本；不得通过跳过哈希、改用浮动 URL 或覆盖旧 tag 回滚。
-- 当前仓库和默认视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json` 逐项素材授权记录，`npm run release:preflight:public` 会阻止证据缺失的 tag Release。
+- 当前仓库和视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json`，逐项覆盖基础与补充清单当前合计 9 个视频，`npm run release:preflight:public` 会阻止证据缺失的 tag Release。
 - 完整操作与本地覆盖参数见 [素材包说明](../assets/web-composer/README.md)。
 
 ## 候选构建

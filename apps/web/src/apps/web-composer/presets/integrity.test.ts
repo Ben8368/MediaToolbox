@@ -12,7 +12,7 @@ const lockedFiles = {
   'TraceGridPreset.tsx': '7b03069c233eef347337b91a5b152a0a1d42b04e04b3370c94dbfbb7daa70c91',
   'trace-grid.css': '45829e4f1961d9bb956fc26289f3d8f6c5286974a5084ad5136c3d68a4665b49',
   'VexVisionPreset.tsx': '36149f8ff4a9244f2ab470760bcb44e2c880a6b2d163ee0792109aeabd9524e1',
-  'vex-vision.css': '151183ca6f710042443269efaf4436f52fdfa36368879b844ffb2b293159aa5a',
+  'vex-vision.css': '536e5e5ccb8b35398d32df8d73af23063830b3b96689d9e2de6226d3f69cb071',
 } as const
 
 describe('locked web composer preset sources', () => {

@@ -5,7 +5,7 @@
 
 ## 当前决策
 
-- 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE` 与 8 个默认 MP4 的逐项 `assets/web-composer/PROVENANCE.json`，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
+- 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE`，且 `assets/web-composer/PROVENANCE.json` 尚未逐项覆盖 8 个基础 MP4 与 1 个补充 MP4，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
 - **TD-019** 的实现与自动化烟测已接入，尚待首次 tag Release 在 Windows、macOS、Linux 实跑；这不是“renderer 不可用”的代码阻断。
 - 最近客观验证：2026-07-23 `npm run verify` 通过（44 个测试文件、256 项）；Web Composer 视频导出失败路径现会清理 recorder、stream track 与媒体监听器。`npm run release:preflight:public` 仍按设计拒绝缺失的公开授权证据。
 

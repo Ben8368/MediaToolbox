@@ -14,6 +14,15 @@ type AssetFile = {
   sha256: string
 }
 
+type SupplementalAssetFile = AssetFile & {
+  sourceUrl: string
+}
+
+type SupplementalManifest = {
+  schemaVersion: 1
+  files: SupplementalAssetFile[]
+}
+
 type AssetManifest = {
   schemaVersion: 1
   packageVersion: string
@@ -30,6 +39,7 @@ type AssetManifest = {
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const manifestPath = path.join(rootDir, 'assets', 'web-composer', 'manifest.json')
+const supplementalManifestPath = path.join(rootDir, 'assets', 'web-composer', 'supplemental.json')
 const artifactDir = path.join(rootDir, '.artifacts', 'web-composer')
 
 async function readManifest(): Promise<AssetManifest> {
@@ -44,6 +54,30 @@ async function readManifest(): Promise<AssetManifest> {
       && asset.path.endsWith('.mp4')
     if (!isFlatFile || paths.has(asset.path) || asset.size <= 0 || !/^[a-f0-9]{64}$/u.test(asset.sha256)) {
       throw new Error(`Web Composer 素材条目无效：${asset.path}`)
+    }
+    paths.add(asset.path)
+  }
+  return manifest
+}
+
+async function readSupplementalManifest(): Promise<SupplementalManifest> {
+  const manifest = JSON.parse(await fs.readFile(supplementalManifestPath, 'utf8')) as SupplementalManifest
+  if (manifest.schemaVersion !== 1 || !manifest.files.length) {
+    throw new Error('Web Composer supplemental asset manifest is invalid.')
+  }
+  const paths = new Set<string>()
+  for (const asset of manifest.files) {
+    const isFlatFile = asset.path === path.basename(asset.path)
+      && !asset.path.includes('\\')
+      && asset.path.endsWith('.mp4')
+    if (
+      !isFlatFile
+      || paths.has(asset.path)
+      || asset.size <= 0
+      || !/^[a-f0-9]{64}$/u.test(asset.sha256)
+      || !/^https:\/\//iu.test(asset.sourceUrl)
+    ) {
+      throw new Error(`Invalid Web Composer supplemental asset: ${asset.path}`)
     }
     paths.add(asset.path)
   }
@@ -67,7 +101,7 @@ async function sha256(filePath: string): Promise<string> {
   return hash.digest('hex')
 }
 
-async function verifyDirectory(directory: string, manifest: AssetManifest): Promise<string[]> {
+async function verifyDirectory(directory: string, manifest: Pick<AssetManifest, 'files'> | SupplementalManifest): Promise<string[]> {
   const errors: string[] = []
   for (const asset of manifest.files) {
     const filePath = path.join(directory, asset.path)
@@ -91,7 +125,7 @@ async function verifyDirectory(directory: string, manifest: AssetManifest): Prom
   return errors
 }
 
-async function requireValidDirectory(directory: string, manifest: AssetManifest): Promise<void> {
+async function requireValidDirectory(directory: string, manifest: Pick<AssetManifest, 'files'> | SupplementalManifest): Promise<void> {
   const errors = await verifyDirectory(directory, manifest)
   if (errors.length > 0) throw new Error(`Web Composer 素材校验失败：\n- ${errors.join('\n- ')}`)
 }
@@ -168,6 +202,36 @@ async function install(manifest: AssetManifest): Promise<void> {
   }
 }
 
+async function installSupplemental(directory: string, manifest: SupplementalManifest): Promise<void> {
+  const stagingRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mediatoolbox-web-composer-supplemental-'))
+  try {
+    for (const asset of manifest.files) {
+      console.log(`Fetching Web Composer supplemental asset: ${asset.sourceUrl}`)
+      await copySource(asset.sourceUrl, path.join(stagingRoot, asset.path))
+    }
+    await requireValidDirectory(stagingRoot, manifest)
+    await fs.mkdir(directory, { recursive: true })
+    for (const asset of manifest.files) {
+      await fs.copyFile(path.join(stagingRoot, asset.path), path.join(directory, asset.path))
+    }
+    await requireValidDirectory(directory, manifest)
+    console.log('Web Composer supplemental assets installed.')
+  } finally {
+    await fs.rm(stagingRoot, { recursive: true, force: true })
+  }
+}
+
+async function ensureSupplemental(directory: string, manifest: SupplementalManifest): Promise<void> {
+  const errors = await verifyDirectory(directory, manifest)
+  if (errors.length === 0) {
+    console.log('Web Composer supplemental assets are ready.')
+    return
+  }
+  console.warn(`Supplemental assets are missing or invalid; reinstalling:
+- ${errors.join('\n- ')}`)
+  await installSupplemental(directory, manifest)
+}
+
 async function pack(manifest: AssetManifest): Promise<void> {
   const sourceDir = resolveInstallDirectory(manifest)
   await requireValidDirectory(sourceDir, manifest)
@@ -185,32 +249,37 @@ async function pack(manifest: AssetManifest): Promise<void> {
 async function main(): Promise<void> {
   const command = process.argv[2]
   const manifest = await readManifest()
+  const supplementalManifest = await readSupplementalManifest()
   const installDir = resolveInstallDirectory(manifest)
 
   if (command === 'verify') {
     await requireValidDirectory(installDir, manifest)
-    console.log(`Web Composer 素材包 ${manifest.packageVersion} 校验通过。`)
+    await requireValidDirectory(installDir, supplementalManifest)
+    console.log(`Web Composer asset package ${manifest.packageVersion} and supplemental assets verified.`)
     return
   }
   if (command === 'ensure') {
     const errors = await verifyDirectory(installDir, manifest)
     if (errors.length === 0) {
-      console.log(`Web Composer 素材包 ${manifest.packageVersion} 已就绪。`)
-      return
+      console.log(`Web Composer asset package ${manifest.packageVersion} is ready.`)
+    } else {
+      console.warn(`Base assets are missing or invalid; reinstalling:
+- ${errors.join('\n- ')}`)
+      await install(manifest)
     }
-    console.warn(`本地素材缺失或无效，将重新安装：\n- ${errors.join('\n- ')}`)
-    await install(manifest)
+    await ensureSupplemental(installDir, supplementalManifest)
     return
   }
   if (command === 'install') {
     await install(manifest)
+    await installSupplemental(installDir, supplementalManifest)
     return
   }
   if (command === 'pack') {
     await pack(manifest)
     return
   }
-  throw new Error('用法：tsx scripts/web-composer-assets.ts <verify|ensure|install|pack>')
+  throw new Error('Usage: tsx scripts/web-composer-assets.ts <verify|ensure|install|pack>')
 }
 
 void main().catch((error: unknown) => {

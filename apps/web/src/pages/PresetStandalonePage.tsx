@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   WEB_COMPOSER_ASPECT_RATIO_OPTIONS,
   type WebComposerAspectRatio,
@@ -7,6 +7,8 @@ import {
 } from '@mediatoolbox/contracts'
 
 import { presetById, clonePresetState } from '@/apps/web-composer/presets'
+import type { PresetDefinition } from '@/apps/web-composer/presets/types'
+import { WebComposerPresetDialog } from '@/apps/web-composer/WebComposerPresetPicker'
 import { createPreviewSessionId, previewRuntimeUrl } from '@/apps/web-composer/model'
 import {
   getWebComposerMessageTargetOrigin,
@@ -15,8 +17,64 @@ import {
   type WebComposerPreviewUpdateMessage,
 } from '@/apps/web-composer/previewMessages'
 
+export function PresetStandaloneToolbar({ preset, aspectRatio, presetDialogOpen, onOpenPresetDialog, onChangeAspectRatio }: {
+  preset: PresetDefinition
+  aspectRatio: WebComposerAspectRatio
+  presetDialogOpen: boolean
+  onOpenPresetDialog: () => void
+  onChangeAspectRatio: (aspectRatio: WebComposerAspectRatio) => void
+}) {
+  return (
+    <div className="wc-standalone-toolbar" style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.5rem',
+      padding: '0.5rem 1rem',
+      borderBottom: '1px solid #1E293B',
+      background: '#0F141E',
+      flexShrink: 0,
+    }}>
+      <button
+        type="button"
+        className="wc-standalone-preset-trigger"
+        aria-label={`选择预设：${preset.name}`}
+        aria-expanded={presetDialogOpen}
+        aria-haspopup="dialog"
+        onClick={onOpenPresetDialog}
+      >
+        <span>预设</span>
+        <strong>{preset.name}</strong>
+        <span className="wc-preset-picker__chevron" aria-hidden="true" />
+      </button>
+      <div className="wc-standalone-aspect-options" aria-label="选择画幅">
+        {WEB_COMPOSER_ASPECT_RATIO_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChangeAspectRatio(option.value)}
+            style={{
+              padding: '0.375rem 1rem',
+              borderRadius: '0.375rem',
+              border: option.value === aspectRatio ? '1px solid #38BDF8' : '1px solid #334155',
+              background: option.value === aspectRatio ? '#0F2847' : 'transparent',
+              color: option.value === aspectRatio ? '#38BDF8' : '#94A3B8',
+              fontSize: '0.875rem',
+              fontWeight: option.value === aspectRatio ? 600 : 400,
+              cursor: 'pointer',
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function PresetStandalonePage() {
   const { presetId } = useParams<{ presetId: string }>()
+  const navigate = useNavigate()
   const previewAreaRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const sessionId = useMemo(createPreviewSessionId, [])
@@ -25,6 +83,7 @@ export function PresetStandalonePage() {
   const [aspectRatio, setAspectRatio] = useState<WebComposerAspectRatio>('16:9')
   const [availableW, setAvailableW] = useState(800)
   const [availableH, setAvailableH] = useState(450)
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false)
 
   const preset = useMemo(() => {
     if (!presetId) return null
@@ -115,45 +174,30 @@ export function PresetStandalonePage() {
   }
 
   return (
-    <div style={{
+    <div className="wc-standalone-page" style={{
       width: '100vw',
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       background: '#0B0E14',
       overflow: 'hidden',
+      position: 'relative',
     }}>
-      {/* Aspect ratio toolbar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        padding: '0.5rem 1rem',
-        borderBottom: '1px solid #1E293B',
-        background: '#0F141E',
-        flexShrink: 0,
-      }}>
-        {WEB_COMPOSER_ASPECT_RATIO_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => setAspectRatio(option.value)}
-            style={{
-              padding: '0.375rem 1rem',
-              borderRadius: '0.375rem',
-              border: option.value === aspectRatio ? '1px solid #38BDF8' : '1px solid #334155',
-              background: option.value === aspectRatio ? '#0F2847' : 'transparent',
-              color: option.value === aspectRatio ? '#38BDF8' : '#94A3B8',
-              fontSize: '0.875rem',
-              fontWeight: option.value === aspectRatio ? 600 : 400,
-              cursor: 'pointer',
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      <PresetStandaloneToolbar
+        preset={preset}
+        aspectRatio={aspectRatio}
+        presetDialogOpen={presetDialogOpen}
+        onOpenPresetDialog={() => setPresetDialogOpen(true)}
+        onChangeAspectRatio={setAspectRatio}
+      />
+
+      {presetDialogOpen && (
+        <WebComposerPresetDialog
+          activePresetId={preset.id}
+          onSelect={(nextPresetId) => navigate(`/preset/${nextPresetId}`)}
+          onClose={() => setPresetDialogOpen(false)}
+        />
+      )}
 
       {/* Preview area — fills remaining space, no padding, no scrollbars */}
       <div

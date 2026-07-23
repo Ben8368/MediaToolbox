@@ -7,7 +7,7 @@ const slots = collectSlots([
     id: 'background',
     label: '背景视频',
     group: '画布',
-    src: '/static/web-composer/videos/viktor-light-tunnel.mp4',
+    src: '/static/web-composer/videos/vex-vision-hero.mp4',
   }),
   textSlot({ id: 'brand.logo', label: '品牌名称', group: '页头', value: 'VEX', fontRole: 'heading', allowImage: true, canHide: false }),
   ...['Story', 'Investing', 'Building', 'Advisory'].map((value, index) => textSlot({

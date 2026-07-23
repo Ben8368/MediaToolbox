@@ -1,7 +1,7 @@
 ﻿import { StrictMode } from 'react'
 import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 
 import { bootstrapApiClient } from '@/api/bootstrap'
 import App from '@/App'
@@ -22,6 +22,7 @@ createRoot(document.getElementById('root')!).render(
         <Suspense fallback={<div className="mt-app-loading mt-app-loading--fullscreen" role="status">正在加载...</div>}>
           <Routes>
             <Route path="/" element={<App />} />
+            <Route path="/preset" element={<Navigate to="/preset/lumora" replace />} />
             <Route path="/preset/:presetId" element={<PresetStandalonePage />} />
           </Routes>
         </Suspense>

@@ -2,6 +2,7 @@
 .claude/
 .codex/
 .tmp/
+.tmp-dev/
 .DS_Store
 *.log
 

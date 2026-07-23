@@ -11,6 +11,7 @@ function readJson(filePath) {
 
 export function runPublicReleasePreflight({ rootDir = defaultRootDir, logger = console } = {}) {
   const manifestPath = path.join(rootDir, 'assets/web-composer/manifest.json')
+  const supplementalPath = path.join(rootDir, 'assets/web-composer/supplemental.json')
   const provenancePath = path.join(rootDir, 'assets/web-composer/PROVENANCE.json')
   const licensePath = path.join(rootDir, 'LICENSE')
   const failures = []
@@ -34,8 +35,11 @@ export function runPublicReleasePreflight({ rootDir = defaultRootDir, logger = c
       const manifest = readJson(manifestPath)
       const provenance = readJson(provenancePath)
       const manifestEntries = Array.isArray(manifest.files) ? manifest.files : []
+      const supplemental = fs.existsSync(supplementalPath) ? readJson(supplementalPath) : { files: [] }
+      const supplementalEntries = Array.isArray(supplemental.files) ? supplemental.files : []
+      const expectedEntries = [...manifestEntries, ...supplementalEntries]
       const entries = Array.isArray(provenance.files) ? provenance.files : []
-      const expectedPathList = manifestEntries.map((entry) => entry?.path)
+      const expectedPathList = expectedEntries.map((entry) => entry?.path)
       const actualPathList = entries.map((entry) => entry?.path)
       const expectedPaths = new Set(expectedPathList)
       const actualPaths = new Set(actualPathList)
@@ -44,7 +48,7 @@ export function runPublicReleasePreflight({ rootDir = defaultRootDir, logger = c
       if (expectedPathList.some((entryPath) => typeof entryPath !== 'string' || entryPath.trim() === '')) {
         fail('manifest 包含缺少有效 path 的素材条目。')
       }
-      if (expectedPaths.size !== manifestEntries.length) fail('manifest 包含重复的素材路径。')
+      if (expectedPaths.size !== expectedEntries.length) fail('manifest 包含重复的素材路径。')
       if (actualPaths.size !== entries.length) fail('PROVENANCE 包含重复的素材路径。')
 
       for (const entry of entries) {

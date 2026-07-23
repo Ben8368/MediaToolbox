@@ -9,7 +9,7 @@
 }
 
 .vex-preset > .preset-bg-media { z-index: -1; }
-.vex-header { position: relative; z-index: 2; padding: 24px 64px 0; }
+.vex-header { position: relative; z-index: 2; padding: 32px 64px 0; }
 .vex-liquid-glass { position: relative; overflow: hidden; background: rgba(0, 0, 0, .4); background-blend-mode: luminosity; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1); }
 .vex-liquid-glass::before { position: absolute; z-index: 0; inset: 0; padding: 1.4px; border-radius: inherit; content: ""; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.1) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,.1) 80%, rgba(255,255,255,.3) 100%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .vex-navbar { display: flex; min-height: 56px; align-items: center; justify-content: space-between; padding: 8px 16px; border-radius: 12px; }
@@ -54,7 +54,7 @@
 }
 
 @container (max-width: 760px) {
-  .vex-header { padding: 24px 24px 0; }
+  .vex-header { padding: 28px 24px 0; }
   .vex-nav-links { display: none; }
   .vex-hero { padding: 0 24px 48px; }
   .vex-copy h1 { font-size: 40px; }
