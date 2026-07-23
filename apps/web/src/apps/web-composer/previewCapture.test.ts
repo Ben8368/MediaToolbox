@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { objectFitRect, waitForPreviewImage, waitForPreviewImages } from './previewCapture'
+import {
+  objectFitRect,
+  waitForPreviewImage,
+  waitForPreviewImages,
+  waitForPreviewVideo,
+} from './previewCapture'
 
 type FakeImage = {
   addEventListener: ReturnType<typeof vi.fn>
@@ -122,5 +127,25 @@ describe('waitForPreviewImage', () => {
     await expect(waitForPreviewImages(root as unknown as Pick<HTMLElement, 'querySelectorAll'>))
       .rejects.toThrow('图片“Hero”加载失败，请重新选择素材后再导出。')
     expect(root.querySelectorAll).toHaveBeenCalledWith('img')
+  })
+})
+
+describe('waitForPreviewVideo', () => {
+  it('rejects media errors and removes pending listeners', async () => {
+    const listeners = new Map<string, () => void>()
+    const video = {
+      addEventListener: vi.fn((type: string, listener: () => void) => listeners.set(type, listener)),
+      currentSrc: '/api/filebrowser/file?path=hero.mp4',
+      readyState: 0,
+      removeEventListener: vi.fn((type: string) => listeners.delete(type)),
+      src: '',
+    }
+
+    const ready = waitForPreviewVideo(video as unknown as HTMLVideoElement)
+    listeners.get('error')?.()
+
+    await expect(ready).rejects.toThrow('视频“/api/filebrowser/file?path=hero.mp4”加载失败，请重新选择素材后再导出。')
+    expect(video.removeEventListener).toHaveBeenCalledWith('loadeddata', expect.any(Function))
+    expect(video.removeEventListener).toHaveBeenCalledWith('error', expect.any(Function))
   })
 })

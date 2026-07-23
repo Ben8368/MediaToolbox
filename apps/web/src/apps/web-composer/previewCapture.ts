@@ -5,6 +5,7 @@ import {
   type WebComposerPreviewCaptureMessage,
   type WebComposerPreviewOutboundMessage,
 } from './previewMessages'
+import { recordPreviewFrames } from './previewRecording'
 
 type WithoutSession<T> = T extends { sessionId: string } ? Omit<T, 'sessionId'> : never
 type WebComposerPreviewOutboundPayload = WithoutSession<WebComposerPreviewOutboundMessage>
@@ -21,7 +22,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string): Promise<Blob> {
 }
 
 function sleep(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms))
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 }
 
 type PreviewImage = Pick<
@@ -38,6 +39,7 @@ type PreviewImage = Pick<
 >
 
 const PREVIEW_IMAGE_LOAD_TIMEOUT_MS = 15_000
+const PREVIEW_VIDEO_LOAD_TIMEOUT_MS = 15_000
 
 function previewImageLabel(image: PreviewImage) {
   return image.alt.trim() || image.currentSrc.trim() || image.src.trim() || '未命名图片'
@@ -95,19 +97,44 @@ export async function waitForPreviewImages(root: Pick<HTMLElement, 'querySelecto
   await Promise.all([...root.querySelectorAll<HTMLImageElement>('img')].map(waitForPreviewImage))
 }
 
+export function waitForPreviewVideo(video: HTMLVideoElement) {
+  if (video.readyState >= 2) return Promise.resolve()
+
+  return new Promise<void>((resolve, reject) => {
+    let settled = false
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined
+    const cleanup = () => {
+      video.removeEventListener('loadeddata', onLoadedData)
+      video.removeEventListener('error', onError)
+      if (timer !== undefined) globalThis.clearTimeout(timer)
+    }
+    const finish = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      callback()
+    }
+    const label = video.currentSrc || video.src || '未命名视频'
+    const onLoadedData = () => finish(resolve)
+    const onError = () => finish(() => reject(
+      new Error(`视频“${label}”加载失败，请重新选择素材后再导出。`),
+    ))
+
+    video.addEventListener('loadeddata', onLoadedData, { once: true })
+    video.addEventListener('error', onError, { once: true })
+    timer = globalThis.setTimeout(() => finish(() => reject(
+      new Error(`等待视频“${label}”加载超时，请稍后重试。`),
+    )), PREVIEW_VIDEO_LOAD_TIMEOUT_MS)
+
+    // Avoid missing a transition that completed between the initial check
+    // and listener registration.
+    if (video.readyState >= 2) queueMicrotask(onLoadedData)
+  })
+}
 async function waitForPreviewAssets(root: HTMLElement) {
   await document.fonts?.ready
   await waitForPreviewImages(root)
-  const videos = [...root.querySelectorAll('video')]
-  await Promise.all(videos.map((video) => {
-    if (video.readyState >= 2) return Promise.resolve()
-    return new Promise<void>((resolve) => {
-      const finish = () => resolve()
-      video.addEventListener('loadeddata', finish, { once: true })
-      video.addEventListener('error', finish, { once: true })
-      window.setTimeout(finish, 3000)
-    })
-  }))
+  await Promise.all([...root.querySelectorAll('video')].map(waitForPreviewVideo))
   // Capture the settled composition rather than the first frame of Framer
   // Motion's reveal sequence. Infinite decorative CSS animations intentionally
   // keep running and must not hold up an export.
@@ -294,35 +321,28 @@ async function captureWebm(
     mimeType,
     videoBitsPerSecond: Math.min(24_000_000, Math.max(4_000_000, width * height * fps)),
   })
-  const chunks: Blob[] = []
-  recorder.ondataavailable = (event) => {
-    if (event.data.size > 0) chunks.push(event.data)
-  }
-  const finished = new Promise<void>((resolve, reject) => {
-    recorder.onstop = () => resolve()
-    recorder.onerror = () => reject(new Error('浏览器帧录制失败。'))
+  const blob = await recordPreviewFrames({
+    context,
+    durationSeconds,
+    fps,
+    height,
+    mimeType,
+    recorder,
+    renderer,
+    stream,
+    waitForNextFrame: sleep,
+    width,
+    onProgress(current, total) {
+      postToParent({
+        channel: WEB_COMPOSER_CHANNEL,
+        type: 'capture-progress',
+        requestId: request.requestId,
+        current,
+        total,
+      })
+    },
   })
-
-  recorder.start(1000)
-  const frameCount = Math.max(1, Math.round(durationSeconds * fps))
-  for (let frame = 0; frame < frameCount; frame += 1) {
-    const snapshot = renderer.render()
-    context.clearRect(0, 0, width, height)
-    context.drawImage(snapshot, 0, 0, width, height)
-    postToParent({
-      channel: WEB_COMPOSER_CHANNEL,
-      type: 'capture-progress',
-      requestId: request.requestId,
-      current: frame + 1,
-      total: frameCount,
-    })
-    await sleep(1000 / fps)
-  }
-  recorder.stop()
-  await finished
-  stream.getTracks().forEach((track) => track.stop())
-
-  const buffer = await new Blob(chunks, { type: mimeType }).arrayBuffer()
+  const buffer = await blob.arrayBuffer()
   postToParent({
     channel: WEB_COMPOSER_CHANNEL,
     type: 'capture-complete',
