@@ -1,0 +1,66 @@
+.vex-preset {
+  container-type: size;
+  isolation: isolate;
+  color: var(--vex-text, #fff);
+  background: #000;
+  font-family: var(--vex-font-body, "Inter", sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.vex-preset > .preset-bg-media { z-index: -1; }
+.vex-header { position: relative; z-index: 2; padding: 24px 64px 0; }
+.vex-liquid-glass { position: relative; overflow: hidden; background: rgba(0, 0, 0, .4); background-blend-mode: luminosity; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, .1); }
+.vex-liquid-glass::before { position: absolute; z-index: 0; inset: 0; padding: 1.4px; border-radius: inherit; content: ""; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,.1) 20%, rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%, rgba(255,255,255,.1) 80%, rgba(255,255,255,.3) 100%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.vex-navbar { display: flex; min-height: 56px; align-items: center; justify-content: space-between; padding: 8px 16px; border-radius: 12px; }
+.vex-navbar > * { position: relative; z-index: 1; }
+.vex-logo { min-width: 150px; font-family: var(--vex-font-heading, "Inter", sans-serif); font-size: 24px; font-weight: 600; line-height: 1; }
+.vex-logo img { display: block; width: auto; max-width: 120px; height: 28px; object-fit: contain; }
+.vex-nav-links { display: flex; align-items: center; gap: 32px; font-size: 14px; }
+.vex-nav-links a { transition: color 180ms ease; }
+.vex-nav-links a:hover { color: #d1d5db; }
+.vex-nav-cta, .vex-primary, .vex-secondary { display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; font-weight: 500; transition: color 180ms ease, background 180ms ease; }
+.vex-nav-cta { min-width: 150px; justify-self: end; padding: 10px 24px; color: #000; background: #fff; font-size: 14px; text-align: center; }
+.vex-nav-cta:hover, .vex-primary:hover { background: #f3f4f6; }
+.vex-hero { position: absolute; z-index: 1; inset: 104px 0 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 64px 64px; }
+.vex-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 64px; }
+.vex-copy { max-width: 780px; }
+.vex-copy h1 { margin: 0 0 16px; font-family: var(--vex-font-heading, "Inter", sans-serif); font-size: 72px; font-weight: 400; line-height: 1.07; letter-spacing: 0; }
+.vex-heading-line { display: block; min-height: 1.07em; }
+.vex-heading-character { display: inline-block; opacity: 0; transform: translateX(-18px); transition: opacity 500ms ease, transform 500ms ease; }
+.vex-heading-line.is-visible .vex-heading-character { opacity: 1; transform: translateX(0); }
+.vex-subtext-wrap { max-width: 680px; margin-bottom: 20px; }
+.vex-subtext-wrap p { margin: 0; color: #d1d5db; font-size: 18px; line-height: 1.55; }
+.vex-fade { opacity: 0; transition: opacity var(--vex-fade-duration, 1000ms) ease; }
+.vex-fade.is-visible { opacity: 1; }
+.vex-actions { display: flex; flex-wrap: wrap; gap: 16px; }
+.vex-primary, .vex-secondary { min-height: 48px; padding: 12px 32px; }
+.vex-primary { color: #000; background: #fff; }
+.vex-secondary { color: #fff; border: 1px solid rgba(255, 255, 255, .2); }
+.vex-secondary > * { position: relative; z-index: 1; }
+.vex-secondary:hover { color: #000; background: #fff; }
+.vex-tag-wrap { display: flex; align-items: flex-end; justify-content: flex-end; }
+.vex-tag { padding: 12px 24px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 12px; font-family: var(--vex-font-heading, "Inter", sans-serif); font-size: 24px; font-weight: 300; white-space: nowrap; }
+.vex-tag > * { position: relative; z-index: 1; }
+
+@container (max-width: 1100px) {
+  .vex-header { padding-right: 48px; padding-left: 48px; }
+  .vex-logo, .vex-nav-cta { min-width: auto; }
+  .vex-hero { padding-right: 48px; padding-bottom: 48px; padding-left: 48px; }
+  .vex-hero-grid { grid-template-columns: 1fr; gap: 28px; }
+  .vex-copy h1 { font-size: 60px; }
+  .vex-tag-wrap { justify-content: flex-start; }
+  .vex-tag { font-size: 20px; }
+}
+
+@container (max-width: 760px) {
+  .vex-header { padding: 24px 24px 0; }
+  .vex-nav-links { display: none; }
+  .vex-hero { padding: 0 24px 48px; }
+  .vex-copy h1 { font-size: 40px; }
+  .vex-subtext-wrap p { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vex-preset *, .vex-preset *::before, .vex-preset *::after { transition-duration: .001ms !important; }
+}

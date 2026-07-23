@@ -178,7 +178,9 @@ function mediaDimensions(media: BackgroundMedia) {
 async function captureForeground(root: HTMLElement, media: BackgroundMedia | null, width: number, height: number) {
   const rootBackground = root.style.background
   const mediaDisplay = media?.style.display
-  const settledElements = [...root.querySelectorAll<HTMLElement>('.vault-copy h1, .vault-copy p, .vault-cta')]
+  const settledElements = [...root.querySelectorAll<HTMLElement>(
+    '.vault-copy h1, .vault-copy p, .vault-cta, .vex-heading-line, .vex-heading-character, .vex-fade',
+  )]
     .map((element) => ({
       element,
       cssText: element.style.cssText,

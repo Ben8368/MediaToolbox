@@ -4,6 +4,7 @@ import { MultiShowcasePreset } from './MultiShowcasePreset'
 import { LumoraPreset } from './LumoraPreset'
 import { multiShowcaseManifest } from './manifests/multiShowcase'
 import { traceGridManifest } from './manifests/traceGrid'
+import { vexVisionManifest } from './manifests/vexVision'
 import { lumoraManifest } from './manifests/lumora'
 import { vaultShieldManifest } from './manifests/vaultshield'
 import { viktorManifest } from './manifests/viktor'
@@ -11,11 +12,13 @@ import type { PresetDefinition } from './types'
 import { VaultShieldPreset } from './VaultShieldPreset'
 import { ViktorPreset } from './ViktorPreset'
 import { TraceGridPreset } from './TraceGridPreset'
+import { VexVisionPreset } from './VexVisionPreset'
 
 export const presets: PresetDefinition[] = [
   { ...lumoraManifest, Component: LumoraPreset },
   { ...multiShowcaseManifest, Component: MultiShowcasePreset },
   { ...traceGridManifest, Component: TraceGridPreset },
+  { ...vexVisionManifest, Component: VexVisionPreset },
   { ...vaultShieldManifest, Component: VaultShieldPreset },
   { ...viktorManifest, Component: ViktorPreset },
 ]
