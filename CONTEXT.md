@@ -1,11 +1,11 @@
 # 当前状态
 
 > **最后确认：** 2026-07-23<br>
-> **阶段：** Phase 4.5 / 5 已接入，Phase 5.5 Web Composer beta 已接入（现有 6 个预设），Phase 6A/B/C PathGrant 管道已落地。详细能力边界见 [ROADMAP.md](docs/ROADMAP.md)。
+> **阶段：** Phase 4.5 / 5 已接入，Phase 5.5 Web Composer beta 已接入（现有 7 个预设），Phase 6A/B/C PathGrant 管道已落地。详细能力边界见 [ROADMAP.md](docs/ROADMAP.md)。
 
 ## 当前决策
 
-- 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE`，且 `assets/web-composer/PROVENANCE.json` 尚未逐项覆盖 8 个基础 MP4 与 1 个补充 MP4，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
+- 内部开发没有代码级阻断；公开发布被 **TD-023** 阻断：缺少根 `LICENSE`，且 `assets/web-composer/PROVENANCE.json` 尚未逐项覆盖 8 个基础 MP4 与 2 个补充 MP4，详见 [TECH_DEBT.md](docs/TECH_DEBT.md)。
 - **TD-019** 的实现与自动化烟测已接入，尚待首次 tag Release 在 Windows、macOS、Linux 实跑；这不是“renderer 不可用”的代码阻断。
 - 最近客观验证：2026-07-23 `npm run verify` 通过（44 个测试文件、256 项）；Web Composer 视频导出失败路径现会清理 recorder、stream track 与媒体监听器。`npm run release:preflight:public` 仍按设计拒绝缺失的公开授权证据。
 

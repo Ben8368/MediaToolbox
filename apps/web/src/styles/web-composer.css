@@ -158,6 +158,11 @@
 .wc-preset-thumb--vex-vision::after { background: linear-gradient(90deg, rgba(0,0,0,.66), transparent 68%), repeating-radial-gradient(ellipse at 70% 42%, transparent 0 13px, rgba(214,255,237,.08) 14px 15px); }
 .wc-preset-thumb--vex-vision .wc-preset-thumb__title { max-width: 82%; font-weight: 400; letter-spacing: 0; }
 .wc-preset-thumb--vex-vision .wc-preset-thumb__action { color: #080b0a; background: #fff; }
+.wc-preset-thumb--foundation::before { background: radial-gradient(circle at 68% 48%, rgba(255,255,255,.78), transparent 5%), linear-gradient(125deg, #dbeafe, #f8fafc 42%, #cbd5e1); }
+.wc-preset-thumb--foundation::after { background: linear-gradient(90deg, rgba(248,250,252,.12), rgba(248,250,252,.82) 66%), repeating-linear-gradient(110deg, transparent 0 14px, rgba(14,46,84,.08) 15px 16px); }
+.wc-preset-thumb--foundation { color: #0a1b33; }
+.wc-preset-thumb--foundation .wc-preset-thumb__title { max-width: 82%; font-weight: 500; }
+.wc-preset-thumb--foundation .wc-preset-thumb__action { color: #fff; background: #0a152d; }
 .wc-preset-thumb--lumora { align-items: center; justify-content: center; text-align: center; }
 .wc-preset-thumb--multi-showcase { color: #070709; }
 .wc-preset-thumb--multi-showcase::before { background: linear-gradient(135deg, #fff 0%, #fff 48%, #dcd8fc 100%); }
