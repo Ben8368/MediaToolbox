@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "presetId": "foundation",
+  "installPath": "apps/web/public/static/web-composer/foundation/logos",
+  "files": [
+    { "path": "procure.svg", "sourceUrl": "https://svgl.app/library/procure.svg", "size": 1075, "sha256": "2b87e7cd0c48dbf324666f347340afc1156fc86a466021e480ac9c288c618fd6" },
+    { "path": "shopify.svg", "sourceUrl": "https://svgl.app/library/shopify.svg", "size": 1714, "sha256": "86e19afda708cead229b714d25de147ef0b920cfea807c5b2933b30d17a234db" },
+    { "path": "blender.svg", "sourceUrl": "https://svgl.app/library/blender.svg", "size": 1112, "sha256": "60a4c31343f8356ecbaaee324bd6253deacd8a6c27c3fe33f06ecc59ed4bd164" },
+    { "path": "figma.svg", "sourceUrl": "https://svgl.app/library/figma.svg", "size": 1087, "sha256": "5bcdea3417293412845b8298fe357fce3b192e8ff112d9b3fef315bc5cd127f6" },
+    { "path": "spotify.svg", "sourceUrl": "https://svgl.app/library/spotify.svg", "size": 1012, "sha256": "d3f7f94d90089fd318a2649807d5d57cf353affcf9d4cd2c5d373062822cf507" },
+    { "path": "lottielab.svg", "sourceUrl": "https://svgl.app/library/lottielab.svg", "size": 1222, "sha256": "59c903cc3c11f4fc63286675a5460bbaa5c80643acf85c3dd2394b27ab00eaf5" },
+    { "path": "google-cloud.svg", "sourceUrl": "https://svgl.app/library/google-cloud.svg", "size": 1139, "sha256": "e314a1d65f5035bdcebb84ed740ed0341cc5ba15ecf22fa2c1b10d39fbe18880" },
+    { "path": "bing.svg", "sourceUrl": "https://svgl.app/library/bing.svg", "size": 3768, "sha256": "192d4671a23e40c7deb8fb16c48970e27f116a6ca5cc648eb6e3b366f5c8dd6d" }
+  ]
+}

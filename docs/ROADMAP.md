@@ -118,15 +118,15 @@
 状态：**桌面 App beta 已接入，基础 PNG/MP4 闭环与默认素材离线化已验收；待 4K 长时压力验收**。
 
 - [x] 通过统一 `appRegistry` 接入 `web-composer`，复用全局窗口默认/最小尺寸和任务状态徽章。
-- [x] 接入 Lumora、多展示、Trace Grid、VEX Vision、VaultShield、Viktor 共 6 个版本化 Slot v2 预设；预设 DOM、样式和动画由完整性测试锁定，manifest/default/DOM Slot 绑定由契约测试校验；独立 `/preset/` 预览路由可选择预设与画幅。
+- [x] 接入 Lumora、多展示、Trace Grid、VEX Vision、Foundation、VaultShield、Viktor 共 7 个版本化 Slot v2 预设；预设 DOM、样式和动画由完整性测试锁定，manifest/default/DOM Slot 绑定由契约测试校验；独立 `/preset/` 预览路由可选择预设与画幅。
 - [x] 支持在预览区点击文案、Logo、图标或背景，由左侧上下文 Inspector 按 manifest 动态提供文案、字体、字号、字重、颜色、Icon/图片/媒体替换、X/Y 偏移和显隐编辑；不提供任意 DOM 拖拽或结构改写。
 - [x] 元素大纲支持搜索、分组和隐藏 Slot 恢复；编辑/交互预览模式分离，多工作台消息通过 session、source、origin 和预设版本隔离，选择 overlay 不进入导出捕获层。
 - [x] 独立 iframe 以目标像素尺寸渲染，工作台只缩放外层预览；支持 `16:9`、`4:3`、`1:1`、`9:16` 和 720p/1080p/1440p/4K。
 - [x] PNG 与 MP4 接入统一 Job/Asset；WebM 由 `web-render-worker` 通过 ffmpeg 编码为 H.264 MP4，输出固定进入 `/Workspace/Exports`。
 - [x] 所有预设支持去除背景后导出透明 PNG；MP4 导出菜单提供 VP9 Alpha 捕获、ProRes 4444（`yuva444p10le`）透明 MOV。
 - [x] 2026-07-13 完成桌面默认/最小窗口、Slot 编辑、4:3 画布、PNG 和 1 秒 MP4 本地烟测。
-- [x] 默认字体和必要图片已随源码本地化；8 个基础 MP4 使用固定 SHA-256 的版本化 Release Asset，1 个补充 MP4 固定上游 HTTPS URL、大小和 SHA-256，安装后均由本地静态路径提供。
-- [ ] 完成 4K/15 秒、6 个预设和图片/视频替换的桌面端压力与体验验收。
+- [x] 默认字体和必要图片已随源码本地化；8 个基础 MP4 使用固定 SHA-256 的版本化 Release Asset，2 个补充 MP4 固定上游 HTTPS URL、大小和 SHA-256，安装后均由本地静态路径提供。
+- [ ] 完成 4K/15 秒、7 个预设和图片/视频替换的桌面端压力与体验验收。
 
 ## Phase 6：工作区外路径授权
 

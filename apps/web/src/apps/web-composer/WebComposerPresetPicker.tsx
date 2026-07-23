@@ -9,6 +9,7 @@ import { presets } from './presets'
 const thumbnailCopy = {
   'trace-grid': { eyebrow: 'TRACE GRID', title: 'Tracing\nthe unseen', action: 'Start scan' },
   'vex-vision': { eyebrow: 'VEX', title: 'Shaping tomorrow\nwith vision and action.', action: 'Start a Chat' },
+  foundation: { eyebrow: 'FOUNDATION', title: 'Foundation of the\nnew digital epoch', action: 'Contact Us' },
   'multi-showcase': { eyebrow: 'BYTEPLUS', title: '多展示', action: 'Learn more' },
   lumora: { eyebrow: 'LUMORA', title: 'Find your\nnext path', action: 'Explore' },
   vaultshield: { eyebrow: 'VAULTSHIELD', title: 'Lock Down Your\nPasswords\nwith Ironclad Security', action: 'Get It Free' },
