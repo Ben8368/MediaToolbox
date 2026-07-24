@@ -23,7 +23,7 @@ const slots = collectSlots([
     multiline: true,
     maxLength: 360,
   }),
-  textSlot({ id: 'hero.email-placeholder', label: '邮箱占位文案', group: '主视觉', value: 'Your Best Email', allowIcon: false, canHide: false }),
+  textSlot({ id: 'hero.email-placeholder', label: '邮箱占位文案', group: '主视觉', value: 'Your Best Email', allowIcon: false }),
   textSlot({ id: 'hero.cta', label: '行动按钮', group: '主视觉', value: 'Get Early Access' }),
   textSlot({
     id: 'hero.stats',

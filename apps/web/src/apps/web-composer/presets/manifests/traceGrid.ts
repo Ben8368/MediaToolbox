@@ -11,8 +11,8 @@ const slots = collectSlots([
     src: '/static/web-composer/trace-grid-background.svg',
     kind: 'image',
   }),
-  iconSlot({ id: 'brand.mark', label: '品牌图标', group: '页头', iconId: 'fingerprint', allowImage: true, canHide: false }),
-  textSlot({ id: 'brand.logo', label: '品牌名称', group: '页头', value: 'TRACE GRID', fontRole: 'heading', allowImage: true, canHide: false }),
+  iconSlot({ id: 'brand.mark', label: '品牌图标', group: '页头', iconId: 'fingerprint', allowImage: true }),
+  textSlot({ id: 'brand.logo', label: '品牌名称', group: '页头', value: 'TRACE GRID', fontRole: 'heading', allowImage: true }),
   ...['Platform', 'Solutions', 'Resources', 'Pricing'].map((value, index) => textSlot({
     id: `nav.${index}`,
     label: `导航：${value}`,
@@ -22,8 +22,8 @@ const slots = collectSlots([
   })),
   textSlot({ id: 'nav.cta', label: '页头按钮', group: '页头', value: 'Book a demo', allowIcon: false }),
   textSlot({ id: 'hero.eyebrow', label: '眉题', group: '主视觉', value: 'Autonomous threat intelligence', allowIcon: false }),
-  textSlot({ id: 'hero.heading.line1', label: '标题第一行', group: '主视觉', value: 'Tracing', fontRole: 'heading', allowImage: true, canHide: false }),
-  textSlot({ id: 'hero.heading.line2', label: '标题第二行', group: '主视觉', value: 'the unseen', fontRole: 'heading', allowImage: true, canHide: false }),
+  textSlot({ id: 'hero.heading.line1', label: '标题第一行', group: '主视觉', value: 'Tracing', fontRole: 'heading', allowImage: true }),
+  textSlot({ id: 'hero.heading.line2', label: '标题第二行', group: '主视觉', value: 'the unseen', fontRole: 'heading', allowImage: true }),
   textSlot({
     id: 'hero.subtext',
     label: '副标题',

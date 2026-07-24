@@ -9,7 +9,7 @@ const slots = collectSlots([
     group: '画布',
     src: '/static/web-composer/videos/vex-vision-hero.mp4',
   }),
-  textSlot({ id: 'brand.logo', label: '品牌名称', group: '页头', value: 'VEX', fontRole: 'heading', allowImage: true, canHide: false }),
+  textSlot({ id: 'brand.logo', label: '品牌名称', group: '页头', value: 'VEX', fontRole: 'heading', allowImage: true }),
   ...['Story', 'Investing', 'Building', 'Advisory'].map((value, index) => textSlot({
     id: `nav.${index}`,
     label: `导航：${value}`,
@@ -18,8 +18,8 @@ const slots = collectSlots([
     allowIcon: false,
   })),
   textSlot({ id: 'nav.cta', label: '页头按钮', group: '页头', value: 'Start a Chat', allowIcon: false }),
-  textSlot({ id: 'hero.heading.line1', label: '标题第一行', group: '主视觉', value: 'Shaping tomorrow', fontRole: 'heading', allowImage: true, canHide: false }),
-  textSlot({ id: 'hero.heading.line2', label: '标题第二行', group: '主视觉', value: 'with vision and action.', fontRole: 'heading', allowImage: true, canHide: false }),
+  textSlot({ id: 'hero.heading.line1', label: '标题第一行', group: '主视觉', value: 'Shaping tomorrow', fontRole: 'heading', allowImage: true }),
+  textSlot({ id: 'hero.heading.line2', label: '标题第二行', group: '主视觉', value: 'with vision and action.', fontRole: 'heading', allowImage: true }),
   textSlot({
     id: 'hero.subtext',
     label: '副标题',

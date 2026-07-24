@@ -65,6 +65,16 @@ describe('web composer preset manifests', () => {
     })
   }
 
+  it('lets users hide every editable text or icon slot', () => {
+    for (const preset of presets) {
+      for (const slot of preset.slots) {
+        if (slot.editors.text || slot.editors.icon) {
+          expect(slot.canHide, `${preset.id}:${slot.id}`).toBe(true)
+        }
+      }
+    }
+  })
+
   it('enables an independent color override for every editable text slot', () => {
     for (const preset of presets) {
       for (const slot of preset.slots) {
