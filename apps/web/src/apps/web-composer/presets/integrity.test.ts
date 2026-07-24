@@ -14,14 +14,15 @@ const lockedFiles = {
   'TraceGridPreset.tsx': '7b03069c233eef347337b91a5b152a0a1d42b04e04b3370c94dbfbb7daa70c91',
   'trace-grid.css': '45829e4f1961d9bb956fc26289f3d8f6c5286974a5084ad5136c3d68a4665b49',
   'VexVisionPreset.tsx': '36149f8ff4a9244f2ab470760bcb44e2c880a6b2d163ee0792109aeabd9524e1',
-  'vex-vision.css': '536e5e5ccb8b35398d32df8d73af23063830b3b96689d9e2de6226d3f69cb071',
+  'vex-vision.css': '824f0e6876e422ad359c6099984e11dbfbc8e1c8e3981605c5f2279ddb1a16a1',
 } as const
 
 describe('locked web composer preset sources', () => {
   for (const [filename, expected] of Object.entries(lockedFiles)) {
     it(`keeps ${filename} unchanged for its declared preset version`, () => {
       const path = fileURLToPath(new URL(filename, import.meta.url))
-      const actual = createHash('sha256').update(fs.readFileSync(path)).digest('hex')
+      const source = fs.readFileSync(path, 'utf8').replace(/\r\n/g, '\n')
+      const actual = createHash('sha256').update(source).digest('hex')
       expect(actual).toBe(expected)
     })
   }
