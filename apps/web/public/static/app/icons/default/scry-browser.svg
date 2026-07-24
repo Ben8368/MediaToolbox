@@ -1,47 +1,30 @@
 <svg width="224" height="224" viewBox="0 0 224 224" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="scry-bg" x1="24" y1="12" x2="200" y2="218" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#172E63"/>
-      <stop offset="0.5" stop-color="#0B1837"/>
-      <stop offset="1" stop-color="#050B1B"/>
+    <linearGradient id="shell" x1="28" y1="18" x2="193" y2="207" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26384A"/>
+      <stop offset="1" stop-color="#101923"/>
     </linearGradient>
-    <linearGradient id="scry-orbit" x1="61" y1="55" x2="166" y2="171" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#B9E8FF"/>
-      <stop offset="0.46" stop-color="#78A8FF"/>
-      <stop offset="1" stop-color="#7869F6"/>
+    <linearGradient id="glass" x1="53" y1="61" x2="171" y2="164" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#233B50"/>
+      <stop offset="1" stop-color="#142431"/>
     </linearGradient>
-    <linearGradient id="scry-core" x1="94" y1="80" x2="138" y2="145" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F4FCFF"/>
-      <stop offset="1" stop-color="#9AD9FF"/>
-    </linearGradient>
-    <radialGradient id="scry-glow" cx="0" cy="0" r="1" gradientTransform="translate(112 112) rotate(90) scale(83)" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3C8DFF" stop-opacity="0.34"/>
-      <stop offset="1" stop-color="#3C8DFF" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="scry-shadow" x="29" y="29" width="166" height="166" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#020616" flood-opacity="0.52"/>
-    </filter>
-    <filter id="scry-soft-glow" x="60" y="57" width="104" height="110" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="4"/>
+    <filter id="shadow" x="9" y="12" width="206" height="207" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#02070C" flood-opacity="0.46"/>
     </filter>
   </defs>
-  <rect x="8" y="8" width="208" height="208" rx="48" fill="#030818"/>
-  <rect x="12" y="12" width="200" height="200" rx="44" fill="url(#scry-bg)" stroke="rgba(185,232,255,0.18)" stroke-width="2"/>
-  <rect x="20" y="20" width="184" height="184" rx="37" fill="url(#scry-glow)"/>
-  <path d="M35 90C50 57 78 39 112 39C146 39 174 57 189 90" stroke="#9CD6FF" stroke-opacity="0.18" stroke-width="2" stroke-linecap="round"/>
-  <path d="M35 134C50 167 78 185 112 185C146 185 174 167 189 134" stroke="#8E82FF" stroke-opacity="0.17" stroke-width="2" stroke-linecap="round"/>
-  <g filter="url(#scry-shadow)">
-    <path d="M48 112C61.7 79.9 84.1 63.8 112 63.8C139.9 63.8 162.3 79.9 176 112C162.3 144.1 139.9 160.2 112 160.2C84.1 160.2 61.7 144.1 48 112Z" fill="#081633" stroke="url(#scry-orbit)" stroke-width="5"/>
-    <path d="M64 112C75.2 89.2 92 78.5 112 78.5C132 78.5 148.8 89.2 160 112C148.8 134.8 132 145.5 112 145.5C92 145.5 75.2 134.8 64 112Z" stroke="#BFEAFF" stroke-opacity="0.3" stroke-width="1.5"/>
-    <circle cx="112" cy="112" r="31" fill="#0B2046" stroke="url(#scry-orbit)" stroke-width="4"/>
-    <circle cx="112" cy="112" r="22" fill="url(#scry-core)"/>
-    <circle cx="112" cy="112" r="13" fill="#112B5A"/>
-    <circle cx="105" cy="104" r="5" fill="white" fill-opacity="0.92"/>
-    <circle cx="119" cy="121" r="2.5" fill="#CFF1FF" fill-opacity="0.72"/>
-  </g>
-  <path d="M112 64C139.9 64 162.3 79.9 176 112" stroke="#D5F3FF" stroke-opacity="0.48" stroke-width="2" stroke-linecap="round"/>
-  <g opacity="0.68" filter="url(#scry-soft-glow)">
-    <circle cx="72" cy="78" r="3" fill="#91D8FF"/>
-    <circle cx="157" cy="145" r="3" fill="#9A92FF"/>
+  <g filter="url(#shadow)">
+    <rect x="18" y="18" width="188" height="188" rx="42" fill="url(#shell)"/>
+    <rect x="19" y="19" width="186" height="186" rx="41" stroke="#9CB3C5" stroke-opacity="0.22" stroke-width="2"/>
+    <rect x="35" y="42" width="154" height="140" rx="22" fill="#0B121A" stroke="#A8BBC9" stroke-opacity="0.28" stroke-width="2"/>
+    <path d="M36 68H188" stroke="#A8BBC9" stroke-opacity="0.24" stroke-width="2"/>
+    <circle cx="53" cy="55" r="4" fill="#8798A5"/>
+    <circle cx="67" cy="55" r="4" fill="#697C8B"/>
+    <rect x="83" y="50" width="83" height="10" rx="5" fill="#263746"/>
+    <path d="M49 126C62.5 95 84 79.5 112 79.5C140 79.5 161.5 95 175 126C161.5 157 140 172.5 112 172.5C84 172.5 62.5 157 49 126Z" fill="url(#glass)" stroke="#95B6CA" stroke-width="4"/>
+    <circle cx="112" cy="126" r="30" fill="#0B151E" stroke="#66879A" stroke-width="4"/>
+    <circle cx="112" cy="126" r="18" fill="#A4C1D0"/>
+    <circle cx="112" cy="126" r="10" fill="#253A48"/>
+    <circle cx="106" cy="119" r="4" fill="#E8F0F3" fill-opacity="0.88"/>
+    <path d="M62 119C75 96.5 91.5 85 112 85" stroke="#D2E0E7" stroke-opacity="0.5" stroke-width="2" stroke-linecap="round"/>
   </g>
 </svg>

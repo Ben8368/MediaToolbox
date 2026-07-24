@@ -8,6 +8,7 @@ import type {
   WebComposerExportSettings,
   WebComposerPresetState,
 } from '@mediatoolbox/contracts'
+import { ChevronDown } from 'lucide-react'
 
 import { aspectRatioOptions, previewRuntimeUrl, resolutionOptions, resizeExportSettings } from './model'
 import type { PresetDefinition } from './presets/types'
@@ -177,7 +178,9 @@ export function WebComposerPreviewStage({
               aria-haspopup="menu"
               disabled={busy || Boolean(compositionInvalidReason)}
               onClick={() => setVideoMenuOpen((open) => !open)}
-            >⌄</button>
+            >
+              <ChevronDown aria-hidden="true" size={14} strokeWidth={2} />
+            </button>
             {videoMenuOpen && (
               <div className="wc-video-export__menu" role="menu" aria-label="视频导出格式">
                 <button type="button" role="menuitem" onClick={() => { setVideoMenuOpen(false); onExport('mp4') }}>导出 MP4</button>
