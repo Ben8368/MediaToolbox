@@ -2,8 +2,8 @@ import { apiRequest } from '@/api/http'
 import type { AssetListResponse, OkResult, WebComposerCaptureMetadata, WorkOrderGetResponse, WorkOrder } from '@mediatoolbox/contracts'
 import type { JobListResponse, JobRecord, TranscodeCommandPreviewResponse, TranscodeJobDraft, TranscodeProbeResponse } from '@/api/types'
 
-export function listJobs(): Promise<JobListResponse> {
-  return apiRequest<JobListResponse>('/api/jobs')
+export function listJobs(signal?: AbortSignal): Promise<JobListResponse> {
+  return apiRequest<JobListResponse>('/api/jobs', { signal })
 }
 
 export function getJob(jobId: string): Promise<{ ok: boolean; job?: JobRecord }> {

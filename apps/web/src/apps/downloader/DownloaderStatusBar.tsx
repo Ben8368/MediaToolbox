@@ -18,9 +18,10 @@ export function DownloaderStatusBar({ detailOpen, onToggleDetail }: DownloaderSt
   })
   const systemLifecycle = useSystemStore((state) => state.systemLifecycle)
 
-  const refreshNetwork = useCallback(async () => {
+  const refreshNetwork = useCallback(async (signal?: AbortSignal) => {
     try {
-      const metrics = await fetchSystemRuntimeMetrics()
+      const metrics = await fetchSystemRuntimeMetrics(signal)
+      if (signal?.aborted) return
       if (metrics.network) {
         setNetwork({
           upload: normalizeNetworkSpeed(metrics.network.upload),
@@ -28,6 +29,7 @@ export function DownloaderStatusBar({ detailOpen, onToggleDetail }: DownloaderSt
         })
       }
     } catch {
+      if (signal?.aborted) return
       // 保留上次成功显示的网络速率
     }
   }, [])

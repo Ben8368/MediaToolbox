@@ -10,8 +10,8 @@ function buildQuery(params: Record<string, string | number | undefined>) {
   return text ? `?${text}` : ''
 }
 
-export async function fetchLogs(query: { level?: string; module?: string; page?: number; page_size?: number } = {}) {
-  return apiRequest<LogListResponse>(`/api/logs${buildQuery(query)}`)
+export async function fetchLogs(query: { level?: string; module?: string; page?: number; page_size?: number } = {}, signal?: AbortSignal) {
+  return apiRequest<LogListResponse>(`/api/logs${buildQuery(query)}`, { signal })
 }
 
 export async function fetchLogMetadata() {
@@ -22,8 +22,8 @@ export async function clearLogs() {
   return apiRequest<{ ok: boolean }>('/api/logs', { method: 'DELETE' })
 }
 
-export async function getUnreadNotificationCount() {
-  return apiRequest<UnreadNotificationResponse>('/api/notifications/unread-count')
+export async function getUnreadNotificationCount(signal?: AbortSignal) {
+  return apiRequest<UnreadNotificationResponse>('/api/notifications/unread-count', { signal })
 }
 
 export async function clearNotifications() {
@@ -34,11 +34,11 @@ export async function markAllNotificationsAsRead() {
   return apiRequest<{ ok: boolean }>('/api/notifications/read-all', { method: 'POST' })
 }
 
-export async function fetchNotifications(query: { level?: string; page?: number; page_size?: number; unread_only?: boolean } = {}) {
+export async function fetchNotifications(query: { level?: string; page?: number; page_size?: number; unread_only?: boolean } = {}, signal?: AbortSignal) {
   return apiRequest<LogListResponse>(`/api/notifications${buildQuery({
     level: query.level,
     page: query.page,
     page_size: query.page_size,
     unread_only: query.unread_only ? 'true' : undefined,
-  })}`)
+  })}`, { signal })
 }

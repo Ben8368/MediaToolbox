@@ -29,19 +29,19 @@ export function RightPanel() {
   const [servicesExpanded, setServicesExpanded] = useState(false)
   const systemLifecycle = useSystemStore((state) => state.systemLifecycle)
 
-  async function refresh() {
+  async function refresh(signal?: AbortSignal) {
     if (useSystemStore.getState().systemLifecycle !== 'running') return
 
     try {
-      const data = await getSystemMetrics()
-      if (useSystemStore.getState().systemLifecycle !== 'running') return
+      const data = await getSystemMetrics(signal)
+      if (signal?.aborted || useSystemStore.getState().systemLifecycle !== 'running') return
       setMetrics(data)
       setLastSampleAt(new Date())
       setError('')
       setNetUpData((items) => [...items.slice(1), Number(data.network?.upload_bytes_per_sec || 0)])
       setNetDownData((items) => [...items.slice(1), Number(data.network?.download_bytes_per_sec || 0)])
     } catch (err: unknown) {
-      if (useSystemStore.getState().systemLifecycle !== 'running') return
+      if (signal?.aborted || useSystemStore.getState().systemLifecycle !== 'running') return
       setError(getErrorMessage(err) || '监控数据读取失败')
     }
   }

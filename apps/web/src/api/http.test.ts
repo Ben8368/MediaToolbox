@@ -91,4 +91,22 @@ describe('apiRequest', () => {
       status: 200,
     })
   })
+
+  it('forwards caller cancellation to fetch', async () => {
+    const requestSignals: AbortSignal[] = []
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (_input, init) => {
+      const requestSignal = init?.signal
+      if (requestSignal) requestSignals.push(requestSignal)
+      return await new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    }))
+    const controller = new AbortController()
+
+    const request = apiRequest('/api/cancellable', { signal: controller.signal })
+    controller.abort()
+
+    await expect(request).rejects.toMatchObject({ message: '请求已取消' })
+    expect(requestSignals[0]?.aborted).toBe(true)
+  })
 })

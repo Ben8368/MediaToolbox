@@ -47,7 +47,7 @@ export function LeftNavbar() {
       allWindows.findIndex((candidate) => candidate.appType === windowItem.appType) === index,
   )
 
-  useVisibilityPolling(() => void pullUnreadNotificationCount(), 3000, systemLifecycle === 'running')
+  useVisibilityPolling(pullUnreadNotificationCount, 3000, systemLifecycle === 'running')
 
   function doClick(appType: string) {
     const existingWindow = windows.find((windowItem) => windowItem.appType === appType)

@@ -121,7 +121,7 @@
 - [x] 接入 Lumora、多展示、Trace Grid、VEX Vision、Foundation、VaultShield、Viktor 共 7 个版本化 Slot v2 预设；预设 DOM、样式和动画由完整性测试锁定，manifest/default/DOM Slot 绑定由契约测试校验；独立 `/preset/` 预览路由可选择预设与画幅。
 - [x] 支持在预览区点击文案、Logo、图标或背景，由左侧上下文 Inspector 按 manifest 动态提供文案、字体、字号、字重、颜色、Icon/图片/媒体替换、X/Y 偏移和显隐编辑；不提供任意 DOM 拖拽或结构改写。
 - [x] 元素大纲支持搜索、分组和隐藏 Slot 恢复；编辑/交互预览模式分离，多工作台消息通过 session、source、origin 和预设版本隔离，选择 overlay 不进入导出捕获层。
-- [x] 独立 iframe 以目标像素尺寸渲染，工作台只缩放外层预览；支持 `16:9`、`4:3`、`1:1`、`9:16` 和 720p/1080p/1440p/4K。
+- [x] 独立 iframe 以目标像素尺寸渲染，工作台只缩放外层预览；支持 `16:9`、`9:16`、`1.91:1`、`1:1.91`、`4:3`、`3:4`、`1:1` 和 720p/1080p/1440p/4K。
 - [x] PNG 与 MP4 接入统一 Job/Asset；WebM 由 `web-render-worker` 通过 ffmpeg 编码为 H.264 MP4，输出固定进入 `/Workspace/Exports`。
 - [x] 所有预设支持去除背景后导出透明 PNG；MP4 导出菜单提供 VP9 Alpha 捕获、ProRes 4444（`yuva444p10le`）透明 MOV。
 - [x] 2026-07-13 完成桌面默认/最小窗口、Slot 编辑、4:3 画布、PNG 和 1 秒 MP4 本地烟测。

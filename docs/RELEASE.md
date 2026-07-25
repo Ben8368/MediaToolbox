@@ -32,7 +32,7 @@
 - 素材清单变更必须在同一改动中记录兼容的预设/产品范围、来源与再分发授权，并完成本地归档安装、远端全新安装和逐文件校验。
 - 已被任一源码版本引用的素材 Release Asset 必须长期保留；若需要迁移，先发布新版本并验证，再更新源码清单。禁止删除仍被已发布源码或产品引用的旧归档。
 - 回滚优先恢复到上一个仍可下载且哈希匹配的清单版本；不得通过跳过哈希、改用浮动 URL 或覆盖旧 tag 回滚。
-- 当前仓库和视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json`，逐项覆盖基础与补充清单当前合计 9 个视频，`npm run release:preflight:public` 会阻止证据缺失的 tag Release。
+- 当前仓库和视频尚无完整的公开分发许可证/来源清单，因此只允许开发和内部候选构建；公开产品发布必须先补齐根 `LICENSE` 与 `assets/web-composer/PROVENANCE.json`，逐项覆盖基础与补充清单当前合计 10 个视频，`npm run release:preflight:public` 会阻止证据缺失的 tag Release。
 - 完整操作与本地覆盖参数见 [素材包说明](../assets/web-composer/README.md)。
 
 ## 候选构建

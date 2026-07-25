@@ -55,7 +55,18 @@ async function readSuccessPayload<T>(response: Response): Promise<T> {
 export async function apiRequest<T>(path: string, init: ApiRequestInit = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchInit } = init
   const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs)
+  const externalSignal = fetchInit.signal
+  let timedOut = false
+  const abortFromCaller = () => controller.abort()
+  if (externalSignal?.aborted) {
+    controller.abort()
+  } else {
+    externalSignal?.addEventListener('abort', abortFromCaller, { once: true })
+  }
+  const timer = window.setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
 
   try {
     const headers = new Headers(fetchInit.headers)
@@ -76,12 +87,13 @@ export async function apiRequest<T>(path: string, init: ApiRequestInit = {}): Pr
     return await readSuccessPayload<T>(response)
   } catch (err: unknown) {
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new ApiRequestError('请求超时，请稍后重试')
+      throw new ApiRequestError(timedOut ? '请求超时，请稍后重试' : '请求已取消')
     }
     if (err instanceof ApiRequestError) throw err
     throw new ApiRequestError(getErrorMessage(err) || '网络请求失败')
   } finally {
     window.clearTimeout(timer)
+    externalSignal?.removeEventListener('abort', abortFromCaller)
   }
 }
 
