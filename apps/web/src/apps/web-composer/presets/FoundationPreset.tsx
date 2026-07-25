@@ -1,7 +1,5 @@
-import { clsx } from 'clsx'
+import { motion } from 'framer-motion'
 import { ChevronRight } from 'lucide-react'
-import { motion } from 'motion/react'
-import { twMerge } from 'tailwind-merge'
 import type { CSSProperties } from 'react'
 
 import { getMedia, getMediaProps, PresetSlotContent, slotElementProps } from './shared'
@@ -21,17 +19,11 @@ const logos = [
   { src: localAsset('bing'), alt: 'Bing', gradient: 'linear-gradient(135deg, #67e8f9, #0f766e)' },
 ] as const
 
-const heroContainerClass = twMerge(clsx(
-  'foundation-hero relative w-full max-w-[1400px] mx-auto rounded-[48px] bg-white border border-slate-200/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.03)] overflow-hidden h-[600px] flex flex-col',
-))
+const heroContainerClass = 'foundation-hero relative w-full max-w-[1400px] mx-auto rounded-[48px] bg-white border border-slate-200/50 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.03)] overflow-hidden h-[600px] flex flex-col'
 
-const navClass = twMerge(clsx(
-  'foundation-navbar flex items-center bg-white/90 backdrop-blur-2xl px-1.5 py-1.5 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-slate-200/40',
-))
+const navClass = 'foundation-navbar flex items-center bg-white/90 backdrop-blur-2xl px-1.5 py-1.5 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.08)] border border-slate-200/40'
 
-const marqueeCardClass = twMerge(clsx(
-  'foundation-marquee-card group relative h-24 w-40 shrink-0 flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-sm hover:border-slate-300 transition-all overflow-hidden',
-))
+const marqueeCardClass = 'foundation-marquee-card group relative h-24 w-40 shrink-0 flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-sm hover:border-slate-300 transition-all overflow-hidden'
 
 export function FoundationPreset({ state, viewport }: { state: PresetState; viewport: PresetViewport }) {
   const background = getMedia(state)
