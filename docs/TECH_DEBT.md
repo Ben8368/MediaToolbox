@@ -94,15 +94,15 @@
 - **建议方案：** 设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
 - **估算工作量：** 中等，需要数据库契约、调度器、executor 和重启/关闭集成测试协同修改。
 
-#### TD-031: npm 依赖安全告警待分级
-- **位置：** `package-lock.json` + workspace `package.json`
-- **来源：** 全仓技术债复核（2026-07-25）
-- **目标阶段：** 下一次内部候选构建前
-- **阻断候选构建：** 待确认；若 high 告警进入生产依赖或 Electron 运行时则是
-- **问题：** 锁定依赖同步时 npm 报告 1 个 moderate、6 个 high 告警，但尚未取得逐项 advisory、生产/开发依赖路径和安全升级范围，不能据汇总数字盲目执行破坏性升级
-- **影响：** 在完成依赖路径分级前，无法判断告警是否进入最终桌面包，也无法为候选版本给出可信的供应链结论
-- **建议方案：** 经明确授权查询 npm advisory，分别运行全量与 production-only 审计；优先升级可兼容修复项，涉及 major 或 `--force` 的变更逐项验证 Electron 打包、测试和运行时影响
-- **估算工作量：** 小到中等，取决于告警是否集中在构建链传递依赖
+#### TD-033: Electron Builder 稳定版构建链 advisory 例外
+- **位置：** `apps/desktop/package.json` + `package-lock.json`
+- **来源：** TD-031 依赖安全告警分级（2026-07-25）
+- **目标阶段：** Electron Builder v27 稳定版或等价安全版本发布后
+- **阻断候选构建：** 否；若允许不受信任输入控制打包配置、文件名或 glob 则是
+- **问题：** 全量 `npm audit` 仍通过 `electron-builder@26.15.3` 的 `@electron/asar@3`、`@electron/universal@2`、旧 `minimatch` / `brace-expansion` 等报告 16 个 high 元告警。当前 v26 补丁标签仍固定旧链；已修复依赖仅出现在 v27 alpha，npm 的 `--force` 建议反而降级到 v22。
+- **影响：** 这些包只参与受信任 tag 的桌面打包，不进入 Electron 最终运行时；若攻击者可控制打包 glob 或仓库文件结构，仍可能造成构建进程 DoS。
+- **建议方案：** 保持稳定 v26 和受信任 tag 构建边界，跟踪 v27 stable；升级时重新运行 full/production audit、`npm run verify`、三平台目录包构建与 renderer 烟测。禁止为清零数字降级到 v22 或把 alpha 工具带入候选链。
+- **估算工作量：** 上游稳定版发布后为小到中等；主要成本是三平台打包回归。
 
 #### TD-032: PathGrant 桌面端真实体验与边界验收
 - **位置：** `apps/desktop/src/pathGrants.ts` + `apps/api/src/routes/path-grants.ts` + `apps/web/src/hooks/useExternalPathGrant.ts` + `docs/API_VALIDATION.md`
