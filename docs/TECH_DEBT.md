@@ -18,7 +18,7 @@
 
 新增债务仍按上方 P0/P1/P2 分级登记；当前无空队列占位，未偿还项集中在下方分级列表。
 
-### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（7 项）
+### 🟡 P1 — 从 CONTEXT.md 黄灯与代码审查迁移（8 项）
 
 #### TD-019: Electron 目录包跨平台 renderer 功能烟测
 - **位置：** `apps/desktop/src/main.ts` + `apps/api/src/renderer-routes.ts` + `.github/workflows/release.yml` + `scripts/release-preflight.ts`
@@ -46,7 +46,7 @@
 - **来源：** Phase 5.5 beta 验收待办
 - **目标阶段：** Web Composer 候选版本前
 - **阻断候选构建：** 是，若候选版本承诺离线或 4K/15 秒稳定导出
-- **验证方式：** 6 个预设分别覆盖默认素材、工作区图片、工作区视频，在 16:9/4:3/1:1/9:16 下完成 PNG 与 MP4；4K 明确定义为 UHD `3840×2160`（不是 DCI `4096×2160`），重点记录 15 秒导出耗时、峰值内存、文件体积和失败提示
+- **验证方式：** 8 个预设分别覆盖默认素材、工作区图片、工作区视频，在 `16:9`、`9:16`、`1.91:1`、`1:1.91`、`4:3`、`3:4`、`1:1` 下完成 PNG 与 MP4；4K 明确定义为 UHD `3840×2160`（不是 DCI `4096×2160`），重点记录 15 秒导出耗时、峰值内存、文件体积和失败提示
 - **问题：** 基础 PNG 和 1 秒 1080p H.264 MP4 已通过；视频加载失败会明确终止导出，录制成功或异常路径均会释放 recorder、stream track、媒体监听器与 timer；8 个基础视频和 3 个补充视频均已固定来源与 SHA-256，但 4K/长时捕获基线仍待完成
 - **影响：** 高规格视频导出可能较慢或触发捕获超时
 - **建议方案：** 为高规格捕获建立分级预设、耗时提示和压力测试基线
@@ -94,15 +94,25 @@
 - **建议方案：** 设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
 - **估算工作量：** 中等，需要数据库契约、调度器、executor 和重启/关闭集成测试协同修改。
 
-#### TD-030: 可见性轮询生命周期竞态
-- **位置：** `apps/web/src/hooks/useVisibilityPolling.ts`
-- **来源：** 全仓代码审查（2026-07-23）
-- **目标阶段：** 前端运行时可靠性迭代
-- **阻断候选构建：** 否
-- **问题：** effect 在页面初始隐藏时仍立即请求并启动 interval；禁用、卸载或重建 effect 不会隔离已在途回调，旧请求可能在新一代轮询启动后写回状态，且新一代首次刷新可能被共享的 `inFlightRef` 跳过
-- **影响：** 通知、日志、系统指标、下载和转码状态在后台恢复或系统生命周期切换后可能短暂陈旧，并可能发生卸载后状态写回
-- **建议方案：** 为每代 effect 增加 active/generation 标记，只在页面可见时启动；回调支持 `AbortSignal` 或至少忽略失效代结果，并覆盖 hidden mount、disable/re-enable、unmount in-flight 三类测试
-- **估算工作量：** 小到中等，需同步检查 6 个调用方的错误与 loading 状态语义
+#### TD-033: Electron Builder 稳定版构建链 advisory 例外
+- **位置：** `apps/desktop/package.json` + `package-lock.json`
+- **来源：** TD-031 依赖安全告警分级（2026-07-25）
+- **目标阶段：** Electron Builder v27 稳定版或等价安全版本发布后
+- **阻断候选构建：** 否；若允许不受信任输入控制打包配置、文件名或 glob 则是
+- **问题：** 全量 `npm audit` 仍通过 `electron-builder@26.15.3` 的 `@electron/asar@3`、`@electron/universal@2`、旧 `minimatch` / `brace-expansion` 等报告 16 个 high 元告警。当前 v26 补丁标签仍固定旧链；已修复依赖仅出现在 v27 alpha，npm 的 `--force` 建议反而降级到 v22。
+- **影响：** 这些包只参与受信任 tag 的桌面打包，不进入 Electron 最终运行时；若攻击者可控制打包 glob 或仓库文件结构，仍可能造成构建进程 DoS。
+- **建议方案：** 保持稳定 v26 和受信任 tag 构建边界，跟踪 v27 stable；升级时重新运行 full/production audit、`npm run verify`、三平台目录包构建与 renderer 烟测。禁止为清零数字降级到 v22 或把 alpha 工具带入候选链。
+- **估算工作量：** 上游稳定版发布后为小到中等；主要成本是三平台打包回归。
+
+#### TD-032: PathGrant 桌面端真实体验与边界验收
+- **位置：** `apps/desktop/src/pathGrants.ts` + `apps/api/src/routes/path-grants.ts` + `apps/web/src/hooks/useExternalPathGrant.ts` + `docs/API_VALIDATION.md`
+- **来源：** Phase 6A/B/C 验收待办补录（2026-07-25）
+- **目标阶段：** 内部候选版本前
+- **阻断候选构建：** 否；若候选版本承诺稳定读写工作区外路径则是
+- **问题：** 单文件 read grant、one-shot write grant 与目录级 read grant 管道已有自动化覆盖，但尚未在桌面端完整验证 open/save dialog、二次写入确认、过期/终态回收、纯 Web 降级及目录边界体验
+- **影响：** API 安全边界已有客观保障，但真实桌面交互仍可能暴露授权提示不清、取消路径状态残留或目录范围展示不准确
+- **建议方案：** 按 `docs/API_VALIDATION.md` 的 Phase 6 清单完成真实外部文件转码/PSD 输入、工作区外导出、grant 过期与目录级浏览验收，并记录日期、平台和结果
+- **估算工作量：** 主要为桌面端测试验收；发现交互缺陷后再单独估算修复
 ### 🟢 P2 — 长期规划
 
 #### TD-020: PSD fixture 边界场景覆盖

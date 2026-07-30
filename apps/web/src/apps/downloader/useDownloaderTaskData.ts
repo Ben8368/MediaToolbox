@@ -66,23 +66,22 @@ export function useDownloaderTaskData() {
   const [historyTasks, setHistoryTasks] = useState<DownloadTask[]>([])
   const [optimisticTasks, setOptimisticTasks] = useState<DownloadTask[]>([])
   const [pollError, setPollError] = useState('')
-  const loadingRef = useRef(false)
+  const taskRequestGenerationRef = useRef(0)
   const historyLoadingRef = useRef(false)
 
-  const fetchTasks = useCallback(async () => {
-    if (loadingRef.current) return
-    loadingRef.current = true
+  const fetchTasks = useCallback(async (signal?: AbortSignal) => {
+    const generation = ++taskRequestGenerationRef.current
     try {
-      const activeRes = await getActiveTasks()
+      const activeRes = await getActiveTasks(signal)
+      if (signal?.aborted || generation !== taskRequestGenerationRef.current) return
       const mappedTasks = normalizeTaskList(activeRes).map(mapApiTaskToDownloadTask)
 
       mappedTasks.sort((a, b) => b.created_at - a.created_at)
       setTasks(mappedTasks)
       setPollError('')
     } catch (err: unknown) {
+      if (signal?.aborted || generation !== taskRequestGenerationRef.current) return
       setPollError(getErrorMessage(err) || '任务列表刷新失败')
-    } finally {
-      loadingRef.current = false
     }
   }, [])
 

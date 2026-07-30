@@ -36,15 +36,17 @@ export function TranscodeApp() {
     [jobs],
   )
 
-  const refreshJobs = useCallback(async () => {
+  const refreshJobs = useCallback(async (signal?: AbortSignal) => {
     try {
-      const result = await listJobs()
+      const result = await listJobs(signal)
+      if (signal?.aborted) return
       setJobs(result.jobs ?? [])
       setError('')
     } catch (err: unknown) {
+      if (signal?.aborted) return
       setError(err instanceof Error ? err.message : '任务列表加载失败')
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [])
 

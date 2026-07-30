@@ -8,7 +8,7 @@ interface NotificationUnreadStore {
   cooldownUntil: number
   setUnreadNotificationCount: (count: number) => void
   setClearCooldown: () => void
-  pullUnreadNotificationCount: () => Promise<void>
+  pullUnreadNotificationCount: (signal?: AbortSignal) => Promise<void>
 }
 
 export const useNotificationUnreadStore = create<NotificationUnreadStore>((set, get) => ({
@@ -16,15 +16,17 @@ export const useNotificationUnreadStore = create<NotificationUnreadStore>((set, 
   cooldownUntil: 0,
   setUnreadNotificationCount: (count) => set({ unreadNotificationCount: count }),
   setClearCooldown: () => set({ cooldownUntil: Date.now() + CLEAR_COOLDOWN_MS }),
-  pullUnreadNotificationCount: async () => {
+  pullUnreadNotificationCount: async (signal?: AbortSignal) => {
     if (Date.now() < get().cooldownUntil) return
     try {
-      const data = await getUnreadNotificationCount()
+      const data = await getUnreadNotificationCount(signal)
+      if (signal?.aborted) return
       const raw = data?.unread_count ?? 0
       const n = typeof raw === 'number' ? raw : Number(raw)
       const count = Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0
       set({ unreadNotificationCount: count })
     } catch {
+      if (signal?.aborted) return
       set({ unreadNotificationCount: 0 })
     }
   },

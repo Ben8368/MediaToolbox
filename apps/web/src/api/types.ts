@@ -63,14 +63,14 @@ export type TranscodeJobDraft = {
 export interface MediaToolboxApi {
   submitFetch(draft: FetchTaskDraft): Promise<SubmitFetchResponse>
   analyzeDownloadStrategy(draft: { url: string; requested_route?: 'auto' | 'ytdlp' | 'browser' }): Promise<DownloadStrategyResponse>
-  getActiveTasks(): Promise<TaskListResponse>
-  getWeeklyHistory(): Promise<TaskListResponse>
+  getActiveTasks(signal?: AbortSignal): Promise<TaskListResponse>
+  getWeeklyHistory(signal?: AbortSignal): Promise<TaskListResponse>
   cancelTask(taskId: string): Promise<OkResult>
   deleteTaskRecord(taskId: string): Promise<OkResult>
   clearTaskRecords(taskIds?: string[]): Promise<OkResult>
   getFetchTaskFileUrl(taskId: string, path: string): string
 
-  listJobs(): Promise<JobListResponse>
+  listJobs(signal?: AbortSignal): Promise<JobListResponse>
   getJob(jobId: string): Promise<{ ok: boolean; job?: JobRecord }>
   fetchAssets(): Promise<AssetListResponse>
   submitTranscodeJob(draft: TranscodeJobDraft): Promise<JobRecord>
@@ -99,15 +99,15 @@ export interface MediaToolboxApi {
   uploadFilebrowserFile(directory: string, file: File): Promise<OkResult & { path?: string; name?: string }>
   filebrowserFileDownloadUrl(virtualPath: string): string
 
-  getSystemMetrics(): Promise<RuntimeMetrics>
-  fetchSystemRuntimeMetrics(): Promise<RuntimeMetricsSlice>
+  getSystemMetrics(signal?: AbortSignal): Promise<RuntimeMetrics>
+  fetchSystemRuntimeMetrics(signal?: AbortSignal): Promise<RuntimeMetricsSlice>
   shutdownSystem(): Promise<OkResult>
 
-  fetchLogs(query?: { level?: string; module?: string; page?: number; page_size?: number }): Promise<LogListResponse>
+  fetchLogs(query?: { level?: string; module?: string; page?: number; page_size?: number }, signal?: AbortSignal): Promise<LogListResponse>
   fetchLogMetadata(): Promise<LogMetadataResponse>
   clearLogs(): Promise<OkResult>
-  getUnreadNotificationCount(): Promise<UnreadNotificationResponse>
-  fetchNotifications(query?: { level?: string; page?: number; page_size?: number; unread_only?: boolean }): Promise<LogListResponse>
+  getUnreadNotificationCount(signal?: AbortSignal): Promise<UnreadNotificationResponse>
+  fetchNotifications(query?: { level?: string; page?: number; page_size?: number; unread_only?: boolean }, signal?: AbortSignal): Promise<LogListResponse>
   clearNotifications(): Promise<OkResult>
   markAllNotificationsAsRead(): Promise<OkResult>
 }

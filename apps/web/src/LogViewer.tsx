@@ -71,13 +71,14 @@ export function LogViewer() {
 
   const totalPages = Math.max(Math.ceil((logs.total || 0) / pageSize), 1)
 
-  const loadLogs = useCallback(async () => {
+  const loadLogs = useCallback(async (signal?: AbortSignal) => {
     setLoading(true)
     setError('')
     try {
       const data = isNotificationPanel
-        ? await fetchNotifications({ level, page, page_size: pageSize }) as LogResponse
-        : await fetchLogs({ level, module, page, page_size: pageSize }) as LogResponse
+        ? await fetchNotifications({ level, page, page_size: pageSize }, signal) as LogResponse
+        : await fetchLogs({ level, module, page, page_size: pageSize }, signal) as LogResponse
+      if (signal?.aborted) return
       setLogs({
         ...data,
         total: data.total ?? 0,
@@ -86,9 +87,10 @@ export function LogViewer() {
         page_size: data.page_size ?? pageSize,
       })
     } catch (err: unknown) {
+      if (signal?.aborted) return
       setError(getErrorMessage(err) || (isNotificationPanel ? '通知加载失败' : '日志加载失败'))
     } finally {
-      setLoading(false)
+      if (!signal?.aborted) setLoading(false)
     }
   }, [isNotificationPanel, level, module, page, pageSize])
 

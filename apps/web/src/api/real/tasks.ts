@@ -15,12 +15,12 @@ export async function submitFetch(draft: FetchTaskDraft) {
   })
 }
 
-export async function getActiveTasks() {
-  return apiRequest<TaskListResponse>('/api/fetch/tasks')
+export async function getActiveTasks(signal?: AbortSignal) {
+  return apiRequest<TaskListResponse>('/api/fetch/tasks', { signal })
 }
 
-export async function getWeeklyHistory() {
-  return apiRequest<TaskListResponse>('/api/fetch/tasks/history')
+export async function getWeeklyHistory(signal?: AbortSignal) {
+  return apiRequest<TaskListResponse>('/api/fetch/tasks/history', { signal })
 }
 
 export async function cancelTask(taskId: string) {
