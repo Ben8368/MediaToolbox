@@ -12,6 +12,12 @@
       "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260505_101331_74f9b798-3f00-4e86-8a01-377aa16ffeaa.mp4",
       "size": 2788688,
       "sha256": "84882d84197946ee4ca32815ca8dd80684f11c13aa22cfc07f30d4a617c67ea3"
+    },
+    {
+      "path": "wandor-hero.mp4",
+      "sourceUrl": "https://pollen-batch-41236914.figma.site/_components/v2/f0ee2dae7671c170c34f12e31c4cb41418976c98/769c564298c132f7919405cd9f17c1b1231f341d.769c5642.mp4",
+      "size": 17257941,
+      "sha256": "2cea5efe6ed80d027512044dc177b41fad830700d6de6a8ffe8bcd36610c8383"
     }
   ]
 }

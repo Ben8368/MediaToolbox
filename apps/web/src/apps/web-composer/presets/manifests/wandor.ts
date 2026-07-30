@@ -2,7 +2,7 @@ import { WEB_COMPOSER_PRESET_CATALOG, type WebComposerPresetManifest } from '@me
 
 import { collectSlots, iconSlot, mediaSlot, textSlot } from './helpers'
 
-export const wandorVideoSource = 'https://pollen-batch-41236914.figma.site/_components/v2/f0ee2dae7671c170c34f12e31c4cb41418976c98/769c564298c132f7919405cd9f17c1b1231f341d.769c5642.mp4'
+export const wandorVideoSource = '/static/web-composer/videos/wandor-hero.mp4'
 
 const slots = collectSlots([
   mediaSlot({ id: 'background', label: '背景视频', group: '画布', src: wandorVideoSource }),
@@ -38,7 +38,7 @@ const slots = collectSlots([
 export const wandorManifest: WebComposerPresetManifest = {
   id: 'wandor',
   version: WEB_COMPOSER_PRESET_CATALOG.wandor.currentVersion,
-  upstreamSourceSha: 'user-provided-figma-video-20260730',
+  upstreamSourceSha: 'user-provided-figma-video-supplemental-20260730',
   upstreamStyleSha: 'user-provided-wandor-prompt-20260730',
   name: 'Wandor',
   style: '旅行 AI / 液态玻璃视频首屏',

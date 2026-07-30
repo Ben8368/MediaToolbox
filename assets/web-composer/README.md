@@ -29,10 +29,10 @@ HTTP(S) URL、`file://` URL 或本地归档路径。正式源码清单必须固�
 
 ## 治理与回滚
 
-- 当前 Release 资源包只包含 `manifest.json` 声明的 8 个基础 MP4；`supplemental.json` 当前声明 2 个固定来源的补充 MP4，不打入该归档。字体、CSS 和必要图片仍随源码仓库管理。
+- 当前 Release 资源包只包含 `manifest.json` 声明的 8 个基础 MP4；`supplemental.json` 当前声明 3 个固定来源的补充 MP4，不打入该归档。字体、CSS 和必要图片仍随源码仓库管理。
 - 每次内容变化都必须提升 `packageVersion`、使用新 tag/归档名并更新归档与逐文件 SHA-256；已发布 tag 和归档不可覆盖。
 - PR 必须说明兼容的预设/产品范围、素材来源、版权/许可证和再分发授权，并附本地安装、远端全新安装及 renderer 入包结果。
 - 已被源码或产品引用的归档长期保留。回滚时恢复上一版清单，不能删除旧归档、关闭哈希校验或改用浮动下载地址。
-- 当前视频的逐项来源与授权记录尚未建立，因此这些素材只用于开发和内部候选构建，不得随公开产品发布。公开发布前须补齐根 `LICENSE` 与本目录 `PROVENANCE.json`；后者必须逐项覆盖 `manifest.json` 与 `supplemental.json` 当前合计 10 个视频的 `path`、`source`、`copyrightOwner`、`license` 和 `redistributionEvidence`，并通过 `npm run release:preflight:public`。
+- 当前视频的逐项来源与授权记录尚未建立，因此这些素材只用于开发和内部候选构建，不得随公开产品发布。公开发布前须补齐根 `LICENSE` 与本目录 `PROVENANCE.json`；后者必须逐项覆盖 `manifest.json` 与 `supplemental.json` 当前合计 11 个视频的 `path`、`source`、`copyrightOwner`、`license` 和 `redistributionEvidence`，并通过 `npm run release:preflight:public`。
 
 长期决策见 [ADR 0006](../../docs/ADR/0006-web-composer-external-video-assets.md)，跨产品发布门禁见 [RELEASE.md](../../docs/RELEASE.md)。

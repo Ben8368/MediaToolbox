@@ -7,7 +7,7 @@ import { WandorPreset } from './WandorPreset'
 const viewport = { width: 1920, height: 1080, designWidth: 1920, designHeight: 1080 }
 
 describe('Wandor preset', () => {
-  it('keeps the supplied looping video, travel copy, and liquid-glass prompt card', () => {
+  it('uses the installed looping video, travel copy, and liquid-glass prompt card', () => {
     const markup = renderToStaticMarkup(<WandorPreset state={wandorManifest.defaults} viewport={viewport} />)
 
     expect(markup).toContain(`src="${wandorVideoSource}"`)
