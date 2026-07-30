@@ -12,6 +12,7 @@ import {
   Shield,
   Sparkles,
   Star,
+  Upload,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
@@ -30,6 +31,7 @@ export const webComposerIconLabels: Record<WebComposerIconName, string> = {
   shield: '盾牌',
   sparkles: '闪光',
   star: '星标',
+  upload: '上传',
   'vault-logo': 'VaultShield Logo',
   zap: '闪电',
 }
@@ -47,6 +49,7 @@ const iconRegistry: Partial<Record<WebComposerIconName, LucideIcon>> = {
   shield: Shield,
   sparkles: Sparkles,
   star: Star,
+  upload: Upload,
   zap: Zap,
 }
 

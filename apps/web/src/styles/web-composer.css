@@ -158,6 +158,11 @@
 .wc-preset-thumb--vex-vision::after { background: linear-gradient(90deg, rgba(0,0,0,.66), transparent 68%), repeating-radial-gradient(ellipse at 70% 42%, transparent 0 13px, rgba(214,255,237,.08) 14px 15px); }
 .wc-preset-thumb--vex-vision .wc-preset-thumb__title { max-width: 82%; font-weight: 400; letter-spacing: 0; }
 .wc-preset-thumb--vex-vision .wc-preset-thumb__action { color: #080b0a; background: #fff; }
+.wc-preset-thumb--wandor { color: #1a1a1a; }
+.wc-preset-thumb--wandor::before { background: radial-gradient(circle at 73% 80%, rgba(152,198,181,.82), transparent 28%), linear-gradient(155deg, #f8f8f3 0%, #dbe7dd 48%, #92b6a6 100%); }
+.wc-preset-thumb--wandor::after { background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.08) 64%), linear-gradient(90deg, transparent 56%, rgba(67,111,95,.14)); }
+.wc-preset-thumb--wandor .wc-preset-thumb__title { max-width: 84%; font-size: clamp(13px, 2.1vw, 20px); font-weight: 500; }
+.wc-preset-thumb--wandor .wc-preset-thumb__action { color: #fafafa; background: #0a0a0a; }
 .wc-preset-thumb--foundation::before { background: radial-gradient(circle at 68% 48%, rgba(255,255,255,.78), transparent 5%), linear-gradient(125deg, #dbeafe, #f8fafc 42%, #cbd5e1); }
 .wc-preset-thumb--foundation::after { background: linear-gradient(90deg, rgba(248,250,252,.12), rgba(248,250,252,.82) 66%), repeating-linear-gradient(110deg, transparent 0 14px, rgba(14,46,84,.08) 15px 16px); }
 .wc-preset-thumb--foundation { color: #0a1b33; }

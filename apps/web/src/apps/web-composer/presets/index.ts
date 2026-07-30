@@ -15,12 +15,15 @@ import { TraceGridPreset } from './TraceGridPreset'
 import { VexVisionPreset } from './VexVisionPreset'
 import { FoundationPreset } from './FoundationPreset'
 import { foundationManifest } from './manifests/foundation'
+import { WandorPreset } from './WandorPreset'
+import { wandorManifest } from './manifests/wandor'
 
 export const presets: PresetDefinition[] = [
   { ...lumoraManifest, Component: LumoraPreset },
   { ...multiShowcaseManifest, Component: MultiShowcasePreset },
   { ...traceGridManifest, Component: TraceGridPreset },
   { ...vexVisionManifest, Component: VexVisionPreset },
+  { ...wandorManifest, Component: WandorPreset },
   { ...foundationManifest, Component: FoundationPreset },
   { ...vaultShieldManifest, Component: VaultShieldPreset },
   { ...viktorManifest, Component: ViktorPreset },
