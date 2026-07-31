@@ -1,7 +1,7 @@
 import { runPsdWorkerJob, PsdWorkerEngineNotConfiguredError, PsdWorkerInputError } from '@mediatoolbox/psd-worker'
 import type { JobRecord, WorkOrder } from '@mediatoolbox/contracts'
 
-import { updateJobRecord } from './job-utils.js'
+import { startJobExecution, updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 import { revokeGrantsBoundToJob, toGrantMarker } from './workspace-path.js'
@@ -29,7 +29,7 @@ export async function executePsdScan(
   let retainInputGrant = false
 
   try {
-    const started = await updateJobRecord(state, job.id, 'running')
+    const started = await startJobExecution(state, job.id)
     if (!started) return
     addLog(state.db, 'INFO', 'psd', `开始 PSD 扫描：${job.title}`)
 
@@ -102,7 +102,7 @@ export async function executePsdApply(
   signal: AbortSignal,
 ): Promise<void> {
   try {
-    const started = await updateJobRecord(state, job.id, 'running')
+    const started = await startJobExecution(state, job.id)
     if (!started) return
     addLog(state.db, 'INFO', 'psd', `开始 PSD 应用：${job.title}`)
 

@@ -1,5 +1,6 @@
 import type { FetchTaskRecord } from '@mediatoolbox/contracts'
-import { describe, expect, it, vi } from 'vitest'
+import { YtdlpRunError } from '@mediatoolbox/downloader'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@mediatoolbox/download-worker', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@mediatoolbox/download-worker')>()
@@ -17,8 +18,21 @@ vi.mock('@mediatoolbox/download-worker', async (importOriginal) => {
 
 import { buildApiServer } from './app.js'
 import { buildDownloadJob } from './download-executor.js'
+import { runDownloadWorkerJob } from '@mediatoolbox/download-worker'
+
+const mockedRunDownloadWorkerJob = vi.mocked(runDownloadWorkerJob)
 
 describe('fetch routes', () => {
+  beforeEach(() => {
+    mockedRunDownloadWorkerJob.mockReset().mockResolvedValue({
+      status: 'canceled',
+      command: 'yt-dlp',
+      args: [],
+      exitCode: null,
+      events: [],
+    })
+  })
+
   it('creates, lists, and cancels fetch task skeletons', async () => {
     const app = await buildApiServer()
 
@@ -207,6 +221,35 @@ describe('fetch routes', () => {
     expect(body.task_ids).toHaveLength(2)
     expect(body.task_id).toBe(body.task_ids[0])
     expect(body.task_ids.every((id) => jobIds.has(id))).toBe(true)
+    await app.close()
+  })
+
+  it('automatically retries retryable download failures with a stable output token', async () => {
+    mockedRunDownloadWorkerJob
+      .mockRejectedValueOnce(new YtdlpRunError({
+        normalized: { code: 'network', message: '网络连接异常，稍后可以重试。', retryable: true },
+        exitCode: 1,
+        stderr: 'connection reset',
+      }))
+      .mockResolvedValueOnce({ status: 'succeeded', command: 'yt-dlp', args: [], exitCode: 0, events: [] })
+
+    const app = await buildApiServer()
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/fetch/tasks',
+      payload: { url: 'https://example.com/retryable-video' },
+    })
+    const taskId = created.json<{ task_id: string }>().task_id
+
+    let job: { status: string; attempt: number; maxAttempts: number; outputToken: string } | undefined
+    for (let poll = 0; poll < 120 && job?.status !== 'succeeded'; poll += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      const detail = await app.inject({ method: 'GET', url: `/api/jobs/${taskId}` })
+      job = detail.json<{ job: typeof job }>().job
+    }
+
+    expect(mockedRunDownloadWorkerJob).toHaveBeenCalledTimes(2)
+    expect(job).toMatchObject({ status: 'succeeded', attempt: 2, maxAttempts: 3, outputToken: taskId })
     await app.close()
   })
 

@@ -122,6 +122,8 @@ Workers / adapters 负责：
 - `POST /api/fetch/tasks/clear` 会同步清理对应 jobs 记录；`POST /api/fetch/tasks` 兼容 `urls` 数组，按 URL 拆分为多个下载任务和 jobs，并把 yt-dlp 产物固定写入工作区 `Downloads`。
 - `POST /api/fetch/tasks` 仅接受共享 `FetchTaskDraft` 字段：工作区内 `output_dir`、可选的 `compatible_format`（先下载最高规格，再转码为 H.264/MP4）、支持的浏览器 Cookie 来源及 `1–4` 的单批次并发。未勾选兼容格式时，视频不转码且音视频合并优先使用 MKV。平台与通道由 `/api/downloads/analyze` 自动分流；yt-dlp 任务会自动检测字幕，并只请求一份原始语言的 SRT 字幕。未知字段、越界路径或超界并发返回 4xx，绝不静默忽略。
 - `POST /api/jobs/{id}/cancel` 会联动下载、转码、PSD、网页合成 abort controller，标记浏览器下载 job 取消状态，并统一执行 Job 终态资源清理。
+- `JobRecord` 除基础状态外返回 `attempt`、`maxAttempts`、稳定 `outputToken` 与可选 `nextAttemptAt`。下载和转码任务默认 `maxAttempts=3`；仅当 adapter 将错误标记为 `retryable` 时，任务才从 `running` 回到带 `nextAttemptAt` 的 `queued`，随后按 1、2 秒退避再次执行。其余任务当前 `maxAttempts=1`。
+- 自动重试不新增 `retrying` 枚举，也不把一次 attempt 失败视为 Job 终态；最终成功、次数耗尽、用户取消或服务关闭后才执行终态资源清理。API 重启仍会把遗留活动任务标记为失败，不提供断点续跑承诺。
 - `GET /api/assets` 为文件库提供 SQLite 资产索引；`DELETE /api/logs` 会清空 SQLite 日志；通知未读数从 WARNING/ERROR/CRITICAL 日志派生，并通过本地已读时间点归零。
 
 安全边界：

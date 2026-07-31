@@ -16,6 +16,7 @@ MediaToolbox 需要处理本地文件、转码输入、PSD 模板和导出路径
 - 前端和任务 payload 只传 `grantId`，不持有、不拼接工作区外物理路径。
 - API 负责签发、校验和吊销 grant，并记录审计日志。
 - worker 只消费任务附带的 grant，不自行扩大搜索范围。
+- Job 自动重试的 `running → queued` 不是终态，绑定 grant 在 attempt 间保留；最终成功、失败或取消时再吊销。
 
 ## 后果
 
@@ -37,4 +38,3 @@ MediaToolbox 需要处理本地文件、转码输入、PSD 模板和导出路径
 - `docs/FRONTEND_API_CONTRACT.md`
 - `docs/API_VALIDATION.md`
 - `docs/ROADMAP.md`
-

@@ -9,7 +9,7 @@ import type {
   BrowserNetworkRequestResponse,
   OkResult,
 } from '@mediatoolbox/contracts'
-import { createJobRecord, transitionJob } from '@mediatoolbox/job-core'
+import { createJobRecord, startJobAttempt } from '@mediatoolbox/job-core'
 
 import { requireDesktopAuth } from '../desktop-auth.js'
 import {
@@ -80,7 +80,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
 
       state.browserDownloads.unshift(download)
       const job = createJobRecord({ id, kind: 'browser.download', title: `浏览器下载：${download.filename}` })
-      await state.db.jobs.create(transitionJob(job, 'running', new Date(now * 1000)))
+      await state.db.jobs.create(startJobAttempt(job, new Date(now * 1000)))
       addLog(state.db, 'NOTICE', 'browser-network', `浏览器下载开始：${download.filename}`)
       return { ok: true, download }
     },
@@ -174,7 +174,7 @@ export function registerBrowserNetworkRoutes(app: FastifyInstance, state: ApiSta
 
       state.browserRequests.unshift(record)
       const job = createJobRecord({ id, kind: 'browser.request', title: `浏览器网络请求：${record.method} ${hostFromUrl(record.url)}` })
-      await state.db.jobs.create(transitionJob(job, 'running', new Date(now * 1000)))
+      await state.db.jobs.create(startJobAttempt(job, new Date(now * 1000)))
       addLog(state.db, 'NOTICE', 'browser-network', `浏览器网络请求开始：${record.method} ${record.url}`)
       return { ok: true, request: record }
     },

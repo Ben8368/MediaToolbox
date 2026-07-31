@@ -26,6 +26,7 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         id: jobId,
         kind: 'media.transcode',
         title: title || `转码任务：${path.basename(input.physicalPath)}`,
+        maxAttempts: 3,
       })
       try {
         await state.db.jobs.create(job)

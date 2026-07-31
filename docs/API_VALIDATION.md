@@ -32,6 +32,14 @@
 3. 取消可取消任务，确认状态刷新或错误提示可读。
 4. 输入路径越界、输出目录不在 `/Workspace/Exports` 或 ffmpeg 缺失时，前端显示可读提示。
 
+## Job 重试与幂等路径
+
+1. 制造一次 adapter 明确标记为 `retryable` 的下载网络错误，确认 Job 从 `running` 回到带 `nextAttemptAt` 的 `queued`，随后成功；`attempt=2`、`maxAttempts=3` 且 `outputToken` 不变。
+2. 制造转码暂时性错误后恢复，确认退避期间可取消，成功后只保留一个最终输出和一条 Asset，不残留带 `outputToken` 的 `.partial` / `.backup` 文件。
+3. 制造输入不存在、权限拒绝、缺少 yt-dlp/ffmpeg 等不可恢复错误，确认不会自动重试并保留可读 `errorMessage`。
+4. 使用 read PathGrant 触发一次可重试错误，确认 attempt 间 grant 仍有效，最终成功、失败或取消后才吊销；one-shot write grant 不恢复为 active。
+5. 在退避等待或运行中关闭 API，确认 executor 被取消并完成清理；重启后遗留活动 Job 明确失败，不显示为已续跑。
+
 ## 浏览器网络路径
 
 1. 浏览器资源下载入口创建 Browser Network 下载任务，并写入 `/Workspace/Downloads`。

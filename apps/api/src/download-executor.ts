@@ -8,7 +8,7 @@ import { parseDataRateText } from './system-sampler.js'
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
 import { toVirtualWorkspacePath } from './workspace-files.js'
-import { updateJobRecord } from './job-utils.js'
+import { deferJobRetry, startJobExecution, updateJobRecord, waitForDeferredJob } from './job-utils.js'
 
 function drainQueue(state: ApiState): void {
   const scheduler = state.downloadScheduler
@@ -96,74 +96,76 @@ export async function shutdownDownloadScheduler(state: ApiState): Promise<void> 
   }))
 }
 
-export async function updateDownloadJob(state: ApiState, taskId: string, nextStatus: Parameters<typeof updateJobRecord>[2]) {
-  return updateJobRecord(state, taskId, nextStatus)
+export async function updateDownloadJob(
+  state: ApiState,
+  taskId: string,
+  nextStatus: Parameters<typeof updateJobRecord>[2],
+  errorMessage?: string,
+) {
+  return updateJobRecord(state, taskId, nextStatus, errorMessage ? { errorMessage } : {})
 }
 
 export async function executeDownload(task: FetchTaskRecord, state: ApiState, signal: AbortSignal): Promise<void> {
-  const started = await updateDownloadJob(state, task.id, 'running')
-  if (!started) return
-  task.status = 'running'
-  task.started_at = nowSeconds()
-  task.updated_at = task.started_at
-  task.stage = '准备下载'
-  addLog(state.db, 'INFO', 'downloader', `开始下载：${task.title}`)
+  while (!signal.aborted) {
+    const runningJob = await startJobExecution(state, task.id)
+    if (!runningJob) return
+    task.status = 'running'
+    task.started_at = nowSeconds()
+    task.updated_at = task.started_at
+    task.completed_at = null
+    task.stage = '准备下载'
+    task.error = null
+    addLog(state.db, 'INFO', 'downloader', `开始下载（${runningJob.attempt}/${runningJob.maxAttempts}）：${task.title}`)
 
-  try {
-    const job = buildDownloadJob(task, state)
-    await fs.mkdir(path.dirname(job.outputTemplate), { recursive: true })
     const outputFiles = new Set<string>()
-
-    const result = await runDownloadWorkerJob(job, {
-      signal,
-      onEvent: (event: YtdlpProgressEvent) => {
-        if (signal.aborted) return
-        task.updated_at = nowSeconds()
-        if (event.type === 'progress') {
-          task.progress = event.percent
-          const speedBps = parseDataRateText(event.speedText)
-          if (speedBps === null) {
-            const nextState = { ...(task.state ?? {}) }
-            delete nextState.download_bytes_per_sec
-            task.state = nextState
-          } else if (task.state?.download_bytes_per_sec !== speedBps) {
-            task.state = { ...(task.state ?? {}), download_bytes_per_sec: speedBps }
+    try {
+      const job = buildDownloadJob(task, state)
+      await fs.mkdir(path.dirname(job.outputTemplate), { recursive: true })
+      const result = await runDownloadWorkerJob(job, {
+        signal,
+        onEvent: (event: YtdlpProgressEvent) => {
+          if (signal.aborted) return
+          task.updated_at = nowSeconds()
+          if (event.type === 'progress') {
+            task.progress = event.percent
+            const speedBps = parseDataRateText(event.speedText)
+            if (speedBps === null) {
+              const nextState = { ...(task.state ?? {}) }
+              delete nextState.download_bytes_per_sec
+              task.state = nextState
+            } else if (task.state?.download_bytes_per_sec !== speedBps) {
+              task.state = { ...(task.state ?? {}), download_bytes_per_sec: speedBps }
+            }
+            const speed = event.speedText ? ` @ ${event.speedText}` : ''
+            const eta = event.etaText ? ` ETA ${event.etaText}` : ''
+            task.stage = `${event.percent}% of ${event.totalText}${speed}${eta}`
+          } else if (event.type === 'stage') {
+            if (event.stage === 'destination') {
+              task.stage = `写入：${event.message}`
+              rememberOutputFile(outputFiles, state, event.message)
+            } else if (event.stage === 'already-downloaded') {
+              task.stage = '已下载过，跳过'
+              rememberOutputFile(outputFiles, state, event.message)
+            } else if (event.stage === 'merger') {
+              task.stage = `合并：${event.message}`
+              rememberOutputFile(outputFiles, state, event.message)
+            } else if (event.stage === 'finished') task.stage = '后处理完成'
+            else task.stage = event.message
+          } else if (event.type === 'error') {
+            task.stage = `错误：${event.message}`
           }
-          const speed = event.speedText ? ` @ ${event.speedText}` : ''
-          const eta = event.etaText ? ` ETA ${event.etaText}` : ''
-          task.stage = `${event.percent}% of ${event.totalText}${speed}${eta}`
-        } else if (event.type === 'stage') {
-          if (event.stage === 'destination') {
-            task.stage = `写入：${event.message}`
-            rememberOutputFile(outputFiles, state, event.message)
-          } else if (event.stage === 'already-downloaded') {
-            task.stage = '已下载过，跳过'
-            rememberOutputFile(outputFiles, state, event.message)
-          } else if (event.stage === 'merger') {
-            task.stage = `合并：${event.message}`
-            rememberOutputFile(outputFiles, state, event.message)
-          } else if (event.stage === 'finished') task.stage = '后处理完成'
-          else task.stage = event.message
-        } else if (event.type === 'error') {
-          task.stage = `错误：${event.message}`
-        }
-      },
-      onLog: (line: string, stream: 'stdout' | 'stderr') => {
-        if (!line.trim()) return
-        const level = stream === 'stderr' ? 'WARNING' : 'INFO'
-        addLog(state.db, level, 'yt-dlp', `[${task.id}] ${line}`)
-      },
-    })
+        },
+        onLog: (line: string, stream: 'stdout' | 'stderr') => {
+          if (!line.trim()) return
+          addLog(state.db, stream === 'stderr' ? 'WARNING' : 'INFO', 'yt-dlp', `[${task.id}] ${line}`)
+        },
+      })
 
-    if (result.status === 'canceled') {
-      if (await updateDownloadJob(state, task.id, 'canceled')) {
-        task.status = 'cancelled'
-        task.stage = '已取消'
-        task.completed_at = nowSeconds()
-        task.updated_at = task.completed_at
-        addLog(state.db, 'WARNING', 'downloader', `下载已取消：${task.title}`)
+      if (result.status === 'canceled') {
+        if (await updateDownloadJob(state, task.id, 'canceled')) markDownloadCanceled(task, state)
+        return
       }
-    } else {
+
       const completed = await updateDownloadJob(state, task.id, 'succeeded')
       if (!completed) {
         await cleanupDownloadOutputFiles(outputFiles, state)
@@ -175,42 +177,54 @@ export async function executeDownload(task: FetchTaskRecord, state: ApiState, si
       task.completed_at = nowSeconds()
       task.updated_at = task.completed_at
       task.output_files = [...outputFiles]
-      task.result = {
-        status: result.status,
-        command: result.command,
-        args: result.args,
-        exitCode: result.exitCode,
-      }
+      task.result = { status: result.status, command: result.command, args: result.args, exitCode: result.exitCode }
       addLog(state.db, 'INFO', 'downloader', `下载完成：${task.title}`)
-    }
-  } catch (error) {
-    task.completed_at = nowSeconds()
-    task.updated_at = task.completed_at
+      return
+    } catch (error) {
+      const failure = normalizeDownloadFailure(error)
+      const deferred = failure.retryable ? await deferJobRetry(state, task.id, failure.message) : undefined
+      if (deferred) {
+        task.status = 'pending'
+        task.stage = `等待自动重试（下一次 ${deferred.attempt + 1}/${deferred.maxAttempts}）`
+        task.error = failure.message
+        task.updated_at = nowSeconds()
+        addLog(state.db, 'WARNING', 'downloader', `下载暂时失败，将自动重试：${task.title} — ${failure.message}`)
+        if (await waitForDeferredJob(deferred, signal)) continue
+        if (await updateDownloadJob(state, task.id, 'canceled')) markDownloadCanceled(task, state)
+        return
+      }
 
-    if (error instanceof YtdlpToolNotFoundError) {
-      const failed = await updateDownloadJob(state, task.id, 'failed')
+      const failed = await updateDownloadJob(state, task.id, 'failed', failure.message)
       if (!failed) return
       task.status = 'failed'
-      task.stage = '未找到 yt-dlp'
-      task.error = '未找到可用的 yt-dlp，请确认已安装并在 PATH 中。'
-      addLog(state.db, 'ERROR', 'downloader', `下载失败（yt-dlp 缺失）：${task.title}`)
-    } else if (error instanceof YtdlpRunError) {
-      const failed = await updateDownloadJob(state, task.id, 'failed')
-      if (!failed) return
-      task.status = 'failed'
-      task.stage = `失败：${error.normalized.message}`
-      task.error = error.normalized.message
-      addLog(state.db, 'ERROR', 'downloader', `下载失败：${task.title} — ${error.normalized.message}`)
-    } else {
-      const message = error instanceof Error ? error.message : String(error)
-      const failed = await updateDownloadJob(state, task.id, 'failed')
-      if (!failed) return
-      task.status = 'failed'
-      task.stage = '执行出错'
-      task.error = message
-      addLog(state.db, 'ERROR', 'downloader', `下载出错：${task.title} — ${message}`)
+      task.stage = failure.stage
+      task.error = failure.message
+      task.completed_at = nowSeconds()
+      task.updated_at = task.completed_at
+      addLog(state.db, 'ERROR', 'downloader', `${failure.logPrefix}：${task.title} — ${failure.message}`)
+      return
     }
   }
+  if (await updateDownloadJob(state, task.id, 'canceled')) markDownloadCanceled(task, state)
+}
+
+function normalizeDownloadFailure(error: unknown): { message: string; stage: string; logPrefix: string; retryable: boolean } {
+  if (error instanceof YtdlpToolNotFoundError) {
+    return { message: '未找到可用的 yt-dlp，请确认已安装并在 PATH 中。', stage: '未找到 yt-dlp', logPrefix: '下载失败（yt-dlp 缺失）', retryable: false }
+  }
+  if (error instanceof YtdlpRunError) {
+    return { message: error.normalized.message, stage: `失败：${error.normalized.message}`, logPrefix: '下载失败', retryable: error.normalized.retryable }
+  }
+  const message = error instanceof Error ? error.message : String(error)
+  return { message, stage: '执行出错', logPrefix: '下载出错', retryable: false }
+}
+
+function markDownloadCanceled(task: FetchTaskRecord, state: ApiState): void {
+  task.status = 'cancelled'
+  task.stage = '已取消'
+  task.completed_at = nowSeconds()
+  task.updated_at = task.completed_at
+  addLog(state.db, 'WARNING', 'downloader', `下载已取消：${task.title}`)
 }
 
 export function buildDownloadJob(task: FetchTaskRecord, state?: ApiState): DownloadWorkerJob {

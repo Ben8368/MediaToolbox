@@ -4,7 +4,7 @@ import { persistWebComposerPng, runWebRenderVideoJob } from '@mediatoolbox/web-r
 import type { JobRecord } from '@mediatoolbox/contracts'
 import type { WebComposerVideoFormat } from '@mediatoolbox/contracts'
 
-import { patchRunningJob, updateJobRecord } from './job-utils.js'
+import { patchRunningJob, startJobExecution, updateJobRecord } from './job-utils.js'
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
 
@@ -38,8 +38,9 @@ export async function executeWebComposerCapture(
   state: ApiState,
   signal: AbortSignal,
 ): Promise<void> {
-  const started = await updateJobRecord(state, job.id, 'running', { progress: { current: 0, total: 100, unit: 'percent' } })
+  const started = await startJobExecution(state, job.id)
   if (!started) return
+  await patchRunningJob(state, job.id, { progress: { current: 0, total: 100, unit: 'percent' } })
   addLog(state.db, 'INFO', 'web-composer', `开始导出：${job.title}`)
   let retainOutput = false
 

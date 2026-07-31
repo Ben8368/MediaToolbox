@@ -17,6 +17,7 @@ export async function recoverInterruptedJobs(state: ApiState): Promise<number> {
       ...transitionJob(job, 'failed'),
       errorMessage: INTERRUPTED_JOB_MESSAGE,
     }
+    delete failedJob.nextAttemptAt
     const updated = await state.db.jobs.updateIfStatus(failedJob, job.status)
     if (!updated) continue
     recoveredCount += 1

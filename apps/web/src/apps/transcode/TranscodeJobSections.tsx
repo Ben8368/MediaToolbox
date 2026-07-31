@@ -46,7 +46,7 @@ export function TranscodeJobSections(props: TranscodeJobSectionsProps) {
           {jobs.map((job) => (
             <div className="transcode-row" key={job.id}>
               <span><strong>{job.title}</strong>{job.errorMessage && <small>{job.errorMessage}</small>}</span>
-              <span><i className={`transcode-status transcode-status--${job.status}`} />{STATUS_LABELS[job.status]}</span>
+              <span><i className={`transcode-status transcode-status--${job.status}`} />{formatStatus(job)}</span>
               <span>{formatProgress(job)}</span>
               <span>
                 <button className="mt-btn" type="button" disabled={TERMINAL_STATUSES.has(job.status)} onClick={() => onCancel(job.id)}>取消</button>
@@ -78,4 +78,12 @@ function formatProgress(job: JobRecord): string {
     : job.progress.current
   if (job.progress.unit === 'percent') return `${Math.min(100, Math.max(0, value))}%`
   return `${job.progress.current}/${job.progress.total} ${job.progress.unit}`
+}
+
+function formatStatus(job: JobRecord): string {
+  if (job.status === 'queued' && job.nextAttemptAt && job.attempt < job.maxAttempts) {
+    return `等待重试 ${job.attempt + 1}/${job.maxAttempts}`
+  }
+  if (job.attempt > 0 && job.maxAttempts > 1) return `${STATUS_LABELS[job.status]} ${job.attempt}/${job.maxAttempts}`
+  return STATUS_LABELS[job.status]
 }

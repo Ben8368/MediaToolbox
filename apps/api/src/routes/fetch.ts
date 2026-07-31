@@ -83,7 +83,7 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
     state.fetchTasks.unshift(...tasks)
     for (const task of tasks) {
-      await state.db.jobs.create(createJobRecord({ id: task.id, kind: 'download.video', title: task.title }))
+      await state.db.jobs.create(createJobRecord({ id: task.id, kind: 'download.video', title: task.title, maxAttempts: 3 }))
       addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
       scheduleDownload(task, state)
     }

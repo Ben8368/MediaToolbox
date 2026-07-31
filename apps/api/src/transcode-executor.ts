@@ -7,7 +7,7 @@ import type { JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
-import { patchRunningJob, updateJobRecord } from './job-utils.js'
+import { deferJobRetry, patchRunningJob, startJobExecution, updateJobRecord, waitForDeferredJob } from './job-utils.js'
 
 export async function updateTranscodeJob(
   state: ApiState,
@@ -26,9 +26,9 @@ function patchTranscodeProgress(state: ApiState, jobId: string, progress: JobRec
   return progress ? patchRunningJob(state, jobId, { progress }) : Promise.resolve(false)
 }
 
-function outputStagingPaths(outputPath: string, jobId: string) {
+function outputStagingPaths(outputPath: string, outputToken: string) {
   const parsed = path.parse(outputPath)
-  const suffix = jobId.replace(/[^a-zA-Z0-9_-]/g, '_')
+  const suffix = outputToken.replace(/[^a-zA-Z0-9_-]/g, '_')
   return {
     temporaryPath: path.join(parsed.dir, `.${parsed.name}.${suffix}.partial${parsed.ext}`),
     backupPath: path.join(parsed.dir, `.${parsed.name}.${suffix}.backup${parsed.ext}`),
@@ -47,13 +47,20 @@ export async function executeTranscode(
   outputVirtualPath: string,
   signal: AbortSignal,
 ): Promise<void> {
-  const started = await updateTranscodeJob(state, job.id, 'running')
-  if (!started) return
-  addLog(state.db, 'INFO', 'transcode', `开始转码：${job.title}`)
+  if (signal.aborted) {
+    if (await updateTranscodeJob(state, job.id, 'canceled')) {
+      addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+    }
+    return
+  }
+  const runningJob = await startJobExecution(state, job.id)
+  if (!runningJob) return
+  addLog(state.db, 'INFO', 'transcode', `开始转码（${runningJob.attempt}/${runningJob.maxAttempts}）：${job.title}`)
   let retainOutput = false
   let outputCommitted = false
   let hasBackup = false
-  const { temporaryPath, backupPath } = outputStagingPaths(workerJob.outputPath, job.id)
+  let deferredJob: JobRecord | undefined
+  const { temporaryPath, backupPath } = outputStagingPaths(workerJob.outputPath, runningJob.outputToken)
 
   try {
     await Promise.all([
@@ -115,12 +122,19 @@ export async function executeTranscode(
       }
     }
   } catch (error) {
-    if (error instanceof FfmpegToolNotFoundError) {
+    if (signal.aborted) {
+      if (await updateTranscodeJob(state, job.id, 'canceled')) {
+        addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+      }
+    } else if (error instanceof FfmpegToolNotFoundError) {
       if (await updateTranscodeJob(state, job.id, 'failed', undefined, '未找到可用的 ffmpeg，请确认已安装并在 PATH 中。')) {
         addLog(state.db, 'ERROR', 'transcode', `转码失败（ffmpeg 缺失）：${job.title}`)
       }
     } else if (error instanceof FfmpegRunError) {
-      if (await updateTranscodeJob(state, job.id, 'failed', undefined, error.normalized.message)) {
+      if (error.normalized.retryable) deferredJob = await deferJobRetry(state, job.id, error.normalized.message)
+      if (deferredJob) {
+        addLog(state.db, 'WARNING', 'transcode', `转码暂时失败，将自动重试：${job.title} — ${error.normalized.message}`)
+      } else if (await updateTranscodeJob(state, job.id, 'failed', undefined, error.normalized.message)) {
         addLog(state.db, 'ERROR', 'transcode', `转码失败：${job.title} — ${error.normalized.message}`)
       }
     } else {
@@ -135,5 +149,13 @@ export async function executeTranscode(
       await restorePreviousOutput(workerJob.outputPath, backupPath, hasBackup).catch(() => undefined)
     }
     if (retainOutput || !hasBackup) await fs.unlink(backupPath).catch(() => undefined)
+  }
+
+  if (deferredJob) {
+    if (await waitForDeferredJob(deferredJob, signal)) {
+      await executeTranscode(job, workerJob, state, outputVirtualPath, signal)
+    } else if (await updateTranscodeJob(state, job.id, 'canceled')) {
+      addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+    }
   }
 }

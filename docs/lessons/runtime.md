@@ -7,3 +7,4 @@
 - T-008：生产打包必须验证包内真实启动路径和 `/api/health`，不能只相信开发态路径或源码布局。
 - T-009：Fastify `close` 前必须先等待或取消所有异步 executor；没有统一 drain 屏障时不得直接关闭 SQLite，否则 worker 收尾会访问已关闭连接。
 - T-010：Job 进入终态默认回收绑定 PathGrant；若成功结果会由持久实体继续复用授权（如 PSD scan → WorkOrder → apply），必须显式保留或转移所有权，同时保证失败、取消和重启恢复路径仍会回收。
+- T-011：Job 自动重试只能消费 adapter 明确分类的暂时性错误；attempt 间必须保持稳定输出 token 和授权所有权，等待用带 `nextAttemptAt` 的 `queued` 表达，不能新增没有真实调度语义的伪状态。
