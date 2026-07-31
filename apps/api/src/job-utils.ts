@@ -1,5 +1,5 @@
 import { canTransitionJob, isTerminalJobStatus, scheduleJobRetry, startJobAttempt, transitionJob } from '@mediatoolbox/job-core'
-import type { JobRecord } from '@mediatoolbox/contracts'
+import type { AssetRecord, JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { revokeGrantsBoundToJob } from './workspace-path.js'
@@ -33,6 +33,25 @@ export async function updateJobRecord(
     await revokeGrantsBoundToJob(state, jobId)
   }
   return true
+}
+
+/** 转码等产物任务共用：Job succeeded 与 Asset 索引必须在同一 SQLite 事务中提交。 */
+export async function completeJobWithAsset(
+  state: ApiState,
+  jobId: string,
+  asset: AssetRecord,
+  progress?: JobRecord['progress'],
+): Promise<boolean> {
+  const current = await state.db.jobs.findById(jobId)
+  if (!current || !canTransitionJob(current.status, 'succeeded')) return false
+  const completed = {
+    ...transitionJob(current, 'succeeded'),
+    ...(progress ? { progress } : {}),
+  }
+  delete completed.nextAttemptAt
+  const updated = await state.db.jobs.completeWithAsset(completed, current.status, asset)
+  if (updated) await revokeGrantsBoundToJob(state, jobId)
+  return updated
 }
 
 /** 原子开始一次执行并增加 attempt；用于支持重试的 executor。 */
@@ -76,6 +95,13 @@ export async function waitForDeferredJob(job: JobRecord, signal: AbortSignal): P
     }
     signal.addEventListener('abort', onAbort, { once: true })
   })
+}
+
+/** 启动/重启调度共用：遵守持久化的 nextAttemptAt，避免恢复后提前执行。 */
+export async function waitForScheduledJob(state: ApiState, jobId: string, signal: AbortSignal): Promise<boolean> {
+  const job = await state.db.jobs.findById(jobId)
+  if (!job || job.status !== 'queued') return false
+  return waitForDeferredJob(job, signal)
 }
 
 /** 运行中进度、日志等字段更新不属于状态迁移；仅允许仍在运行的任务写入。 */

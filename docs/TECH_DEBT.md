@@ -84,15 +84,15 @@
 
 
 #### TD-028: Job 可重试调度与幂等输出
-- **位置：** `apps/api/src/job-recovery.ts` + `apps/api/src/*-executor.ts` + `packages/job-core/`
+- **位置：** `apps/api/src/job-recovery.ts` + `apps/api/src/job-execution-payload.ts` + `apps/api/src/*-executor.ts` + `packages/db/` + `packages/job-core/`
 - **来源：** 全仓技术债复核（2026-07-15）
 - **目标阶段：** 长任务可靠性迭代
 - **阻断候选构建：** 否；若承诺进程重启后自动续跑则是
-- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；SQLite schema v6 与共享契约持久化 `attempt`、`maxAttempts`、`nextAttemptAt` 和稳定 `outputToken`。下载网络错误与转码错误仅在 adapter 明确标记 `retryable` 时最多执行 3 次，采用 1、2 秒指数退避；等待期用带调度时间的 `queued` 表达，取消和关闭可中断等待。转码以稳定 token 隔离 `.partial` / `.backup`，成功后原子提交单一输出；重试 attempt 间保留绑定 PathGrant，最终终态才回收。API 启动仍会将 SQLite 遗留的活动任务原子标记为 `failed` 并审计；executor registry 与关闭 drain 已覆盖下载、转码、PSD 和 Web Composer。自动化覆盖 schema v5→v6 迁移、下载/转码暂时性失败后成功、attempt 递增、token 稳定与临时文件清理。
-- **剩余问题：** 完整执行载荷和 checkpoint 尚未持久化，进程重启后的任务只能明确失败，不能安全续跑；PSD 与 Web Composer 尚未证明重复执行幂等，因此 `maxAttempts=1`。
-- **影响：** 运行期暂时性下载/转码故障可自动恢复，取消、关闭与授权生命周期可控；API 进程丢失或 PSD/Web Composer 暂时性失败仍需用户重新提交。
-- **建议方案：** 为各 Job kind 设计不向 Web 暴露物理路径的持久执行载荷、checkpoint 与启动期 dispatcher；逐类证明输出和 Asset 提交幂等后再开启恢复，禁止仅把遗留 `queued` 任务盲目重跑。
-- **估算工作量：** 剩余为中等到较大，需要执行载荷 schema、启动调度器和各 worker 的重启集成测试协同修改。
+- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；SQLite schema v7 与共享契约持久化 `attempt`、`maxAttempts`、`nextAttemptAt` 和稳定 `outputToken`，私有 `job_executions` 表原子保存下载/转码的版本化执行载荷且不进入 Web API。下载网络错误与转码错误仅在 adapter 明确标记 `retryable` 时最多执行 3 次，采用 1、2 秒指数退避；等待期用带调度时间的 `queued` 表达，取消和关闭可中断等待。异常重启后，载荷完整且次数未耗尽的下载/转码任务重新排队并增加 attempt；转码以稳定 token 隔离 `.partial` / `.backup`，启动时先恢复被中断的旧输出，再原子提交单一输出与 Asset。缺失/损坏载荷、次数耗尽或暂停任务明确失败。自动化覆盖 schema v5→v7 迁移、私有载荷级联清理、下载/转码重启续跑、次数耗尽、attempt/token 稳定与临时文件清理。
+- **剩余问题：** PSD 与 Web Composer 尚未证明重复执行和 Asset 提交幂等，因此仍为 `maxAttempts=1`，异常重启后明确失败；下载/转码采用安全的整次 attempt 重跑，尚未提供媒体字节级 checkpoint/断点续传承诺。
+- **影响：** 运行期暂时性故障与 API 异常重启下的下载/转码可自动恢复，取消、正常关闭与授权生命周期可控；PSD/Web Composer 暂时性失败仍需用户重新提交。
+- **建议方案：** 逐类证明 PSD/Web Composer 的输出与 Asset 提交幂等后，为其增加版本化私有载荷和恢复器；只有 adapter/格式具备可靠 checkpoint 时再引入字节级断点，禁止把遗留任务盲目重跑。
+- **估算工作量：** 剩余为中等，需要 PSD/Web Composer 的幂等提交设计与重启集成测试协同修改。
 
 #### TD-033: Electron Builder 稳定版构建链 advisory 例外
 - **位置：** `apps/desktop/package.json` + `package-lock.json`

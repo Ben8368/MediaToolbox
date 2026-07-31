@@ -22,7 +22,7 @@ MediaToolbox 是本地媒体工作流应用，涉及本地文件、下载、浏�
 - 前端不得直接读取或拼接工作区外物理路径。
 - 裸盘符、UNC、`..` 逃逸和工作区外路径默认由 API 拒绝。
 - 工作区外访问必须通过 PathGrant；读授权和写授权分离，写入工作区外必须二次确认。
-- Job 因明确可重试错误从 `running` 退回带 `nextAttemptAt` 的 `queued` 时仍属于同一授权生命周期：read grant 在 attempt 间保留，最终成功、失败、取消或服务关闭后统一回收；one-shot write grant 不因重试恢复为可复用状态。
+- Job 因明确可重试错误或异常重启恢复从 `running` 退回带 `nextAttemptAt` 的 `queued` 时仍属于同一授权生命周期：read grant 在 attempt 间保留，最终成功、失败、取消或正常服务关闭后统一回收；one-shot write grant 不因重试或重启恢复为可复用状态。下载/转码的版本化执行载荷只存于本地数据库私有表，不进入公开 `JobRecord` 或 Web API。
 - 桌面专用写端点必须同时校验桌面 marker 与启动期 desktop token；token 只在 Electron 主进程与本地 API 之间传递，不暴露给 Web UI。
 - Electron 主进程持有浏览器 session、文件选择和下载事件；Web UI 只提交用户意图并展示状态。
 - 不向 Web UI 暴露原始 cookie、session 或本地敏感路径。

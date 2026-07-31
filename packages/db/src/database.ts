@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import type { AssetRecord, LogEntry, WorkOrder } from '@mediatoolbox/contracts'
-import { SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH, SCHEMA_V6_JOB_ATTEMPTS } from './schema.js'
+import { SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH, SCHEMA_V6_JOB_ATTEMPTS, SCHEMA_V7_JOB_EXECUTIONS } from './schema.js'
 import type { MediaToolboxDatabase } from './types.js'
 import { createJobRepository } from './job-repository.js'
 import { createPathGrantRepository } from './path-grant-repository.js'
@@ -58,6 +58,12 @@ export class SqliteDatabase implements MediaToolboxDatabase {
     if (currentVersion < 6) {
       this.db.exec(SCHEMA_V6_JOB_ATTEMPTS)
       this.recordSchemaVersion(6)
+      currentVersion = 6
+    }
+
+    if (currentVersion < 7) {
+      this.db.exec(SCHEMA_V7_JOB_EXECUTIONS)
+      this.recordSchemaVersion(7)
     }
   }
 

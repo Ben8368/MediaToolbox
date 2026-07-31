@@ -72,8 +72,8 @@ export async function revokeGrantsBoundToJob(state: ApiState, jobId: string): Pr
 }
 
 /** 写授权默认 one-shot：真正用于落盘写入后立即消费，不允许重复使用同一个 grant。 */
-async function consumeWriteGrant(state: ApiState, grantId: string): Promise<void> {
-  const claimed = await state.db.pathGrants.consume(grantId, Date.now())
+async function consumeWriteGrant(state: ApiState, grantId: string, jobId: string): Promise<void> {
+  const claimed = await state.db.pathGrants.consume(grantId, jobId, Date.now())
   if (!claimed) throw new WorkspacePathError('写入授权已被使用、已过期或已失效。')
 }
 
@@ -139,11 +139,16 @@ export async function resolveOutputPath(
     exportsErrorMessage?: string | undefined
     /** 传 true 时立即消费该写授权（one-shot）。仅在真正要落盘写入时才传 true，probe/preview 等只读路径不要传。 */
     consumeGrant?: boolean | undefined
+    /** 消费 write grant 时必须绑定的任务生命周期宿主。 */
+    bindJobId?: string | undefined
   },
 ): Promise<ResolvedPath> {
   if (input.grantId) {
     const physicalPath = await resolveGrantPath(input.grantId, state.db, 'file.write')
-    if (input.consumeGrant) await consumeWriteGrant(state, input.grantId)
+    if (input.consumeGrant) {
+      if (!input.bindJobId) throw new WorkspacePathError('消费写入授权时必须绑定任务。')
+      await consumeWriteGrant(state, input.grantId, input.bindJobId)
+    }
     return { physicalPath }
   }
   const virtualPath = normalizeWorkspacePath(input.path, state.workspaceRoot)

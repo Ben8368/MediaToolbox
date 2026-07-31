@@ -138,6 +138,7 @@ export function registerPsdRoutes(app: FastifyInstance, state: ApiState) {
         path: outputPath || defaultOutputPath,
         grantId: outputGrantId,
         consumeGrant: true,
+        bindJobId: job.id,
       })
       physicalOutputPath = output.physicalPath
     } catch (error) {

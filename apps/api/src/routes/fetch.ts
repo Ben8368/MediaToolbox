@@ -8,6 +8,7 @@ import { addLog, isTerminalTask, nowSeconds } from '../utils.js'
 import { abortDownload, updateDownloadJob, scheduleDownload } from '../download-executor.js'
 import { readWorkspaceFileForDownload } from '../workspace-files.js'
 import { normalizeWorkspacePath } from '../workspace-path.js'
+import { downloadExecution } from '../job-execution-payload.js'
 
 type InternalFetchTaskDraft = FetchTaskDraft & { batch_id: string }
 
@@ -83,7 +84,12 @@ export function registerFetchRoutes(app: FastifyInstance, state: ApiState) {
 
     state.fetchTasks.unshift(...tasks)
     for (const task of tasks) {
-      await state.db.jobs.create(createJobRecord({ id: task.id, kind: 'download.video', title: task.title, maxAttempts: 3 }))
+      const mode = (task.params as FetchTaskDraft).mode
+      const kind = mode === 'audio' ? 'download.audio' : mode === 'subtitles' ? 'download.subtitle' : 'download.video'
+      await state.db.jobs.create(
+        createJobRecord({ id: task.id, kind, title: task.title, maxAttempts: 3 }),
+        downloadExecution(task),
+      )
       addLog(state.db, 'NOTICE', 'downloader', `创建下载任务：${task.title}`)
       scheduleDownload(task, state)
     }

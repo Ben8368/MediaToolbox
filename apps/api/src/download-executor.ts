@@ -8,7 +8,7 @@ import { parseDataRateText } from './system-sampler.js'
 import type { ApiState } from './state.js'
 import { addLog, nowSeconds } from './utils.js'
 import { toVirtualWorkspacePath } from './workspace-files.js'
-import { deferJobRetry, startJobExecution, updateJobRecord, waitForDeferredJob } from './job-utils.js'
+import { deferJobRetry, startJobExecution, updateJobRecord, waitForDeferredJob, waitForScheduledJob } from './job-utils.js'
 
 function drainQueue(state: ApiState): void {
   const scheduler = state.downloadScheduler
@@ -107,6 +107,10 @@ export async function updateDownloadJob(
 
 export async function executeDownload(task: FetchTaskRecord, state: ApiState, signal: AbortSignal): Promise<void> {
   while (!signal.aborted) {
+    if (!await waitForScheduledJob(state, task.id, signal)) {
+      if (signal.aborted && await updateDownloadJob(state, task.id, 'canceled')) markDownloadCanceled(task, state)
+      return
+    }
     const runningJob = await startJobExecution(state, task.id)
     if (!runningJob) return
     task.status = 'running'

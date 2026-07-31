@@ -38,7 +38,7 @@
 2. 制造转码暂时性错误后恢复，确认退避期间可取消，成功后只保留一个最终输出和一条 Asset，不残留带 `outputToken` 的 `.partial` / `.backup` 文件。
 3. 制造输入不存在、权限拒绝、缺少 yt-dlp/ffmpeg 等不可恢复错误，确认不会自动重试并保留可读 `errorMessage`。
 4. 使用 read PathGrant 触发一次可重试错误，确认 attempt 间 grant 仍有效，最终成功、失败或取消后才吊销；one-shot write grant 不恢复为 active。
-5. 在退避等待或运行中关闭 API，确认 executor 被取消并完成清理；重启后遗留活动 Job 明确失败，不显示为已续跑。
+5. 模拟 API 非正常退出后重启，确认载荷完整且仍有剩余 attempt 的下载/转码 Job 自动续跑、`attempt` 递增且 `outputToken` 不变；正常关闭仍取消 executor 并完成清理。缺少/损坏载荷、次数耗尽、暂停任务与 PSD/Web Composer 遗留 Job 必须明确失败，不显示为已续跑。
 
 ## 浏览器网络路径
 

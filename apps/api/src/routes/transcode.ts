@@ -7,9 +7,9 @@ import { probeMedia, analyzeSource, buildFfmpegArgs, buildTwoPassFfmpegArgs } fr
 
 import { transcodeJobCreateSchema, transcodeProbeSchema, transcodePreviewCommandSchema } from '../schemas.js'
 import type { ApiState } from '../state.js'
-import { executeTranscode, updateTranscodeJob } from '../transcode-executor.js'
-import { addLog } from '../utils.js'
-import { resolveInputPath, resolveOutputPath, revokeGrantsBoundToJob } from '../workspace-path.js'
+import { scheduleTranscode, updateTranscodeJob } from '../transcode-executor.js'
+import { resolveInputPath, resolveOutputPath, revokeGrantsBoundToJob, toGrantMarker } from '../workspace-path.js'
+import { transcodeExecution } from '../job-execution-payload.js'
 
 export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
   app.post<{ Body: { inputPath?: string; outputPath?: string; preset?: string; title?: string; inputGrantId?: string; outputGrantId?: string; videoCrf?: number; videoEncodePreset?: string; audioBitrate?: number; targetBitrateKbps?: number; enableVmaf?: boolean }; Reply: JobRecord }>(
@@ -28,13 +28,6 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
         title: title || `转码任务：${path.basename(input.physicalPath)}`,
         maxAttempts: 3,
       })
-      try {
-        await state.db.jobs.create(job)
-      } catch (error) {
-        await revokeGrantsBoundToJob(state, jobId)
-        throw error
-      }
-
       let output: Awaited<ReturnType<typeof resolveOutputPath>>
       try {
         output = await resolveOutputPath(state, {
@@ -43,36 +36,36 @@ export function registerTranscodeRoutes(app: FastifyInstance, state: ApiState) {
           requireExportsDir: true,
           exportsErrorMessage: '转码输出必须位于工作区 Exports 目录内。',
           consumeGrant: true,
+          bindJobId: jobId,
         })
       } catch (error) {
-        await state.db.jobs.delete(jobId)
         await revokeGrantsBoundToJob(state, jobId)
         throw error
       }
 
-      void state.executors.run(job.id, async (signal) => {
-        try {
-          await executeTranscode(
-            job,
-            {
-              inputPath: input.physicalPath,
-              outputPath: output.physicalPath,
-              preset: safePreset,
-              ...(videoCrf !== undefined ? { videoCrf } : {}),
-              ...(videoEncodePreset ? { videoEncodePreset: videoEncodePreset as VideoEncodePreset } : {}),
-              ...(audioBitrate !== undefined ? { audioBitrate } : {}),
-              ...(targetBitrateKbps !== undefined ? { targetBitrateKbps } : {}),
-              ...(enableVmaf !== undefined ? { enableVmaf } : {}),
-            },
-            state,
-            output.virtualPath ?? `__grant:${outputGrantId}`,
-            signal,
-          )
-        } catch (error) {
-          addLog(state.db, 'ERROR', 'transcode', `转码执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+      const workerJob = {
+        inputPath: input.physicalPath,
+        outputPath: output.physicalPath,
+        preset: safePreset,
+        ...(videoCrf !== undefined ? { videoCrf } : {}),
+        ...(videoEncodePreset ? { videoEncodePreset: videoEncodePreset as VideoEncodePreset } : {}),
+        ...(audioBitrate !== undefined ? { audioBitrate } : {}),
+        ...(targetBitrateKbps !== undefined ? { targetBitrateKbps } : {}),
+        ...(enableVmaf !== undefined ? { enableVmaf } : {}),
+      }
+      const inputSource = input.virtualPath ?? toGrantMarker(inputGrantId!)
+      const outputVirtualPath = output.virtualPath ?? toGrantMarker(outputGrantId!)
+      try {
+        await state.db.jobs.create(job, transcodeExecution(workerJob, inputSource, outputVirtualPath))
+      } catch (error) {
+        await revokeGrantsBoundToJob(state, jobId)
+        if (outputGrantId) {
+          await state.db.pathGrants.update({ id: outputGrantId, status: 'revoked', updatedAt: Date.now() })
         }
-      })
-        .catch((error) => addLog(state.db, 'ERROR', 'transcode', `转码执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
+        throw error
+      }
+
+      scheduleTranscode(job, workerJob, state, outputVirtualPath)
 
       return job
     },

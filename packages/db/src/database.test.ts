@@ -94,6 +94,28 @@ describe('jobs', () => {
     })
   })
 
+  it('persists private execution payloads without adding them to JobRecord', async () => {
+    const job = makeJob()
+    await db.jobs.create(job, {
+      executor: 'download.v1',
+      payload: { url: 'https://example.com/video' },
+    })
+
+    await expect(db.jobs.findExecutionByJobId(job.id)).resolves.toMatchObject({
+      jobId: job.id,
+      executor: 'download.v1',
+      payload: { url: 'https://example.com/video' },
+    })
+    await expect(db.jobs.findById(job.id)).resolves.not.toHaveProperty('payload')
+  })
+
+  it('removes the private execution payload when its job is deleted', async () => {
+    const job = makeJob()
+    await db.jobs.create(job, { executor: 'download.v1', payload: { url: 'https://example.com/video' } })
+    await db.jobs.delete(job.id)
+    await expect(db.jobs.findExecutionByJobId(job.id)).resolves.toBeUndefined()
+  })
+
   it('uses status compare-and-set for terminal writes', async () => {
     const job = makeJob({ status: 'running' })
     await db.jobs.create(job)
@@ -101,6 +123,53 @@ describe('jobs', () => {
     await expect(db.jobs.updateIfStatus({ ...job, status: 'canceled', updatedAt: 2000 }, 'running')).resolves.toBe(true)
     await expect(db.jobs.updateIfStatus({ ...job, status: 'succeeded', updatedAt: 2001 }, 'running')).resolves.toBe(false)
     await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ status: 'canceled' })
+  })
+
+  it('commits a completed job and its asset in one transaction', async () => {
+    const job = makeJob({ status: 'running' })
+    const completed = { ...job, status: 'succeeded' as const, updatedAt: 2000 }
+    const asset: AssetRecord = {
+      id: `asset-${job.id}`,
+      kind: 'video',
+      name: 'output.mp4',
+      path: '/Workspace/Exports/output.mp4',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    await db.jobs.create(job)
+
+    await expect(db.jobs.completeWithAsset(completed, 'running', asset)).resolves.toBe(true)
+    await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ status: 'succeeded' })
+    await expect(db.assets.findById(asset.id)).resolves.toMatchObject({ path: asset.path })
+    await expect(db.jobs.completeWithAsset(completed, 'running', asset)).resolves.toBe(false)
+  })
+
+  it('rolls back job completion when the asset path conflicts', async () => {
+    const job = makeJob({ status: 'running' })
+    const timestamp = new Date().toISOString()
+    await db.jobs.create(job)
+    await db.assets.create({
+      id: 'existing-asset',
+      kind: 'video',
+      name: 'existing.mp4',
+      path: '/Workspace/Exports/output.mp4',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    })
+
+    await expect(db.jobs.completeWithAsset(
+      { ...job, status: 'succeeded', updatedAt: 2000 },
+      'running',
+      {
+        id: `asset-${job.id}`,
+        kind: 'video',
+        name: 'output.mp4',
+        path: '/Workspace/Exports/output.mp4',
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      },
+    )).rejects.toThrow()
+    await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ status: 'running' })
   })
 
   it('patches progress only while the job is running', async () => {
@@ -270,10 +339,11 @@ describe('pathGrants', () => {
 
   it('findActiveById treats consumed grants as inactive', async () => {
     await db.pathGrants.create(makeGrant({ kind: 'file.write' }))
-    await expect(db.pathGrants.consume('grant-1', Date.now())).resolves.toBe(true)
-    await expect(db.pathGrants.consume('grant-1', Date.now())).resolves.toBe(false)
+    await expect(db.pathGrants.consume('grant-1', 'job-a', Date.now())).resolves.toBe(true)
+    await expect(db.pathGrants.consume('grant-1', 'job-b', Date.now())).resolves.toBe(false)
 
     await expect(db.pathGrants.findActiveById('grant-1')).resolves.toBeUndefined()
+    await expect(db.pathGrants.findById('grant-1')).resolves.toMatchObject({ status: 'consumed', jobId: 'job-a' })
   })
 
   it('does not bind or consume expired grants', async () => {
@@ -281,6 +351,6 @@ describe('pathGrants', () => {
     await db.pathGrants.create(makeGrant({ id: 'write-expired', kind: 'file.write', expiresAt: Date.now() - 1 }))
 
     await expect(db.pathGrants.bindJob('read-expired', 'job-a', Date.now())).resolves.toBe(false)
-    await expect(db.pathGrants.consume('write-expired', Date.now())).resolves.toBe(false)
+    await expect(db.pathGrants.consume('write-expired', 'job-a', Date.now())).resolves.toBe(false)
   })
 })

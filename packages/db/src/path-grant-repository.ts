@@ -50,12 +50,12 @@ export function createPathGrantRepository(db: Database.Database): MediaToolboxDa
       return result.changes === 1
     },
 
-    consume: async (id, updatedAt) => {
+    consume: async (id, jobId, updatedAt) => {
       const result = db.prepare(`
         UPDATE path_grants
-        SET status = 'consumed', updated_at = ?
-        WHERE id = ? AND status = 'active' AND expires_at > ?
-      `).run(updatedAt, id, updatedAt)
+        SET status = 'consumed', job_id = ?, updated_at = ?
+        WHERE id = ? AND job_id IS NULL AND status = 'active' AND expires_at > ?
+      `).run(jobId, updatedAt, id, updatedAt)
       return result.changes === 1
     },
 

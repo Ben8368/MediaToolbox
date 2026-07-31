@@ -17,6 +17,7 @@ MediaToolbox 需要处理本地文件、转码输入、PSD 模板和导出路径
 - API 负责签发、校验和吊销 grant，并记录审计日志。
 - worker 只消费任务附带的 grant，不自行扩大搜索范围。
 - Job 自动重试的 `running → queued` 不是终态，绑定 grant 在 attempt 间保留；最终成功、失败或取消时再吊销。
+- one-shot 写授权消费时同时绑定 Job ID，状态保持 `consumed` 且不可再次激活；异常重启只允许同一 Job 的私有执行载荷继续使用该已消费目标，不能把授权转给其他任务。
 
 ## 后果
 

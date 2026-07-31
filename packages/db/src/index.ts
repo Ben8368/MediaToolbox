@@ -1,3 +1,3 @@
 export { SqliteDatabase } from './database.js'
 export { CURRENT_SCHEMA_VERSION } from './schema.js'
-export type { MediaToolboxDatabase } from './types.js'
+export type { JobExecutionDraft, JobExecutionRecord, MediaToolboxDatabase } from './types.js'

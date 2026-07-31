@@ -2,7 +2,7 @@
  * Database schema definitions and migrations
  */
 
-export const CURRENT_SCHEMA_VERSION = 6
+export const CURRENT_SCHEMA_VERSION = 7
 
 export const SCHEMA_V1 = `
 -- Schema version tracking
@@ -123,4 +123,15 @@ ALTER TABLE jobs ADD COLUMN output_token TEXT;
 ALTER TABLE jobs ADD COLUMN next_attempt_at INTEGER;
 CREATE INDEX IF NOT EXISTS idx_jobs_next_attempt_at ON jobs(next_attempt_at);
 COMMIT;
+`
+
+export const SCHEMA_V7_JOB_EXECUTIONS = `
+CREATE TABLE IF NOT EXISTS job_executions (
+  job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+  executor TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_job_executions_executor ON job_executions(executor);
 `

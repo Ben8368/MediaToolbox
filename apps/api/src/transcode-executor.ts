@@ -7,7 +7,7 @@ import type { JobRecord } from '@mediatoolbox/contracts'
 
 import type { ApiState } from './state.js'
 import { addLog } from './utils.js'
-import { deferJobRetry, patchRunningJob, startJobExecution, updateJobRecord, waitForDeferredJob } from './job-utils.js'
+import { completeJobWithAsset, deferJobRetry, patchRunningJob, startJobExecution, updateJobRecord, waitForDeferredJob, waitForScheduledJob } from './job-utils.js'
 
 export async function updateTranscodeJob(
   state: ApiState,
@@ -40,6 +40,35 @@ async function restorePreviousOutput(outputPath: string, backupPath: string, has
   if (hasBackup) await fs.rename(backupPath, outputPath)
 }
 
+async function recoverInterruptedOutput(outputPath: string, temporaryPath: string, backupPath: string): Promise<void> {
+  await fs.unlink(temporaryPath).catch(() => undefined)
+  try {
+    const output = await fs.stat(outputPath)
+    if (!output.isFile()) throw new Error('输出路径已存在且不是文件。')
+    await fs.unlink(backupPath).catch(() => undefined)
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error
+    await fs.rename(backupPath, outputPath).catch((restoreError) => {
+      if (!(restoreError instanceof Error && 'code' in restoreError && restoreError.code === 'ENOENT')) throw restoreError
+    })
+  }
+}
+
+export function scheduleTranscode(
+  job: JobRecord,
+  workerJob: TranscodeWorkerJob,
+  state: ApiState,
+  outputVirtualPath: string,
+): void {
+  void state.executors.run(job.id, async (signal) => {
+    try {
+      await executeTranscode(job, workerJob, state, outputVirtualPath, signal)
+    } catch (error) {
+      addLog(state.db, 'ERROR', 'transcode', `转码执行器清理失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }).catch((error) => addLog(state.db, 'ERROR', 'transcode', `转码执行器登记失败：${error instanceof Error ? error.message : String(error)}`))
+}
+
 export async function executeTranscode(
   job: JobRecord,
   workerJob: TranscodeWorkerJob,
@@ -47,6 +76,12 @@ export async function executeTranscode(
   outputVirtualPath: string,
   signal: AbortSignal,
 ): Promise<void> {
+  if (!await waitForScheduledJob(state, job.id, signal)) {
+    if (signal.aborted && await updateTranscodeJob(state, job.id, 'canceled')) {
+      addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
+    }
+    return
+  }
   if (signal.aborted) {
     if (await updateTranscodeJob(state, job.id, 'canceled')) {
       addLog(state.db, 'WARNING', 'transcode', `转码已取消：${job.title}`)
@@ -63,10 +98,7 @@ export async function executeTranscode(
   const { temporaryPath, backupPath } = outputStagingPaths(workerJob.outputPath, runningJob.outputToken)
 
   try {
-    await Promise.all([
-      fs.unlink(temporaryPath).catch(() => undefined),
-      fs.unlink(backupPath).catch(() => undefined),
-    ])
+    await recoverInterruptedOutput(workerJob.outputPath, temporaryPath, backupPath)
     const result = await runTranscodeWorkerJob({ ...workerJob, outputPath: temporaryPath }, {
       signal,
       onProgress: (progress) => {
@@ -102,20 +134,18 @@ export async function executeTranscode(
         throw error
       }
       outputCommitted = true
-      const completed = await updateTranscodeJob(state, job.id, 'succeeded', { current: 100, total: 100, unit: 'percent' })
-      if (!completed) return
-      retainOutput = true
-      if (hasBackup) await fs.unlink(backupPath).catch(() => undefined)
-      await state.db.assets.create({
+      const timestamp = new Date().toISOString()
+      const completed = await completeJobWithAsset(state, job.id, {
         id: `asset-${job.id}`,
         kind: (workerJob.preset === 'audio-mp3' || workerJob.preset === 'audio-aac') ? 'audio' : 'video',
         name: outputVirtualPath.split('/').pop() || job.title,
         path: outputVirtualPath,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }).catch((error) => {
-        addLog(state.db, 'WARNING', 'transcode', `转码产物已生成，但资产索引写入失败：${error instanceof Error ? error.message : String(error)}`)
-      })
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }, { current: 100, total: 100, unit: 'percent' })
+      if (!completed) return
+      retainOutput = true
+      if (hasBackup) await fs.unlink(backupPath).catch(() => undefined)
       addLog(state.db, 'INFO', 'transcode', `转码完成：${job.title}`)
       if (result.vmafScore !== undefined) {
         addLog(state.db, 'INFO', 'transcode', `VMAF 分数：${result.vmafScore.toFixed(2)} — ${job.title}`)
