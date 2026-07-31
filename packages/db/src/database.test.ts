@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import Database from 'better-sqlite3'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { SqliteDatabase } from './database.js'
 import type { JobRecord, AssetRecord, LogEntry, PathGrantRecord } from '@mediatoolbox/contracts'
+import { SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH } from './schema.js'
 
 let db: SqliteDatabase
 
@@ -17,6 +22,9 @@ const makeJob = (overrides?: Partial<JobRecord>): JobRecord => ({
   kind: 'download.video',
   status: 'queued',
   title: 'Test Video',
+  attempt: 0,
+  maxAttempts: 3,
+  outputToken: 'output-job-1',
   createdAt: 1000,
   updatedAt: 1000,
   ...overrides,
@@ -75,6 +83,17 @@ describe('jobs', () => {
     expect(found?.errorMessage).toBe('network timeout')
   })
 
+  it('persists retry scheduling metadata and its stable output token', async () => {
+    const job = makeJob({ status: 'queued', attempt: 1, nextAttemptAt: 1100 })
+    await db.jobs.create(job)
+    await expect(db.jobs.findById(job.id)).resolves.toMatchObject({
+      attempt: 1,
+      maxAttempts: 3,
+      outputToken: 'output-job-1',
+      nextAttemptAt: 1100,
+    })
+  })
+
   it('uses status compare-and-set for terminal writes', async () => {
     const job = makeJob({ status: 'running' })
     await db.jobs.create(job)
@@ -91,6 +110,31 @@ describe('jobs', () => {
     await expect(db.jobs.patchIfStatus(job.id, 'running', { progress: { current: 20, total: 100, unit: 'percent' } }, 2000)).resolves.toBe(true)
     await expect(db.jobs.patchIfStatus(job.id, 'queued', { progress: { current: 30, total: 100, unit: 'percent' } }, 2001)).resolves.toBe(false)
     await expect(db.jobs.findById(job.id)).resolves.toMatchObject({ progress: { current: 20, total: 100, unit: 'percent' }, updatedAt: 2000 })
+  })
+})
+
+describe('job schema migration', () => {
+  it('upgrades v5 jobs with safe retry defaults', async () => {
+    const dbPath = path.join(os.tmpdir(), `mediatoolbox-v5-${process.pid}-${Date.now()}.db`)
+    const legacy = new Database(dbPath)
+    legacy.exec([SCHEMA_V1, SCHEMA_V2_SETTINGS, SCHEMA_V3_PATH_GRANTS, SCHEMA_V4_WORKORDERS, SCHEMA_V5_TRASH].join('\n'))
+    for (let version = 1; version <= 5; version += 1) {
+      legacy.prepare('INSERT INTO schema_version (version, applied_at) VALUES (?, ?)').run(version, new Date().toISOString())
+    }
+    legacy.prepare(`
+      INSERT INTO jobs (id, kind, status, title, created_at, updated_at)
+      VALUES ('legacy-job', 'download.video', 'failed', 'Legacy', 1000, 1000)
+    `).run()
+    legacy.close()
+
+    const migrated = new SqliteDatabase(dbPath)
+    await expect(migrated.jobs.findById('legacy-job')).resolves.toMatchObject({
+      attempt: 0,
+      maxAttempts: 1,
+      outputToken: 'legacy-job',
+    })
+    migrated.close()
+    await fs.rm(dbPath, { force: true })
   })
 })
 

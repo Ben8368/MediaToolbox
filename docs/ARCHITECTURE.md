@@ -17,7 +17,7 @@ packages/*    共享契约、状态机、adapter、数据库和 UI 工具
 - UI 不直接执行 `yt-dlp`、`ffmpeg`、Photoshop 或文件系统危险操作。
 - API 只编排任务和管理本地资源，重活交给 worker。
 - 第三方工具必须通过 adapter 包装，命令参数构建与进程执行分开。
-- 所有长任务进入统一 Job 模型，支持进度、日志、取消与失败状态呈现。API 启动会将持久库遗留的活动任务安全标记为 `failed`、记录重启中断原因并吊销绑定授权；运行期 executor 由实例级 registry 跟踪，关闭时先取消排队任务、终止活动任务并等待清理完成，再关闭数据库。自动重试与断点续跑尚未实现，后续引入时必须先定义 attempt、幂等输出、调度策略、退避与可观测性边界。
+- 所有长任务进入统一 Job 模型，支持进度、日志、取消与失败状态呈现。Job 持久化 `attempt`、`maxAttempts`、`nextAttemptAt` 和稳定 `outputToken`；下载与转码仅对 adapter 明确标记的暂时性错误执行最多 3 次的指数退避重试，等待期仍使用带调度时间的 `queued`。API 启动会将持久库遗留的活动任务安全标记为 `failed`、记录重启中断原因并吊销绑定授权；运行期 executor 由实例级 registry 跟踪，关闭时先取消排队下载、终止活动任务并等待清理完成，再关闭数据库。完整执行载荷和 checkpoint 尚未持久化，因此进程重启后不自动续跑。
 - PSD 能力以模版 manifest 为中心，高保真编辑通过 Photoshop adapter 实现。
 - Web Composer 以版本化 Slot v2 预设为中心；编辑器只写入 manifest 声明的 slot 与主题变量，预设 DOM、样式和动画源码保持只读并由完整性测试锁定。
 - 浏览器网络能力由 Electron 主进程承载，其他 app 只能通过受控 API / IPC 调用，不直接读取 cookie、session 或本地文件。
@@ -63,7 +63,7 @@ Slot v2 与预览交互边界：
 ## 数据模型
 
 - `AssetRecord`：视频、音频、字幕、图片、PSD、文件夹和导出结果。
-- `JobRecord`：下载、转码、网页合成、PSD 批处理等长任务。
+- `JobRecord`：下载、转码、网页合成、PSD 批处理等长任务；执行次数、退避时间和幂等输出 token 属于共享契约。
 - `PsdTemplateManifest`：PSD 模版、图层 slot、画布和导出约束。
 - `WebComposerPresetManifest` / `WebComposerPresetState`：版本化 Slot v2 网页预设、类型化编辑能力、候选内容、显隐/设计坐标状态与主题变量。
 

@@ -25,6 +25,14 @@ export type JobRecord = {
   kind: JobKind
   status: JobStatus
   title: string
+  /** 已开始的执行次数；任务首次进入 running 时从 0 增加到 1。 */
+  attempt: number
+  /** 包含首次执行在内的最大执行次数。1 表示不自动重试。 */
+  maxAttempts: number
+  /** 同一任务跨 attempt 保持稳定，用于隔离临时输出并实现幂等提交。 */
+  outputToken: string
+  /** queued 任务的最早再次执行时间（Unix 秒）。 */
+  nextAttemptAt?: number
   progress?: JobProgress
   createdAt: number
   updatedAt: number

@@ -27,3 +27,4 @@ docs/ADR/0001-title.md
 - [0004-psd-manifest-first.md](0004-psd-manifest-first.md)：PSD manifest 优先模型。
 - [0005-web-composer-versioned-presets.md](0005-web-composer-versioned-presets.md)：Web Composer 版本化只读预设与隔离导出模型。
 - [0006-web-composer-external-video-assets.md](0006-web-composer-external-video-assets.md)：Web Composer 默认视频与源码仓库分离、不可变分发和回滚边界。
+- [0007-job-attempt-and-retry-semantics.md](0007-job-attempt-and-retry-semantics.md)：Job 执行次数、受控自动重试、幂等输出与 PathGrant 生命周期。

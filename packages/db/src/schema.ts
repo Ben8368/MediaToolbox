@@ -2,7 +2,7 @@
  * Database schema definitions and migrations
  */
 
-export const CURRENT_SCHEMA_VERSION = 5
+export const CURRENT_SCHEMA_VERSION = 6
 
 export const SCHEMA_V1 = `
 -- Schema version tracking
@@ -113,4 +113,14 @@ CREATE TABLE IF NOT EXISTS trash_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_trash_entries_workspace_root ON trash_entries(workspace_root);
 CREATE INDEX IF NOT EXISTS idx_trash_entries_deleted_at ON trash_entries(deleted_at DESC);
+`
+
+export const SCHEMA_V6_JOB_ATTEMPTS = `
+BEGIN;
+ALTER TABLE jobs ADD COLUMN attempt INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE jobs ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE jobs ADD COLUMN output_token TEXT;
+ALTER TABLE jobs ADD COLUMN next_attempt_at INTEGER;
+CREATE INDEX IF NOT EXISTS idx_jobs_next_attempt_at ON jobs(next_attempt_at);
+COMMIT;
 `

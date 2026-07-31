@@ -12,6 +12,10 @@ type DbJobRow = {
   created_at: number
   updated_at: number
   error_message: string | null
+  attempt: number
+  max_attempts: number
+  output_token: string | null
+  next_attempt_at: number | null
 }
 
 export function createJobRepository(db: Database.Database): MediaToolboxDatabase['jobs'] {
@@ -21,9 +25,13 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
       kind: row.kind as JobRecord['kind'],
       status: row.status as JobRecord['status'],
       title: row.title,
+      attempt: row.attempt,
+      maxAttempts: row.max_attempts,
+      outputToken: row.output_token || row.id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
+    if (row.next_attempt_at !== null) record.nextAttemptAt = row.next_attempt_at
     if (row.progress_json) record.progress = JSON.parse(row.progress_json)
     if (row.error_message !== null) record.errorMessage = row.error_message
     return record
@@ -32,8 +40,8 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
   return {
     create: async (job) => {
       db.prepare(`
-        INSERT INTO jobs (id, kind, status, title, progress_json, created_at, updated_at, error_message)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO jobs (id, kind, status, title, progress_json, created_at, updated_at, error_message, attempt, max_attempts, output_token, next_attempt_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         job.id,
         job.kind,
@@ -43,6 +51,10 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
         job.createdAt,
         job.updatedAt,
         job.errorMessage ?? null,
+        job.attempt,
+        job.maxAttempts,
+        job.outputToken,
+        job.nextAttemptAt ?? null,
       )
     },
 
@@ -68,7 +80,8 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
     update: async (job) => {
       db.prepare(`
         UPDATE jobs
-        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?
+        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?,
+            attempt = ?, max_attempts = ?, output_token = ?, next_attempt_at = ?
         WHERE id = ?
       `).run(
         job.kind,
@@ -77,6 +90,10 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
         job.progress ? JSON.stringify(job.progress) : null,
         job.updatedAt,
         job.errorMessage ?? null,
+        job.attempt,
+        job.maxAttempts,
+        job.outputToken,
+        job.nextAttemptAt ?? null,
         job.id,
       )
     },
@@ -84,7 +101,8 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
     updateIfStatus: async (job, expectedStatus) => {
       const result = db.prepare(`
         UPDATE jobs
-        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?
+        SET kind = ?, status = ?, title = ?, progress_json = ?, updated_at = ?, error_message = ?,
+            attempt = ?, max_attempts = ?, output_token = ?, next_attempt_at = ?
         WHERE id = ? AND status = ?
       `).run(
         job.kind,
@@ -93,6 +111,10 @@ export function createJobRepository(db: Database.Database): MediaToolboxDatabase
         job.progress ? JSON.stringify(job.progress) : null,
         job.updatedAt,
         job.errorMessage ?? null,
+        job.attempt,
+        job.maxAttempts,
+        job.outputToken,
+        job.nextAttemptAt ?? null,
         job.id,
         expectedStatus,
       )
