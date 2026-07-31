@@ -88,18 +88,18 @@
 - **来源：** 全仓技术债复核（2026-07-15）
 - **目标阶段：** 长任务可靠性迭代
 - **阻断候选构建：** 否；若承诺进程重启后自动续跑则是
-- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；API 启动会将 SQLite 遗留的 `queued` / `running` / `paused` 孤儿任务原子标记为 `failed`，写入明确中断原因和审计日志，并吊销绑定 PathGrant。下载、转码、PSD 与 Web Composer executor 已由实例级 registry 跟踪；Fastify 关闭会取消排队下载、终止活动任务、等待 executor 清理完成后再关闭数据库，下载取消会终止 yt-dlp 及其子进程树。
-- **剩余问题：** 当前仍不自动重试，也没有 attempt/checkpoint/幂等输出 token；进程重启后的任务只能明确失败，不能安全续跑。
-- **影响：** API 重启与关闭不再留下永久运行中的假任务，也不会让 executor 与关库竞争，但暂时性失败仍需用户手动重提。
-- **建议方案：** 设计 `attempt`、`maxAttempts`、`nextAttemptAt`、错误分类、指数退避和幂等 Asset 提交；不得恢复没有调度语义的 `retrying` 伪状态。
-- **估算工作量：** 中等，需要数据库契约、调度器、executor 和重启/关闭集成测试协同修改。
+- **已完成：** 所有服务端 Job ID 已统一为带业务前缀的 UUID；SQLite schema v6 与共享契约持久化 `attempt`、`maxAttempts`、`nextAttemptAt` 和稳定 `outputToken`。下载网络错误与转码错误仅在 adapter 明确标记 `retryable` 时最多执行 3 次，采用 1、2 秒指数退避；等待期用带调度时间的 `queued` 表达，取消和关闭可中断等待。转码以稳定 token 隔离 `.partial` / `.backup`，成功后原子提交单一输出；重试 attempt 间保留绑定 PathGrant，最终终态才回收。API 启动仍会将 SQLite 遗留的活动任务原子标记为 `failed` 并审计；executor registry 与关闭 drain 已覆盖下载、转码、PSD 和 Web Composer。自动化覆盖 schema v5→v6 迁移、下载/转码暂时性失败后成功、attempt 递增、token 稳定与临时文件清理。
+- **剩余问题：** 完整执行载荷和 checkpoint 尚未持久化，进程重启后的任务只能明确失败，不能安全续跑；PSD 与 Web Composer 尚未证明重复执行幂等，因此 `maxAttempts=1`。
+- **影响：** 运行期暂时性下载/转码故障可自动恢复，取消、关闭与授权生命周期可控；API 进程丢失或 PSD/Web Composer 暂时性失败仍需用户重新提交。
+- **建议方案：** 为各 Job kind 设计不向 Web 暴露物理路径的持久执行载荷、checkpoint 与启动期 dispatcher；逐类证明输出和 Asset 提交幂等后再开启恢复，禁止仅把遗留 `queued` 任务盲目重跑。
+- **估算工作量：** 剩余为中等到较大，需要执行载荷 schema、启动调度器和各 worker 的重启集成测试协同修改。
 
 #### TD-033: Electron Builder 稳定版构建链 advisory 例外
 - **位置：** `apps/desktop/package.json` + `package-lock.json`
 - **来源：** TD-031 依赖安全告警分级（2026-07-25）
 - **目标阶段：** Electron Builder v27 稳定版或等价安全版本发布后
 - **阻断候选构建：** 否；若允许不受信任输入控制打包配置、文件名或 glob 则是
-- **问题：** 全量 `npm audit` 仍通过 `electron-builder@26.15.3` 的 `@electron/asar@3`、`@electron/universal@2`、旧 `minimatch` / `brace-expansion` 等报告 16 个 high 元告警。当前 v26 补丁标签仍固定旧链；已修复依赖仅出现在 v27 alpha，npm 的 `--force` 建议反而降级到 v22。
+- **问题：** 2026-07-31 已升级到稳定补丁 `electron-builder@26.15.6`；全量 `npm audit` 仍通过其 `@electron/asar@3`、`@electron/universal@2`、旧 `minimatch` / `brace-expansion` 等报告 16 个 high 元告警，另有 2 个不适用于当前 `BrowserRouter` 模式的 React Router RSC 告警。当前 v26 补丁标签仍固定旧构建链；v27 仍为 alpha，npm 的 `--force` 建议反而降级到 v22。
 - **影响：** 这些包只参与受信任 tag 的桌面打包，不进入 Electron 最终运行时；若攻击者可控制打包 glob 或仓库文件结构，仍可能造成构建进程 DoS。
 - **建议方案：** 保持稳定 v26 和受信任 tag 构建边界，跟踪 v27 stable；升级时重新运行 full/production audit、`npm run verify`、三平台目录包构建与 renderer 烟测。禁止为清零数字降级到 v22 或把 alpha 工具带入候选链。
 - **估算工作量：** 上游稳定版发布后为小到中等；主要成本是三平台打包回归。
